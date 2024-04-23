@@ -12,8 +12,13 @@ bool InitDHooks(GameData hGamedata)
 {
 	int failCount = 0;
 	
-	if (!RegisterDetour(hGamedata, "CMannVsMachineUpgradeManager::LoadUpgradesFile", _, DHookCallback_LoadUpgradesFile_Post))
-		failCount++;
+#if defined METHOD_MVM_UPGRADES
+	//We could not find the address to g_MannVsMachineUpgrades, use this detour to fetch it instead
+	//NOTE: this will not support late-load!
+	if (!g_pMannVsMachineUpgrades)
+		if (!RegisterDetour(hGamedata, "CMannVsMachineUpgradeManager::LoadUpgradesFile", _, DHookCallback_LoadUpgradesFile_Post))
+			failCount++;
+#endif
 	
 	if (!RegisterDetour(hGamedata, "CTFPlayer::ManageRegularWeapons", DHookCallback_ManageRegularWeapons_Pre, DHookCallback_ManageRegularWeapons_Post))
 		failCount++;

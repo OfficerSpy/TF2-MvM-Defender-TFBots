@@ -125,11 +125,7 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 	//TFBots are players, ignore all other nextbots
 	if (actor <= MaxClients)
 	{
-		if (StrEqual(name, "MainAction"))
-		{
-			// action.ShouldAttack = CTFBotMainAction_ShouldAttack;
-		}
-		else if (StrEqual(name, "TacticalMonitor"))
+		if (StrEqual(name, "TacticalMonitor"))
 		{
 			action.Update = CTFBotTacticalMonitor_Update;
 		}
@@ -161,36 +157,6 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 			action.SelectMoreDangerousThreat = CTFBotSpyAttack_SelectMoreDangerousThreat;
 		}
 	}
-}
-
-public Action CTFBotMainAction_ShouldAttack(BehaviorAction action, Address nextbot, Address knownEntity, QueryResultType& result)
-{
-	PrintToChatAll("SHOULD ATTACK: ");
-	
-	INextBot myBot = view_as<INextBot>(nextbot);
-	int me = myBot.GetEntity();
-	
-	if (g_bIsDefenderBot[me])
-	{
-		if (redbots_manager_debug_actions.BoolValue)
-			PrintToChatAll("CTFBotMainAction ShouldAttack");
-		
-		int threat = view_as<CKnownEntity>(knownEntity).GetEntity();
-		
-		OSTFPlayer tfpThreat = OSTFPlayer(threat);
-		
-		if (tfpThreat.IsPlayer())
-		{
-			//Don't attack invulnerable threats, as it just wastes ammo
-			if (tfpThreat.IsInvulnerable())
-			{
-				result = ANSWER_NO;
-				return Plugin_Changed;
-			}
-		}
-	}
-	
-	return Plugin_Continue;
 }
 
 public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, float interval, ActionResult result)
@@ -1789,12 +1755,12 @@ Action GetDesiredBotAction(int client, BehaviorAction action)
 	{
 		if (CTFBotCollectMoney_IsPossible(client))
 			return action.SuspendFor(CTFBotCollectMoney(), "Is possible");
-		else if (!TF2_IsInUpgradeZone(client) && !IsPlayerReady(client) && ActionsManager.GetAction(client, "DefenderMoveToFront") == INVALID_ACTION)
+		else if (redbots_manager_bot_use_upgrades.BoolValue && !TF2_IsInUpgradeZone(client) && !IsPlayerReady(client) && ActionsManager.GetAction(client, "DefenderMoveToFront") == INVALID_ACTION)
 			return action.SuspendFor(CTFBotGotoUpgrade(), "!IsInUpgradeZone && RoundState_BetweenRounds");
 	}
 	else if (state == RoundState_RoundRunning)
 	{
-		if (redbots_manager_mode.IntValue == MANAGER_MODE_AUTO_BOTS && g_bHasBoughtUpgrades[client] == false && !TF2_IsInUpgradeZone(client))
+		if (redbots_manager_bot_use_upgrades.BoolValue && redbots_manager_mode.IntValue == MANAGER_MODE_AUTO_BOTS && g_bHasBoughtUpgrades[client] == false && !TF2_IsInUpgradeZone(client))
 		{
 			//Bots are added during the round, so we must upgrade now if haven't before
 			return action.SuspendFor(CTFBotGotoUpgrade(), "Buy upgrades now");
@@ -2203,7 +2169,7 @@ void CollectUpgrades(int client)
 			if (attr.Address == Address_Null)
 				continue;
 			
-			if (!CanUpgradeWithAttrib(client, slot, attr.GetIndex(), upgrades))
+			if (!CanUpgradeWithAttrib(client, slot, attr.GetIndex(), upgrades.Address))
 				continue;
 			
 			JSONObject UpgradeInfo = new JSONObject();
@@ -2297,7 +2263,7 @@ void CollectUpgrades(int client)
 		if (redbots_manager_debug_actions.BoolValue)
 		{
 			CMannVsMachineUpgradeManager manager = CMannVsMachineUpgradeManager();
-			int cost = GetCostForUpgrade(manager.GetUpgradeByIndex(info.GetInt("index")), info.GetInt("slot"), info.GetInt("pclass"), client);
+			int cost = GetCostForUpgrade(manager.GetUpgradeByIndex(info.GetInt("index")).Address, info.GetInt("slot"), info.GetInt("pclass"), client);
 			PrintToServer("%3d %4d %4d %5d %-64s", i, info.GetInt("slot"), cost, info.GetInt("index"), manager.GetUpgradeByIndex(info.GetInt("index")).m_szAttribute());
 		}
 		
@@ -2401,6 +2367,12 @@ void KV_MvM_UpgradesBegin(int client)
 
 float GetUpgradeInterval()
 {
+	if (redbots_manager_mode.IntValue == MANAGER_MODE_AUTO_BOTS)
+	{
+		//Since we're joining in the middle of a round, we want to upgrade fast
+		return GetRandomFloat(0.3, 1.0);
+	}
+	
 	float customInterval = redbots_manager_bot_upgrade_interval.FloatValue;
 	
 	if (customInterval >= 0.0)
@@ -2438,14 +2410,14 @@ JSONObject CTFBotPurchaseUpgrades_ChooseUpgrade(int actor)
 			continue;
 		
 		int iAttribIndex = attr.GetIndex(); 
-		if (!CanUpgradeWithAttrib(actor, info.GetInt("slot"), iAttribIndex, upgrades))
+		if (!CanUpgradeWithAttrib(actor, info.GetInt("slot"), iAttribIndex, upgrades.Address))
 		{
 			//PrintToServer("upgrade %d/%d: cannot be upgraded with", info.GetInt("slot"), info.GetInt("index"));
 			delete info;
 			continue;
 		}
 		
-		int iCost = GetCostForUpgrade(upgrades, info.GetInt("slot"), info.GetInt("pclass"), actor);
+		int iCost = GetCostForUpgrade(upgrades.Address, info.GetInt("slot"), info.GetInt("pclass"), actor);
 		if (iCost > currency)
 		{
 			//PrintToServer("upgrade %d/%d: cost $%d > $%d", info.GetInt("slot"), info.GetInt("index"), iCost, currency);
