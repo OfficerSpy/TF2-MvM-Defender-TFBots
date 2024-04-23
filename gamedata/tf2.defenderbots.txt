@@ -1,0 +1,231 @@
+"Games"
+{
+	"tf"
+	{
+		"Addresses"
+		{
+			"MannVsMachineUpgrades"
+			{
+				"linux"
+				{
+					"signature" "g_MannVsMachineUpgrades"
+					"read" "0"
+				}
+			}
+		}
+		"Keys"
+		{
+			"CTFPlayer_BaseOffset"
+			{
+				"windows"	"m_iPlayerSkinOverride"
+				"linux"		"m_iPlayerSkinOverride"
+			}
+		}
+		"Signatures"
+		{
+			"CTFGameRules::SetCustomUpgradesFile"
+			{
+				"library"	"server"
+				"windows"	"\x55\x8B\xEC\x57\x8B\x3D\x2A\x2A\x2A\x2A\x85\xFF\x74\x7B\x8B\x4D\x08\x83\xC1\x08\x56\x83\x79\x10\x02\x75\x0E\x8B\x01\xBE\x70\x36\x75\x10\x85\xC0\x0F\x45\xF0\xEB\x07\xE8\x52\x55\xD9\xFF\x8B\xF0\x56\xB9\xB4\xFA\xB8\x10\xE8\x05\x5C\x16\x00"
+				//"windows"	"\x55\x8B\xEC\x56\x57\x8B\xF9\x8B\x4D\x08\x83\xC1\x08\x83\x79\x10\x02\x75\x2A\x8B\x01\xBE\x2A\x2A\x2A\x2A\x85\xC0\x0F\x45\xF0\xEB\x2A\xE8\x2A\x2A\x2A\x2A\x8B\xF0\x56"
+			}
+			"g_MannVsMachineUpgrades"
+			{
+				"library"	"server"
+				"linux"		"@g_MannVsMachineUpgrades"
+			}
+			"CTFPlayer::PostInventoryApplication"
+			{
+				"windows"	"\x55\x8B\xEC\x83\xEC\x40\x53\x8B\xD9\x56\x57\x89\x5D\x2A\x8D\x8B"
+				"linux"		"@_ZN9CTFPlayer24PostInventoryApplicationEv"
+			}
+			"CTFBot::SetMission"
+			{
+				"windows"	"\x55\x8B\xEC\x83\xEC\x20\x80\x7D\x2A\x00"
+				"linux"		"@_ZN6CTFBot10SetMissionENS_11MissionTypeEb"
+			}
+			"CTFPlayer::GetMaxAmmo"
+			{
+				"windows"	"\x55\x8B\xEC\x8B\x45\x2A\x53\x8B\xD9\x56\x57\x8B\x7D\x2A\x83\xF8\xFF"
+				"linux"		"@_ZN9CTFPlayer10GetMaxAmmoEii"
+			}
+			"CBaseEntity::GetNextThink"
+			{
+				"windows"	"\x55\x8B\xEC\x8B\x45\x08\x56\x8B\xF1\x85\xC0\x75\x2A\x8B\x86\xD0\x00\x00\x00\x89\x45\x08"
+				"linux"		"@_ZN11CBaseEntity12GetNextThinkEPKc"
+			}
+			"GEconItemSchema"
+			{
+				"windows"	"\xE8\x2A\x2A\x2A\x2A\x83\xC0\x04\xC3"
+				"linux"		"@_Z15GEconItemSchemav"
+			}
+			"CEconItemSchema::GetAttributeDefinitionByName"
+			{
+				"windows"   "\x55\x8B\xEC\x83\xEC\x1C\x83\x7D\x2A\x00"
+				"linux"		"@2_ZNK15CEconItemSchema28GetAttributeDefinitionByNameEPKc"
+			}
+			"CTFGameRules::CanUpgradeWithAttrib"
+			{
+				"windows"	"\x55\x8B\xEC\x83\xEC\x14\x53\x8B\x5D\x2A\x56\x66\x8B\x75"
+				"linux"		"@_ZN12CTFGameRules20CanUpgradeWithAttribEP9CTFPlayeritP22CMannVsMachineUpgrades"
+			}
+			"CTFGameRules::GetCostForUpgrade"
+			{
+				"windows"	"\x55\x8B\xEC\x57\x8B\x7D\x08\x85\xFF\x75\x2A\x33\xC0\x5F\x5D\xC2\x10\x00"
+				"linux"		"@_ZN12CTFGameRules17GetCostForUpgradeEP22CMannVsMachineUpgradesiiP9CTFPlayer"
+			}
+			"CTFGameRules::GetUpgradeTier"
+			{
+				"windows"	"\x55\x8B\xEC\x8B\x45\x08\x8B\x8C\x81\x70\x07\x00\x00"
+				"linux"		"@_ZN12CTFGameRules14GetUpgradeTierEi"
+			}
+			"CTFGameRules::IsUpgradeTierEnabled"
+			{
+				"windows"	"\x55\x8B\xEC\x81\xEC\xD4\x01\x00\x00\x83\x7D\x2A\x00"
+				"linux"		"@_ZN12CTFGameRules20IsUpgradeTierEnabledEP9CTFPlayerii"
+			}
+			"CMannVsMachineUpgradeManager::LoadUpgradesFile"
+			{
+				"windows"	"\xA1\x2A\x2A\x2A\x2A\x53\x8B\xD9\x56\x8D\x90\xA4\x0C\x00\x00"
+				"linux"		"@_ZN28CMannVsMachineUpgradeManager16LoadUpgradesFileEv"
+			}
+			"CTFPlayer::ManageRegularWeapons"
+			{
+				"windows"	"\x55\x8B\xEC\x83\xEC\x74\x57\x8B\xF9\xE8\x2A\x2A\x2A\x2A\x8D\x8F\xE0\x1A\x00\x00"
+				"linux"		"@_ZN9CTFPlayer20ManageRegularWeaponsEP19TFPlayerClassData_t"
+			}
+		}
+		"Offsets"
+		{
+			"CBaseCombatWeapon::HasAmmo"
+			{
+				"windows"	"239"
+				"linux"		"245"
+			}
+			"CBaseCombatCharacter::GetAmmoCount"
+			{
+				"windows"	"265"		
+				"linux"		"266"
+			}
+			"CItem::MyTouch"
+			{
+				"windows"	"228"
+				"linux"		"229"
+			}
+			"CBasePlayer::IsBot"
+			{
+				"windows"	"454"
+				"linux"		"455"
+			}
+			"CBaseEntity::Event_Killed"
+			{
+				"windows"	"68"
+				"linux"		"69"
+			}
+			"IVision::IsVisibleEntityNoticed"
+			{
+				"windows"	"64"
+				"linux"		"65"
+			}
+			"IVision::IsIgnored"
+			{
+				"windows"	"63"
+				"linux"		"64"
+			}
+			//NOTE: variable offsets are calculated based on these values with the base netprop offset in the Keys section
+			"CTFPlayer::m_isLookingAroundForEnemies" //Actual property is on class CTFBot
+			{
+				"windows"	"612" //build 8622567: 10336
+				"linux"		"612" //build 8622567: 10332
+			}
+		}
+		"Functions"
+		{
+			"CMannVsMachineUpgradeManager::LoadUpgradesFile"
+			{
+				"signature"	"CMannVsMachineUpgradeManager::LoadUpgradesFile"
+				"callconv"	"thiscall"
+				"return"	"void"
+				"this"		"address"
+			}
+			"CTFPlayer::ManageRegularWeapons"
+			{
+				"signature"	"CTFPlayer::ManageRegularWeapons"
+				"callconv"	"thiscall"
+				"return"	"void"
+				"this"		"entity"
+				"arguments"
+				{
+					"pData"
+					{
+						"type"	"int"
+					}
+				}
+			}
+			"CItem::MyTouch"
+			{
+				"offset"	"CItem::MyTouch"
+				"hooktype"	"entity"
+				"return"	"bool"
+				"this"		"entity"
+				"arguments"
+				{
+					"pPlayer"
+					{
+						"type"	"cbaseentity"
+					}
+				}
+			}
+			"CBasePlayer::IsBot"
+			{
+				"offset"	"CBasePlayer::IsBot"
+				"hooktype"	"entity"
+				"return"	"bool"
+				"this"		"entity"
+			}
+			"CBaseEntity::Event_Killed"
+			{
+				"offset"	"CBaseEntity::Event_Killed"
+				"hooktype"	"entity"
+				"return"	"void"
+				"this"		"entity"
+				"arguments"
+				{
+					"info"
+					{
+						"type"	"objectptr"
+						"flags"	"byref"
+					}
+				}
+			}
+			"IVision::IsVisibleEntityNoticed"
+			{
+				"offset"	"IVision::IsVisibleEntityNoticed"
+				"hooktype"	"raw"
+				"return"	"bool"
+				"this"		"address"
+				"arguments"
+				{
+					"subject"
+					{
+						"type"	"cbaseentity"
+					}
+				}
+			}
+			"IVision::IsIgnored"
+			{
+				"offset"	"IVision::IsIgnored"
+				"hooktype"	"raw"
+				"return"	"bool"
+				"this"		"address"
+				"arguments"
+				{
+					"subject"
+					{
+						"type"	"cbaseentity"
+					}
+				}
+			}
+		}
+	}
+}
