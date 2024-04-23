@@ -8,3 +8,8 @@
 - [CBaseNPC](https://github.com/TF2-DMB/CBaseNPC)
 - [Actions](https://github.com/Vinillia/actions.ext)
 - [REST in Pawn](https://github.com/ErikMinekus/sm-ripext)
+## Compilation Only
+- [actions&cbasenpc.inc](https://github.com/OfficerSpy/Sourcemod-Modified-Includes/blob/main/inc_mod_compatibility/actions%26cbasenpc.inc)
+- [stocklib_officerspy](https://github.com/OfficerSpy/SM_Stock_OfficerSpy)
+# Credits
+- Initial AI code is a port over from [[TF2] MvM AFK Bot](https://github.com/Pelipoika/TF2_Idlebot) AI code.
