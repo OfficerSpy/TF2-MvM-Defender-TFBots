@@ -53,7 +53,7 @@ enum //CMannVsMachineUpgrades
 
 methodmap CMannVsMachineUpgrades
 {
-	property Address Address 
+	property Address Address
 	{
 		public get() 
 		{

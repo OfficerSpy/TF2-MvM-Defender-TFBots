@@ -20,6 +20,11 @@
 				"windows"	"m_iPlayerSkinOverride"
 				"linux"		"m_iPlayerSkinOverride"
 			}
+			"CPopulationManager_BaseOffset"
+			{
+				"windows"	"m_vecOrigin"
+				"linux"		"m_vecOrigin"
+			}
 		}
 		"Signatures"
 		{
@@ -55,7 +60,7 @@
 			}
 			"CEconItemSchema::GetAttributeDefinitionByName"
 			{
-				"windows"   "\x55\x8B\xEC\x83\xEC\x1C\x83\x7D\x2A\x00"
+				"windows"	"\x55\x8B\xEC\x83\xEC\x1C\x83\x7D\x2A\x00"
 				"linux"		"@2_ZNK15CEconItemSchema28GetAttributeDefinitionByNameEPKc"
 			}
 			"CTFGameRules::CanUpgradeWithAttrib"
@@ -131,6 +136,11 @@
 			{
 				"windows"	"612" //build 8622567: 10336
 				"linux"		"612" //build 8622567: 10332
+			}
+			"CPopulationManager::m_nStartingCurrency"
+			{
+				"windows"	"628" //build 8835751: 1460
+				"linux"		"628" //build 8835751: 1484
 			}
 		}
 		"Functions"

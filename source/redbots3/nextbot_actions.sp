@@ -346,6 +346,7 @@ BehaviorAction CTFBotDefenderAttack()
 	action.OnStart = CTFBotDefenderAttack_OnStart;
 	action.Update = CTFBotDefenderAttack_Update;
 	action.OnEnd = CTFBotDefenderAttack_OnEnd;
+	action.SelectMoreDangerousThreat = CTFBotDefenderAttack_SelectMoreDangerousThreat;
 	
 	return action;
 }
@@ -419,7 +420,7 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 		
 		if (m_flRepathTime[actor] <= GetGameTime())
 		{
-			m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(1.0, 3.0);
+			m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.5, 1.0);
 			m_pPath[actor].ComputeToTarget(myBot, m_iAttackTarget[actor]);
 		}
 	}
@@ -430,6 +431,33 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 public void CTFBotDefenderAttack_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
 	m_iAttackTarget[actor] = -1;
+}
+
+public Action CTFBotDefenderAttack_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
+{
+	CKnownEntity knownThreat1 = view_as<CKnownEntity>(threat1);
+	int iThreat1 = knownThreat1.GetEntity();
+	
+	if (BaseEntity_IsPlayer(iThreat1) && iThreat1 == m_iAttackTarget[entity] && knownThreat1.IsVisibleInFOVNow())
+	{
+		//Our own current chase target is a high priority, unless they're being healed by a medic
+		knownEntity = view_as<Address>(GetHealerOfThreat(view_as<INextBot>(nextbot), view_as<CKnownEntity>(threat1)));
+		
+		return Plugin_Changed;
+	}
+	
+	CKnownEntity knownThreat2 = view_as<CKnownEntity>(threat2);
+	int iThreat2 = knownThreat2.GetEntity();
+	
+	if (BaseEntity_IsPlayer(iThreat2) && iThreat2 == m_iAttackTarget[entity] && knownThreat2.IsVisibleInFOVNow())
+	{
+		knownEntity = view_as<Address>(GetHealerOfThreat(view_as<INextBot>(nextbot), view_as<CKnownEntity>(threat2)));
+		
+		return Plugin_Changed;
+	}
+	
+	//Use default targeting, which prioritizes closer threats first
+	return Plugin_Continue;
 }
 
 BehaviorAction CTFBotMarkGiant()
@@ -2139,7 +2167,8 @@ void CollectUpgrades(int client)
 	CTFPlayerUpgrades[client] = new JSONArray();
 	
 	ArrayList iArraySlots = new ArrayList();
-	iArraySlots.Push(-1);	//Always buy player upgrades
+	
+	iArraySlots.Push(-1); //Always buy player upgrades
 	
 	bool bDemoKnight = (!IsCombatWeapon(GetPlayerWeaponSlot(client, TFWeaponSlot_Primary)));
 	bool bEngineer = (TF2_GetPlayerClass(client) == TFClass_Engineer);
@@ -2155,6 +2184,17 @@ void CollectUpgrades(int client)
 		if (TF2_GetPlayerClass(client) == TFClass_Sniper)
 		{
 			iArraySlots.Push(TF_LOADOUT_SLOT_PRIMARY);
+			iArraySlots.Push(TF_LOADOUT_SLOT_MELEE);
+		}
+		else if (TF2_GetPlayerClass(client) == TFClass_Medic)
+		{
+			//Buy upgrades for our medigun
+			iArraySlots.Push(TF_LOADOUT_SLOT_SECONDARY);
+		}
+		else if (TF2_GetPlayerClass(client) == TFClass_Spy)
+		{
+			//Buy upgrades for our sapper and knife
+			iArraySlots.Push(TF_LOADOUT_SLOT_SECONDARY);
 			iArraySlots.Push(TF_LOADOUT_SLOT_MELEE);
 		}
 
@@ -2380,16 +2420,16 @@ void KV_MvM_UpgradesBegin(int client)
 
 float GetUpgradeInterval()
 {
-	if (redbots_manager_mode.IntValue == MANAGER_MODE_AUTO_BOTS)
-	{
-		//Since we're joining in the middle of a round, we want to upgrade fast
-		return GetRandomFloat(0.3, 1.2);
-	}
-	
 	float customInterval = redbots_manager_bot_upgrade_interval.FloatValue;
 	
 	if (customInterval >= 0.0)
 		return customInterval;
+	
+	if (redbots_manager_mode.IntValue == MANAGER_MODE_AUTO_BOTS)
+	{
+		//Since we're joining in the middle of a round, we want to upgrade fast
+		return GetRandomFloat(0.3, 0.75);
+	}
 	
 	const float interval = 1.25;
 	const float variance = 0.3;

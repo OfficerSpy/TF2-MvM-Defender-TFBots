@@ -55,6 +55,15 @@ enum eMissionDifficulty
 	MISSION_MAX_COUNT
 };
 
+enum
+{
+	STATS_CREDITS_DROPPED = 0,
+	STATS_CREDITS_ACQUIRED,
+	STATS_CREDITS_BONUS,
+	STATS_PLAYER_DEATHS,
+	STATS_BUYBACKS
+};
+
 char g_sPlayerUseMyNameResponse[][] =
 {
 	"You're very funny for using my name, %s",
@@ -446,6 +455,30 @@ float[] TF2_GetBombHatchPosition()
 TFTeam GetEnemyTeamOfPlayer(int client)
 {
 	return TF2_GetEnemyTeam(TF2_GetClientTeam(client));
+}
+
+int GetAcquiredCreditsOfAllWaves(bool withBonus = true)
+{
+	int ent = FindEntityByClassname(MaxClients + 1, "tf_mann_vs_machine_stats");
+	
+	if (ent == -1)
+	{
+		LogError("GetAcquiredCreditsOfAllWaves: Could not find entity tf_mann_vs_machine_stats!");
+		return 0;
+	}
+	
+	int total = GetEntProp(ent, Prop_Send, "m_runningTotalWaveStats", _, STATS_CREDITS_ACQUIRED)
+	total += GetEntProp(ent, Prop_Send, "m_previousWaveStats", _, STATS_CREDITS_ACQUIRED)
+	total += GetEntProp(ent, Prop_Send, "m_currentWaveStats", _, STATS_CREDITS_ACQUIRED);
+	
+	if (withBonus)
+	{
+		total += GetEntProp(ent, Prop_Send, "m_runningTotalWaveStats", _, STATS_CREDITS_BONUS)
+		total += GetEntProp(ent, Prop_Send, "m_previousWaveStats", _, STATS_CREDITS_BONUS)
+		total += GetEntProp(ent, Prop_Send, "m_currentWaveStats", _, STATS_CREDITS_BONUS);
+	}
+	
+	return total;
 }
 
 stock void RefundPlayerUpgrades(int client)

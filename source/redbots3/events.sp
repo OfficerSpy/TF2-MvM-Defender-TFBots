@@ -69,16 +69,24 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 	if (!IsClientInGame(data) || !IsTFBotPlayer(data) || TF2_GetClientTeam(data) != TFTeam_Red)
 		return Plugin_Stop;
 	
+	if (g_bIsDefenderBot[data])
+	{
+		if (redbots_manager_debug.BoolValue)
+			PrintToChatAll("Timer_PlayerSpawn: Currency for %d is %d", data, TF2_GetCurrency(data));
+		
+		//We already made this guy into our bot, so do nothing
+		return Plugin_Stop;
+	}
+	
 	char clientName[MAX_NAME_LENGTH]; GetClientName(data, clientName, sizeof(clientName));
 	
-	//Identify if the bot is ours, ignore the ones we do know so this is only done once
-	if (g_bIsDefenderBot[data] == false && StrContains(clientName, TFBOT_IDENTITY_NAME) != -1)
+	//Identify if the bot is ours
+	if (StrContains(clientName, TFBOT_IDENTITY_NAME) != -1)
 	{
 		g_bIsDefenderBot[data] = true;
 		
 		SetRandomNameOnBot(data);
 		
-		RefundPlayerUpgrades(data); //Give current wave money and forces respawn
 		g_bHasBoughtUpgrades[data] = false;
 		
 		SDKHook(data, SDKHook_Touch, DefenderBot_Touch);
@@ -86,19 +94,23 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 		
 		DHooks_DefenderBot(data);
 		
-		//For some reason, custom weapons aren't given unless the player respawns again
 		if (redbots_manager_use_custom_loadouts.BoolValue)
+		{
+			//For some reason, custom weapons aren't given unless the player respawns again
 			TF2_RespawnPlayer(data);
-		
-		//Custom loadouts runs it own check for the sniper's primary
-		if (!redbots_manager_use_custom_loadouts.BoolValue)
-			SetMission(data, CTFBot_MISSION_SNIPER);
+		}
+		else
+		{
+			//NOTE: custom loadouts runs it own check for the sniper's primary
+			if (TF2_GetPlayerClass(data) == TFClass_Sniper)
+				SetMission(data, CTFBot_MISSION_SNIPER);
+		}
 		
 		//Let medic bots use their shields
 		VS_AddBotAttribute(data, CTFBot_PROJECTILE_SHIELD);
 		
-		//We stop here cause of the respawn, so this whole function will be called again anyways
-		return Plugin_Stop;
+		//Set the credits we should have at this time
+		TF2_SetCurrency(data, GetStartingCurrency(g_iPopulationManager) + GetAcquiredCreditsOfAllWaves());
 	}
 	
 	return Plugin_Stop;

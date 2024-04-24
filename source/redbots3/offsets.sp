@@ -2,35 +2,18 @@
 //https://github.com/Mikusch/MannVsMann/blob/571737b5ae0aadc1e743360e94311ca64e693bd9/addons/sourcemod/scripting/mannvsmann/offsets.sp
 static StringMap m_adtOffsets;
 
-static int m_iOffsetIsLookingAroundForEnemies;
-
 void InitOffsets(GameData hGamedata)
 {
 	m_adtOffsets = new StringMap();
 	
 	SetOffset(hGamedata, "CTFPlayer", "m_isLookingAroundForEnemies");
-	
-	//Set offset values
-	m_iOffsetIsLookingAroundForEnemies = GetOffset("CTFPlayer", "m_isLookingAroundForEnemies");
+	SetOffset(hGamedata, "CPopulationManager", "m_nStartingCurrency");
 	
 #if defined TESTING_ONLY
 	//Dump offsets
-	LogMessage("InitOffsets: CTFBot m_isLookingAroundForEnemies = %d", m_iOffsetIsLookingAroundForEnemies);
+	LogMessage("InitOffsets: CTFBot->m_isLookingAroundForEnemies = %d", GetOffset("CTFPlayer", "m_isLookingAroundForEnemies"));
+	LogMessage("InitOffsets: CPopulationManager->m_nStartingCurrency = %d", GetOffset("CPopulationManager", "m_nStartingCurrency"));
 #endif
-}
-
-static any GetOffset(const char[] cls, const char[] prop)
-{
-	char key[64];
-	Format(key, sizeof(key), "%s::%s", cls, prop);
-	
-	int offset;
-	if (!m_adtOffsets.GetValue(key, offset))
-	{
-		ThrowError("Offset '%s' not present in map", key);
-	}
-	
-	return offset;
 }
 
 static void SetOffset(GameData hGamedata, const char[] cls, const char[] prop)
@@ -68,7 +51,27 @@ static void SetOffset(GameData hGamedata, const char[] cls, const char[] prop)
 	}
 }
 
+static any GetOffset(const char[] cls, const char[] prop)
+{
+	char key[64];
+	Format(key, sizeof(key), "%s::%s", cls, prop);
+	
+	int offset;
+	if (!m_adtOffsets.GetValue(key, offset))
+	{
+		ThrowError("Offset '%s' not present in map", key);
+	}
+	
+	return offset;
+}
+
 void SetLookingAroundForEnemies(int client, bool shouldLook)
 {
-	SetEntData(client, m_iOffsetIsLookingAroundForEnemies, shouldLook, 1);
+	SetEntData(client, GetOffset("CTFPlayer", "m_isLookingAroundForEnemies"), shouldLook, 1);
+}
+
+int GetStartingCurrency(int populator)
+{
+	//NOTE: the actual starting currecny is determined by two variables, but the other one doesn't seem to matter
+	return GetEntData(populator, GetOffset("CPopulationManager", "m_nStartingCurrency"));
 }

@@ -12,7 +12,7 @@
 #pragma semicolon 1
 #pragma newdecls required
 
-// #define TESTING_ONLY
+#define TESTING_ONLY
 
 #define METHOD_MVM_UPGRADES
 
@@ -38,6 +38,9 @@ static float m_flLastReadyInputTime[MAXPLAYERS + 1];
 
 //Config
 ArrayList adtBotNames;
+
+//Global entities
+int g_iPopulationManager = -1;
 
 ConVar redbots_manager_debug;
 ConVar redbots_manager_debug_actions;
@@ -186,6 +189,9 @@ public void OnClientPutInServer(int client)
 
 public void OnEntityCreated(int entity, const char[] classname)
 {
+	if (StrEqual(classname, "info_populator"))
+		g_iPopulationManager = entity;
+	
 	DHooks_OnEntityCreated(entity, classname);
 }
 
@@ -433,7 +439,7 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 				if (m_flLastReadyInputTime[client] <= GetGameTime())
 				{
 					m_flLastReadyInputTime[client] = GetGameTime() + 3.0;
-					PrintToChat(client, "Press ready again to start the bots.");
+					PrintToChat(client, "%s Press ready again to start the bots.", PLUGIN_PREFIX);
 					
 					return Plugin_Handled;
 				}
@@ -458,7 +464,7 @@ public Action Timer_CheckBotImbalance(Handle timer)
 	
 	switch (redbots_manager_mode.IntValue)
 	{
-		case MANAGER_MODE_MANUAL_BOTS:
+		case MANAGER_MODE_MANUAL_BOTS, MANAGER_MODE_READY_BOTS:
 		{
 			//Bots are added pre-round, don't monitor them during the round
 			if (GameRules_GetRoundState() != RoundState_BetweenRounds)
