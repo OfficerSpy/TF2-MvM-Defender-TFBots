@@ -13,5 +13,6 @@
 - [stocklib_officerspy](https://github.com/OfficerSpy/SM_Stock_OfficerSpy)
 # Credits
 - Initial AI code is a port over from [[TF2] MvM AFK Bot](https://github.com/Pelipoika/TF2_Idlebot) AI code.
-- Internal PluginBot code based on C++ code from [PathFollower](https://github.com/Pelipoika/PathFollower).
-- Tank Weapon Score System based on code from mvm defender bots behavior from [sigsegv MvM](https://github.com/sigsegv-mvm/sigsegv-mvm).
+- Internal PluginBot based on C++ code from [PathFollower](https://github.com/Pelipoika/PathFollower).
+- Certain functions have functionality based on Valve's own code from the game.
+- Tank Weapon Score System based on C++ code from mvm defender bots behavior from [sigsegv MvM](https://github.com/sigsegv-mvm/sigsegv-mvm).
