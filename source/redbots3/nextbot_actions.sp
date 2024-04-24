@@ -613,13 +613,13 @@ public Action CTFBotGotoUpgrade_OnStart(BehaviorAction action, int actor, Behavi
 
 public Action CTFBotGotoUpgrade_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
+	if (TF2_IsInUpgradeZone(actor)) 
+		return action.ChangeTo(CTFBotUpgrade(), "Reached upgrade station; buying upgrades");
+	
 	int station = m_iStation[actor];
 	
 	// if (!IsValidEntity(station))
 		// return action.Done("Upgrade station is invalid");
-	
-	if (TF2_IsInUpgradeZone(actor)) 
-		return action.ChangeTo(CTFBotUpgrade(), "Reached upgrade station; buying upgrades");
 	
 	//Moved from OnStart for technical reasons
 	float center[3];
@@ -952,7 +952,7 @@ public Action CTFBotMoveToFront_Update(BehaviorAction action, int actor, float i
 	
 	if (m_flRepathTime[actor] <= GetGameTime())
 	{
-		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(1.0, 2.0);
+		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(3.0, 4.0);
 		m_pPath[actor].ComputeToPos(myBot, m_vecGoalArea[actor]);
 	}
 	
@@ -1754,9 +1754,22 @@ Action GetDesiredBotAction(int client, BehaviorAction action)
 	if (state == RoundState_BetweenRounds)
 	{
 		if (CTFBotCollectMoney_IsPossible(client))
+		{
+			//Collect any leftover money that my team didn't collect
 			return action.SuspendFor(CTFBotCollectMoney(), "Is possible");
-		else if (redbots_manager_bot_use_upgrades.BoolValue && !TF2_IsInUpgradeZone(client) && !IsPlayerReady(client) && ActionsManager.GetAction(client, "DefenderMoveToFront") == INVALID_ACTION)
-			return action.SuspendFor(CTFBotGotoUpgrade(), "!IsInUpgradeZone && RoundState_BetweenRounds");
+		}
+		else if (!TF2_IsInUpgradeZone(client) && !IsPlayerReady(client) && ActionsManager.GetAction(client, "DefenderMoveToFront") == INVALID_ACTION)
+		{
+			if (redbots_manager_bot_use_upgrades.BoolValue)
+			{
+				return action.SuspendFor(CTFBotGotoUpgrade(), "!IsInUpgradeZone && RoundState_BetweenRounds");
+			}
+			else
+			{
+				FakeClientCommand(client, "tournament_player_readystate 1");
+				return action.SuspendFor(CTFBotMoveToFront(), "Skip upgrading");
+			}
+		}
 	}
 	else if (state == RoundState_RoundRunning)
 	{
@@ -2035,19 +2048,19 @@ bool CTFBotCollectMoney_IsPossible(int actor)
 
 int FindClosestUpgradeStation(int actor)
 {
-	int stations[MAXPLAYERS+1];
+	int stations[MAXPLAYERS + 1];
 	int stationcount;
 	
 	int i = -1;
 	while ((i = FindEntityByClassname(i, "func_upgradestation")) != -1)
 	{
-		if (GetEntProp(i, Prop_Data, "m_bDisabled"))
+		if (GetEntProp(i, Prop_Data, "m_bDisabled") == 1)
 			continue;
 		
 		CNavArea area = TheNavMesh.GetNearestNavArea(WorldSpaceCenter(i), true, 8000.0, false, false, TEAM_ANY);
 		
 		if (area == NULL_AREA)
-			return false;
+			continue;
 		
 		float center[3]; area.GetCenter(center);
 		
@@ -2370,7 +2383,7 @@ float GetUpgradeInterval()
 	if (redbots_manager_mode.IntValue == MANAGER_MODE_AUTO_BOTS)
 	{
 		//Since we're joining in the middle of a round, we want to upgrade fast
-		return GetRandomFloat(0.3, 1.0);
+		return GetRandomFloat(0.3, 1.2);
 	}
 	
 	float customInterval = redbots_manager_bot_upgrade_interval.FloatValue;

@@ -530,3 +530,8 @@ stock bool IsZeroVector(float origin[3])
 {
 	return origin[0] == NULL_VECTOR[0] && origin[1] == NULL_VECTOR[1] && origin[2] == NULL_VECTOR[2];
 }
+
+stock void SetPlayerReady(int client, bool state)
+{
+	FakeClientCommand(client, "tournament_player_readystate %d", state);
+}
