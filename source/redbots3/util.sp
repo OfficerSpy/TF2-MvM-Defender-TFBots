@@ -5,6 +5,9 @@
 #include <stocklib_officerspy/tf/stocklib_extra_vscript>
 #include <stocklib_officerspy/econ_item_view>
 
+//WeaponData > Range in file tf_weapon_medigun.txt
+#define WEAPON_MEDIGUN_RANGE	450.0
+
 enum //medigun_resist_types_t
 {
 	MEDIGUN_BULLET_RESIST = 0,
@@ -345,9 +348,9 @@ bool IsSentryBusterRobot(int client)
 	return StrEqual(model, "models/bots/demo/bot_sentry_buster.mdl");
 }
 
-int TF2_FindBotNearestToBombNearestToHatch(int client)
+int FindBotNearestToBombNearestToHatch(int client)
 {
-	int iBomb = TF2_FindBombNearestToHatch();
+	int iBomb = FindBombNearestToHatch();
 	
 	if (iBomb <= 0)
 		return -1;
@@ -386,9 +389,9 @@ int TF2_FindBotNearestToBombNearestToHatch(int client)
 	return iBestEntity;
 }
 
-int TF2_FindBombNearestToHatch()
+int FindBombNearestToHatch()
 {
-	float flOrigin[3]; flOrigin = TF2_GetBombHatchPosition();
+	float flOrigin[3]; flOrigin = GetBombHatchPosition();
 	
 	float flBestDistance = 999999.0;
 	int iBestEntity = -1;
@@ -426,6 +429,45 @@ float[] GetAbsAngles(int client)
 	return vec;
 }
 
+int SelectRandomReachableEnemy(int actor)
+{
+	TFTeam opposingTFTeam = GetEnemyTeamOfPlayer(actor);
+	
+	int playerarray[MAXPLAYERS + 1];
+	int playercount;
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (i == actor)
+			continue;
+		
+		if (!IsClientInGame(i))
+			continue;
+		
+		if (!IsPlayerAlive(i))
+			continue;
+		
+		if (TF2_GetClientTeam(i) != opposingTFTeam)
+			continue;
+		
+		if (TF2Util_IsPointInRespawnRoom(WorldSpaceCenter(i)))
+			continue;
+		
+		if (IsSentryBusterRobot(i))
+			continue;
+		
+		playerarray[playercount] = i;
+		playercount++;
+	}
+	
+	if (playercount > 0)
+	{
+		return playerarray[GetRandomInt(0, playercount-1)];
+	}
+	
+	return -1;
+}
+
 bool IsHealedByMedic(int client)
 {
 	for (int i = 0; i < GetEntProp(client, Prop_Send, "m_nNumHealers"); i++)
@@ -442,7 +484,7 @@ bool IsHealedByMedic(int client)
 	return false;
 }
 
-float[] TF2_GetBombHatchPosition()
+float[] GetBombHatchPosition()
 {
 	float flOrigin[3];
 
@@ -481,6 +523,39 @@ int GetAcquiredCreditsOfAllWaves(bool withBonus = true)
 	}
 	
 	return total;
+}
+
+int GerNearestTeammate(int client, float max_distance)
+{
+	float origin[3]; origin = WorldSpaceCenter(client);
+	
+	float bestDistance = 999999.0;
+	int bestEntity = -1;
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (i == client)
+			continue;
+		
+		if (!IsClientInGame(i))
+			continue;
+		
+		if (!IsPlayerAlive(i))
+			continue;
+		
+		if (GetClientTeam(i) != GetClientTeam(client))
+			continue;
+		
+		float distance = GetVectorDistance(WorldSpaceCenter(i), origin);
+		
+		if (distance <= bestDistance && distance <= max_distance)
+		{
+			bestDistance = distance;
+			bestEntity = i;
+		}
+	}
+	
+	return bestEntity;
 }
 
 stock void RefundPlayerUpgrades(int client)
