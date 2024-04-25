@@ -329,7 +329,7 @@ bool IsWeapon(int client, int iWeaponID)
 {
 	int iWeapon = BaseCombatCharacter_GetActiveWeapon(client);
 	
-	if (IsValidEntity(iWeapon))
+	if (iWeapon > 0)
 		return TF2Util_GetWeaponID(iWeapon) == iWeaponID;
 	
 	return false;
@@ -337,7 +337,9 @@ bool IsWeapon(int client, int iWeaponID)
 
 bool IsSentryBusterRobot(int client)
 {
-	//TODO: maybe this could be done better for actual tfbots
+	if (IsTFBotPlayer(client))
+		return GetTFBotMission(client) == CTFBot_MISSION_DESTROY_SENTRIES;
+	
 	char model[PLATFORM_MAX_PATH]; GetClientModel(client, model, PLATFORM_MAX_PATH);
 	
 	return StrEqual(model, "models/bots/demo/bot_sentry_buster.mdl");

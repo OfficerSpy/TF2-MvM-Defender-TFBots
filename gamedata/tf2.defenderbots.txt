@@ -132,7 +132,7 @@
 				"linux"		"64"
 			}
 			//NOTE: variable offsets are calculated based on these values with the base netprop offset in the Keys section
-			"CTFPlayer::m_isLookingAroundForEnemies" //Actual property is on class CTFBot
+			"CTFPlayer::m_isLookingAroundForEnemies" //Property on class CTFBot
 			{
 				"windows"	"612" //build 8622567: 10336
 				"linux"		"612" //build 8622567: 10332
@@ -141,6 +141,11 @@
 			{
 				"windows"	"628" //build 8835751: 1460
 				"linux"		"628" //build 8835751: 1484
+			}
+			"CTFPlayer::m_mission" //Property on class CTFBot
+			{
+				"windows"	"664" //build 8835751: 10388
+				"linux"		"664" //build 8835751: 10384
 			}
 		}
 		"Functions"

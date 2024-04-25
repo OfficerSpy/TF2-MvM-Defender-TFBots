@@ -8,11 +8,13 @@ void InitOffsets(GameData hGamedata)
 	
 	SetOffset(hGamedata, "CTFPlayer", "m_isLookingAroundForEnemies");
 	SetOffset(hGamedata, "CPopulationManager", "m_nStartingCurrency");
+	SetOffset(hGamedata, "CTFPlayer", "m_mission");
 	
 #if defined TESTING_ONLY
 	//Dump offsets
 	LogMessage("InitOffsets: CTFBot->m_isLookingAroundForEnemies = %d", GetOffset("CTFPlayer", "m_isLookingAroundForEnemies"));
 	LogMessage("InitOffsets: CPopulationManager->m_nStartingCurrency = %d", GetOffset("CPopulationManager", "m_nStartingCurrency"));
+	LogMessage("InitOffsets: CTFBot->m_mission = %d", GetOffset("CTFPlayer", "m_mission"));
 #endif
 }
 
@@ -74,4 +76,9 @@ int GetStartingCurrency(int populator)
 {
 	//NOTE: the actual starting currecny is determined by two variables, but the other one doesn't seem to matter
 	return GetEntData(populator, GetOffset("CPopulationManager", "m_nStartingCurrency"));
+}
+
+MissionType GetTFBotMission(int client)
+{
+	return view_as<MissionType>(GetEntData(client, GetOffset("CTFPlayer", "m_mission")));
 }

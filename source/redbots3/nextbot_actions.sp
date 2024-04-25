@@ -161,24 +161,29 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 
 public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
-	if (g_bIsDefenderBot[actor] && GameRules_GetRoundState() == RoundState_RoundRunning)
+	if (g_bIsDefenderBot[actor])
 	{
-		bool low_health = false;
+		MonitorKnownEntities(actor, CBaseNPC_GetNextBotOfEntity(actor).GetVisionInterface());
 		
-		float health_ratio = view_as<float>(GetClientHealth(actor)) / view_as<float>(BaseEntity_GetMaxHealth(actor));
-		
-		if ((GetTimeSinceWeaponFired(actor) > 2.0 || TF2_GetPlayerClass(actor) == TFClass_Sniper) && health_ratio < tf_bot_health_critical_ratio.FloatValue)
-			low_health = true;
-		else if (health_ratio < tf_bot_health_ok_ratio.FloatValue)
-			low_health = true;
-		
-		if (low_health && CTFBotGetHealth_IsPossible(actor) && !TF2_IsInvulnerable(actor))
-			return action.SuspendFor(CTFBotGetHealth(), "Getting health");
-		else if (IsAmmoLow(actor) && CTFBotGetAmmo_IsPossible(actor))
-			return action.SuspendFor(CTFBotGetAmmo(), "Getting ammo");
-		
-		OpportunisticallyUseWeaponAbilities(actor);
-		//TODO: use canteens
+		if (GameRules_GetRoundState() == RoundState_RoundRunning)
+		{
+			bool low_health = false;
+			
+			float health_ratio = view_as<float>(GetClientHealth(actor)) / view_as<float>(BaseEntity_GetMaxHealth(actor));
+			
+			if ((GetTimeSinceWeaponFired(actor) > 2.0 || TF2_GetPlayerClass(actor) == TFClass_Sniper) && health_ratio < tf_bot_health_critical_ratio.FloatValue)
+				low_health = true;
+			else if (health_ratio < tf_bot_health_ok_ratio.FloatValue)
+				low_health = true;
+			
+			if (low_health && CTFBotGetHealth_IsPossible(actor) && !TF2_IsInvulnerable(actor))
+				return action.SuspendFor(CTFBotGetHealth(), "Getting health");
+			else if (IsAmmoLow(actor) && CTFBotGetAmmo_IsPossible(actor))
+				return action.SuspendFor(CTFBotGetAmmo(), "Getting ammo");
+			
+			OpportunisticallyUseWeaponAbilities(actor);
+			//TODO: use canteens
+		}
 	}
 	
 	return Plugin_Continue;
@@ -410,9 +415,6 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 		EquipBestWeaponForThreat(actor, threat);
 	}
 	
-	//Make sure we're aware of our target
-	myVision.AddKnownEntity(m_iAttackTarget[actor]);
-	
 	//Path if out of range or cannot see target
 	if (myBot.IsRangeGreaterThanEx(threatOrigin, GetDesiredAttackRange(actor)) || !TF2_IsLineOfFireClear(actor, myEyePos, threatOrigin))
 	{
@@ -435,10 +437,12 @@ public void CTFBotDefenderAttack_OnEnd(BehaviorAction action, int actor, Behavio
 
 public Action CTFBotDefenderAttack_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
 {
+	int me = action.Actor;
+	
 	CKnownEntity knownThreat1 = view_as<CKnownEntity>(threat1);
 	int iThreat1 = knownThreat1.GetEntity();
 	
-	if (BaseEntity_IsPlayer(iThreat1) && iThreat1 == m_iAttackTarget[entity] && knownThreat1.IsVisibleInFOVNow())
+	if (BaseEntity_IsPlayer(iThreat1) && iThreat1 == m_iAttackTarget[me] && knownThreat1.IsVisibleInFOVNow())
 	{
 		//Our own current chase target is a high priority, unless they're being healed by a medic
 		knownEntity = view_as<Address>(GetHealerOfThreat(view_as<INextBot>(nextbot), view_as<CKnownEntity>(threat1)));
@@ -449,15 +453,17 @@ public Action CTFBotDefenderAttack_SelectMoreDangerousThreat(BehaviorAction acti
 	CKnownEntity knownThreat2 = view_as<CKnownEntity>(threat2);
 	int iThreat2 = knownThreat2.GetEntity();
 	
-	if (BaseEntity_IsPlayer(iThreat2) && iThreat2 == m_iAttackTarget[entity] && knownThreat2.IsVisibleInFOVNow())
+	if (BaseEntity_IsPlayer(iThreat2) && iThreat2 == m_iAttackTarget[me] && knownThreat2.IsVisibleInFOVNow())
 	{
 		knownEntity = view_as<Address>(GetHealerOfThreat(view_as<INextBot>(nextbot), view_as<CKnownEntity>(threat2)));
 		
 		return Plugin_Changed;
 	}
 	
-	//Use default targeting, which prioritizes closer threats first
-	return Plugin_Continue;
+	//Use standard threat selection
+	knownEntity = Address_Null;
+	
+	return Plugin_Changed;
 }
 
 BehaviorAction CTFBotMarkGiant()
@@ -3341,7 +3347,7 @@ float GetIdealTankAttackRange(int client)
 			return TANK_ATTACK_RANGE_MELEE;
 		}
 		
-		switch(TF2Util_GetWeaponID(weapon))
+		switch (TF2Util_GetWeaponID(weapon))
 		{
 			case TF_WEAPON_ROCKETLAUNCHER, TF_WEAPON_GRENADELAUNCHER, TF_WEAPON_FLAREGUN, TF_WEAPON_DIRECTHIT, TF_WEAPON_PARTICLE_CANNON, TF_WEAPON_CANNON:
 			{
@@ -3363,12 +3369,13 @@ float GetIdealTankAttackRange(int client)
 			vis.ForgetEntity(i);
 } */
 
+//Extension of the original function
 bool OpportunisticallyUseWeaponAbilities(int client)
 {
 	//The Hitmans Heatmaker
 	if (HasSniperRifle(client) && TF2_IsPlayerInCondition(client, TFCond_Slowed))
 	{
-		if (GetEntPropFloat(client, Prop_Send, "m_flRageMeter") >= 0.0 && GetEntProp(client, Prop_Send, "m_bRageDraining") == 0)
+		if (TF2_GetRageMeter(client) >= 0.0 && !TF2_IsRageDraining(client))
 		{
 			g_iAdditionalButtons[client] |= IN_RELOAD;
 			return true;
@@ -3378,7 +3385,7 @@ bool OpportunisticallyUseWeaponAbilities(int client)
 	//Phlogistinator
 	if (IsWeapon(client, TF_WEAPON_FLAMETHROWER))
 	{
-		if (GetEntPropFloat(client, Prop_Send, "m_flRageMeter") >= 100.0 && GetEntProp(client, Prop_Send, "m_bRageDraining") == 0)
+		if (TF2_GetRageMeter(client) >= 100.0 && !TF2_IsRageDraining(client))
 		{
 			VS_PressAltFireButton(client);
 			return true;
@@ -3845,4 +3852,28 @@ CKnownEntity GetHealerOfThreat(INextBot bot, const CKnownEntity threat)
 	}
 	
 	return threat;
+}
+
+void MonitorKnownEntities(int client, IVision vision)
+{
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (i == client)
+			continue;
+		
+		if (!IsClientInGame(i))
+			continue;
+		
+		if (GetClientTeam(i) == GetClientTeam(client))
+			continue;
+		
+		if (!IsPlayerAlive(i))
+			continue;
+		
+		if (TF2_IsLineOfFireClear4(client, i))
+		{
+			//If the threat is within our visible sightline, we will know about it
+			vision.AddKnownEntity(i);
+		}
+	}
 }

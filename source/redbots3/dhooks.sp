@@ -242,15 +242,44 @@ static MRESReturn DHookCallback_IsVisibleEntityNoticed_Post(Address pThis, DHook
 static MRESReturn DHookCallback_IsIgnored_Pre(Address pThis, DHookReturn hReturn, DHookParam hParams)
 {
 	int subject = hParams.Get(1);
+	int myself = view_as<IVision>(pThis).GetBot().GetEntity();
 	
 	if (BaseEntity_IsPlayer(subject) && TF2_GetClientTeam(subject) != TFTeam_Red)
 	{
-		if (TF2_IsInvulnerable(subject))
+		if (IsSentryBusterRobot(subject))
 		{
-			//We will ignore uber enemies for threat selection because we otherwise waste ammo
+			//We don't really care about sentry busters
 			hReturn.Value = true;
 			
 			return MRES_Supercede;
+		}
+		
+		if (TF2_IsInvulnerable(subject))
+		{
+			if (TF2_IsPlayerInCondition(subject, TFCond_ImmuneToPushback))
+			{
+				//Always ignored, since we can't actually do anything about them
+				hReturn.Value = true;
+				
+				return MRES_Supercede;
+			}
+			
+			int myWeapon = BaseCombatCharacter_GetActiveWeapon(myself);
+			
+			switch (TF2Util_GetWeaponID(myWeapon))
+			{
+				case TF_WEAPON_ROCKETLAUNCHER, TF_WEAPON_GRENADELAUNCHER, TF_WEAPON_PIPEBOMBLAUNCHER, TF_WEAPON_DIRECTHIT:
+				{
+					//Don't ignore when using these, as they have knockback potential
+				}
+				default:
+				{
+					//We will ignore uber enemies for threat selection because we otherwise waste ammo
+					hReturn.Value = true;
+					
+					return MRES_Supercede;
+				}
+			}
 		}
 	}
 	

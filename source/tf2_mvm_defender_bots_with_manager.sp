@@ -12,7 +12,7 @@
 #pragma semicolon 1
 #pragma newdecls required
 
-#define TESTING_ONLY
+// #define TESTING_ONLY
 
 #define METHOD_MVM_UPGRADES
 
@@ -37,7 +37,7 @@ static float m_flNextCommand[MAXPLAYERS + 1];
 static float m_flLastReadyInputTime[MAXPLAYERS + 1];
 
 //Config
-ArrayList adtBotNames;
+static ArrayList m_adtBotNames;
 
 //Global entities
 int g_iPopulationManager = -1;
@@ -155,7 +155,7 @@ public void OnPluginStart()
 	LoadLoadoutFunctions();
 	LoadPreferencesData();
 	
-	adtBotNames = new ArrayList(MAX_NAME_LENGTH);
+	m_adtBotNames = new ArrayList(MAX_NAME_LENGTH);
 	
 	InitNextBotPathing();
 }
@@ -562,7 +562,13 @@ void SetRandomNameOnBot(int client)
 
 void GetRandomDefenderBotName(char[] buffer, int maxlen)
 {
-	char botName[MAX_NAME_LENGTH]; adtBotNames.GetString(GetRandomInt(0, adtBotNames.Length - 1), botName, sizeof(botName));
+	if (m_adtBotNames.Length == 0)
+	{
+		LogError("GetRandomDefenderBotName: No bot names were ever parsed!");
+		return;
+	}
+	
+	char botName[MAX_NAME_LENGTH]; m_adtBotNames.GetString(GetRandomInt(0, m_adtBotNames.Length - 1), botName, sizeof(botName));
 	
 	strcopy(buffer, maxlen, botName);
 }
@@ -670,14 +676,14 @@ void Config_LoadBotNames()
 		return;
 	}
 	
-	adtBotNames.Clear();
+	m_adtBotNames.Clear();
 	
 	while (ReadFileLine(hConfigFile, currentLine, sizeof(currentLine)))
 	{
 		TrimString(currentLine);
 		
 		if (strlen(currentLine) > 0)
-			adtBotNames.PushString(currentLine);
+			m_adtBotNames.PushString(currentLine);
 	}
 	
 	delete hConfigFile;
