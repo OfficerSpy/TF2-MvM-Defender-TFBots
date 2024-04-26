@@ -266,18 +266,21 @@ static MRESReturn DHookCallback_IsIgnored_Pre(Address pThis, DHookReturn hReturn
 			
 			int myWeapon = BaseCombatCharacter_GetActiveWeapon(myself);
 			
-			switch (TF2Util_GetWeaponID(myWeapon))
+			if (myWeapon != -1)
 			{
-				case TF_WEAPON_ROCKETLAUNCHER, TF_WEAPON_GRENADELAUNCHER, TF_WEAPON_PIPEBOMBLAUNCHER, TF_WEAPON_DIRECTHIT:
+				switch (TF2Util_GetWeaponID(myWeapon))
 				{
-					//Don't ignore when using these, as they have knockback potential
-				}
-				default:
-				{
-					//We will ignore uber enemies for threat selection because we otherwise waste ammo
-					hReturn.Value = true;
-					
-					return MRES_Supercede;
+					case TF_WEAPON_ROCKETLAUNCHER, TF_WEAPON_GRENADELAUNCHER, TF_WEAPON_PIPEBOMBLAUNCHER, TF_WEAPON_DIRECTHIT:
+					{
+						//Don't ignore when using these, as they have knockback potential
+					}
+					default:
+					{
+						//We will ignore uber enemies for threat selection because we otherwise waste ammo
+						hReturn.Value = true;
+						
+						return MRES_Supercede;
+					}
 				}
 			}
 		}
