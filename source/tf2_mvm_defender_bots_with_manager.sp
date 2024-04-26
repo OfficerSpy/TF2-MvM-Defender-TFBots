@@ -545,18 +545,25 @@ void RemoveAllDefenderBots(char[] reason = "", bool bFinalWave = false)
 	g_bAreBotsEnabled = false;
 }
 
+static int m_iFindNameTries[MAXPLAYERS + 1];
 void SetRandomNameOnBot(int client)
 {
 	char newName[MAX_NAME_LENGTH]; GetRandomDefenderBotName(newName, sizeof(newName));
 	
-	if (DoesAnyPlayerUseThisName(newName))
+	const int maxTries = 10;
+	
+	if (DoesAnyPlayerUseThisName(newName) && m_iFindNameTries[client] < maxTries)
 	{
+		m_iFindNameTries[client]++;
+		
 		//Someone's already using my name, mock them for it and try again
-		FakeClientCommand(client, "say %s", g_sPlayerUseMyNameResponse[GetRandomInt(0, sizeof(g_sPlayerUseMyNameResponse) - 1)], newName);
+		PrintToChatAll("%s : %s", newName, g_sPlayerUseMyNameResponse[GetRandomInt(0, sizeof(g_sPlayerUseMyNameResponse) - 1)]);
 		SetRandomNameOnBot(client);
+		
 		return;
 	}
 	
+	m_iFindNameTries[client] = 0;
 	SetClientName(client, newName);
 }
 

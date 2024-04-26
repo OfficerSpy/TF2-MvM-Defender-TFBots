@@ -111,6 +111,9 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 		
 		//Set the credits we should have at this time
 		TF2_SetCurrency(data, GetStartingCurrency(g_iPopulationManager) + GetAcquiredCreditsOfAllWaves());
+		
+		if (IsPluginMvMCreditsLoaded())
+			FakeClientCommand(data, "sm_requestcredits");
 	}
 	
 	return Plugin_Stop;

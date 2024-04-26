@@ -69,8 +69,8 @@ enum
 
 char g_sPlayerUseMyNameResponse[][] =
 {
-	"You're very funny for using my name, %s",
-	"You totally stole my name, %s"
+	"You're very funny for using my name.",
+	"You totally stole my name."
 };
 
 //Make sure this matches with the eMissionDifficulty enum size
@@ -470,7 +470,7 @@ int SelectRandomReachableEnemy(int actor)
 
 bool IsHealedByMedic(int client)
 {
-	for (int i = 0; i < GetEntProp(client, Prop_Send, "m_nNumHealers"); i++)
+	for (int i = 0; i < TF2_GetNumHealers(client); i++)
 	{
 		int iHealerIndex = TF2_GetHealerByIndex(client, i);
 		
@@ -644,4 +644,16 @@ stock bool IsZeroVector(float origin[3])
 stock void SetPlayerReady(int client, bool state)
 {
 	FakeClientCommand(client, "tournament_player_readystate %d", state);
+}
+
+stock bool IsPluginMvMCreditsLoaded()
+{
+	//tf_mvm_credits
+	return FindConVar("sm_mvmcredits_version") != null;
+}
+
+stock bool IsPluginRTDLoaded()
+{
+	//rtd
+	return FindConVar("sm_rtd2_version") != null;
 }
