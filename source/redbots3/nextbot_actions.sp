@@ -2,6 +2,7 @@
 #define TANK_ATTACK_RANGE_SPLASH	400.0
 #define TANK_ATTACK_RANGE_DEFAULT	100.0
 #define BOMB_TOO_CLOSE_RANGE	1000.0
+#define PURCHASE_UPGRADES_MAX_TIME	40.0
 
 static char g_strHealthAndAmmoEntities[][] = 
 {
@@ -44,6 +45,7 @@ static float m_ctRecomputePathMvMEngiIdle[MAXPLAYERS + 1];
 static CNavArea m_aNestArea[MAXPLAYERS + 1] = {NULL_AREA, ...};
 static bool g_bGoingToGrabBuilding[MAXPLAYERS + 1];
 static int m_iBuildingToGrab[MAXPLAYERS + 1];
+static float m_flUpgradingTime[MAXPLAYERS + 1];
 
 //Replicate behavior of PathFollower's PluginBot
 bool pb_bPath[MAXPLAYERS + 1];
@@ -83,6 +85,7 @@ void ResetNextBot(int client)
 	m_aNestArea[client] = NULL_AREA;
 	g_bGoingToGrabBuilding[client] = false;
 	m_iBuildingToGrab[client] = -1;
+	m_flUpgradingTime[client] = 0.0;
 	
 	pb_bPath[client] = false;
 	pb_vecPathGoal[client] = NULL_VECTOR;
@@ -458,32 +461,6 @@ public void CTFBotDefenderAttack_OnEnd(BehaviorAction action, int actor, Behavio
 
 public Action CTFBotDefenderAttack_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
 {
-	/* int me = action.Actor;
-	
-	CKnownEntity knownThreat1 = view_as<CKnownEntity>(threat1);
-	int iThreat1 = knownThreat1.GetEntity();
-	
-	if (BaseEntity_IsPlayer(iThreat1) && iThreat1 == m_iAttackTarget[me] && knownThreat1.IsVisibleInFOVNow())
-	{
-		//Our own current chase target is a high priority, unless they're being healed by a medic
-		knownEntity = view_as<Address>(GetHealerOfThreat(view_as<INextBot>(nextbot), view_as<CKnownEntity>(threat1)));
-		
-		return Plugin_Changed;
-	}
-	
-	CKnownEntity knownThreat2 = view_as<CKnownEntity>(threat2);
-	int iThreat2 = knownThreat2.GetEntity();
-	
-	if (BaseEntity_IsPlayer(iThreat2) && iThreat2 == m_iAttackTarget[me] && knownThreat2.IsVisibleInFOVNow())
-	{
-		knownEntity = view_as<Address>(GetHealerOfThreat(view_as<INextBot>(nextbot), view_as<CKnownEntity>(threat2)));
-		
-		return Plugin_Changed;
-	}
-	
-	//Use standard threat selection
-	knownEntity = Address_Null; */
-	
 	CKnownEntity knownThreat1 = view_as<CKnownEntity>(threat1);
 	int iThreat1 = knownThreat1.GetEntity();
 	
@@ -766,6 +743,9 @@ public Action CTFBotUpgrade_OnStart(BehaviorAction action, int actor, BehaviorAc
 	
 	m_flNextUpgrade[actor] = GetGameTime() + GetUpgradeInterval();
 	
+	//How long should it take us to buy upgrades...
+	m_flUpgradingTime[actor] = GetGameTime() + PURCHASE_UPGRADES_MAX_TIME;
+	
 	// UpdateLookAroundForEnemies(actor, false);
 	
 	//Due to CTFBot::AvoidPlayers, other players can push us
@@ -779,6 +759,16 @@ public Action CTFBotUpgrade_Update(BehaviorAction action, int actor, float inter
 	if (!TF2_IsInUpgradeZone(actor)) 
 		return action.ChangeTo(CTFBotGotoUpgrade(), "Not standing at an upgrade station!");
 	
+	if (m_flUpgradingTime[actor] <= GetGameTime())
+	{
+		//It shouldn't take us this long to upgrade...
+		
+		if (redbots_manager_debug_actions.BoolValue)
+			PrintToChatAll("%N upgrade for long with %d credits left!", actor, TF2_GetCurrency(actor));
+		
+		return GetUpgradePostAction(actor, action);
+	}
+	
 	float flNextTime = m_flNextUpgrade[actor] - GetGameTime();
 	
 	if (flNextTime <= 0.0)
@@ -790,6 +780,9 @@ public Action CTFBotUpgrade_Update(BehaviorAction action, int actor, float inter
 		if (info != null) 
 		{
 			CTFBotPurchaseUpgrades_PurchaseUpgrade(actor, info);
+			
+			if (redbots_manager_debug_actions.BoolValue)
+				PrintToChatAll("Currenct left for %N: %d", actor, TF2_GetCurrency(actor));
 		}
 		else 
 		{
@@ -799,16 +792,7 @@ public Action CTFBotUpgrade_Update(BehaviorAction action, int actor, float inter
 			
 			delete info;
 			
-			if (TF2_GetPlayerClass(actor) == TFClass_Engineer)
-				return action.ChangeTo(CTFBotEngineerIdle(), "Start building");
-			else if (TF2_GetPlayerClass(actor) == TFClass_Medic)
-				return action.Done("Start heal mission");
-			else if (TF2_GetPlayerClass(actor) == TFClass_Spy)
-				return action.Done("Start spy lurking");
-			else if (HasSniperRifle(actor))
-				return action.Done("Start lurking");
-			else
-				return action.ChangeTo(CTFBotMoveToFront(), "Finished upgrading; Move to front and press F4");
+			return GetUpgradePostAction(actor, action);
 		}
 		
 		delete info;
@@ -2059,6 +2043,27 @@ Action GetDesiredBotAction(int client, BehaviorAction action)
 	}
 	
 	return Plugin_Continue;
+}
+
+Action GetUpgradePostAction(int client, BehaviorAction action)
+{
+	if (GameRules_GetRoundState() == RoundState_BetweenRounds)
+	{
+		if (TF2_GetPlayerClass(client) == TFClass_Engineer)
+			return action.ChangeTo(CTFBotEngineerIdle(), "Start building");
+		else if (TF2_GetPlayerClass(client) == TFClass_Medic)
+			return action.Done("Start heal mission");
+		else if (TF2_GetPlayerClass(client) == TFClass_Spy)
+			return action.Done("Start spy lurking");
+		else if (HasSniperRifle(client))
+			return action.Done("Start lurking");
+		else
+			return action.ChangeTo(CTFBotMoveToFront(), "Finished upgrading; Move to front and press F4");
+	}
+	
+	//The round's probably already running
+	//CTFBotScenarioMonitor_Update will assign the appropriate task
+	return action.Done("I finished upgrading");
 }
 
 public bool NextBotTraceFilterIgnoreActors(int entity, int contentsMask, any iExclude)

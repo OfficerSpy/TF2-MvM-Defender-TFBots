@@ -270,7 +270,7 @@ static MRESReturn DHookCallback_IsIgnored_Pre(Address pThis, DHookReturn hReturn
 			{
 				switch (TF2Util_GetWeaponID(myWeapon))
 				{
-					case TF_WEAPON_ROCKETLAUNCHER, TF_WEAPON_GRENADELAUNCHER, TF_WEAPON_PIPEBOMBLAUNCHER, TF_WEAPON_DIRECTHIT:
+					case TF_WEAPON_ROCKETLAUNCHER, TF_WEAPON_GRENADELAUNCHER, TF_WEAPON_PIPEBOMBLAUNCHER, TF_WEAPON_DIRECTHIT, TF_WEAPON_FLAMETHROWER:
 					{
 						//Don't ignore when using these, as they have knockback potential
 					}
