@@ -2,7 +2,7 @@
 #define TANK_ATTACK_RANGE_SPLASH	400.0
 #define TANK_ATTACK_RANGE_DEFAULT	100.0
 #define BOMB_TOO_CLOSE_RANGE	1000.0
-#define PURCHASE_UPGRADES_MAX_TIME	40.0
+#define PURCHASE_UPGRADES_MAX_TIME	30.0
 
 static char g_strHealthAndAmmoEntities[][] = 
 {
@@ -743,7 +743,7 @@ public Action CTFBotUpgrade_OnStart(BehaviorAction action, int actor, BehaviorAc
 	
 	m_flNextUpgrade[actor] = GetGameTime() + GetUpgradeInterval();
 	
-	//How long should it take us to buy upgrades...
+	//How long should it take us to buy upgrades?
 	m_flUpgradingTime[actor] = GetGameTime() + PURCHASE_UPGRADES_MAX_TIME;
 	
 	// UpdateLookAroundForEnemies(actor, false);
