@@ -36,6 +36,11 @@ public void Event_MvmWaveComplete(Event event, const char[] name, bool dontBroad
 {
 	if (redbots_manager_kick_bots.BoolValue)
 		RemoveAllDefenderBots("BotManager3: Wave complete!", IsFinalWave());
+	
+	if (IsPluginMvMCreditsLoaded())
+		for (int i = 1; i <= MaxClients; i++)
+			if (IsClientInGame(i) && g_bIsDefenderBot[i])
+				FakeClientCommand(i, "sm_requestcredits");
 }
 
 public void Event_RevivePlayerNotify(Event event, const char[] name, bool dontBroadcast)

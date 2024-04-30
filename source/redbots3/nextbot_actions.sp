@@ -16,11 +16,11 @@ static char g_strHealthAndAmmoEntities[][] =
 static int MAX_INT = 99999999;
 static int MIN_INT = -99999999;
 
-static float m_flNextSnipeFireTime[MAXPLAYERS + 1];
-
 PathFollower m_pPath[MAXPLAYERS + 1];
 // ChasePath m_chasePath[MAXPLAYERS + 1];
 static float m_flRepathTime[MAXPLAYERS + 1];
+
+static float m_flNextSnipeFireTime[MAXPLAYERS + 1];
 
 static int m_iAttackTarget[MAXPLAYERS + 1];
 // float g_flRevalidateTarget[MAXPLAYERS + 1];
@@ -237,7 +237,7 @@ public Action CTFBotMedicHeal_UpdatePost(BehaviorAction action, int actor, float
 			char name[ACTION_NAME_LENGTH]; resultingAction.GetName(name);
 			
 			if (StrEqual(name, "FetchFlag"))
-				return action.Continue(); //TODO: SuspendFor our custom action
+				return action.SuspendFor(CTFBotDefenderAttack(), "Stop the bomb");
 		}
 		
 		int myWeapon = BaseCombatCharacter_GetActiveWeapon(actor);
@@ -287,6 +287,7 @@ public Action CTFBotSniperLurk_Update(BehaviorAction action, int actor, float in
 	{
 		if (TF2_IsPlayerInCondition(actor, TFCond_Zoomed))
 		{
+			//TODO: this needs to be more precise with actually getting our current m_lookAtSubject in PlayerBody as this can cause jittery aim
 			INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 			CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
 			
@@ -400,6 +401,22 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 			if (CTFBotAttackTank_IsPossible(actor))
 				return action.ChangeTo(CTFBotAttackTank(), "Changing threat to tank");
 		}
+		case TFClass_Medic:
+		{
+			for (int i = 1; i <= MaxClients; i++)
+			{
+				if (IsClientInGame(i) && GetClientTeam(i) == GetClientTeam(actor) && IsPlayerAlive(i))
+				{
+					TFClassType class = TF2_GetPlayerClass(i);
+					
+					if (class != TFClass_Medic && class != TFClass_Sniper && class != TFClass_Engineer && class != TFClass_Spy)
+					{
+						//We have someone we'd prefer to heal
+						return action.Done("I have patient");
+					}
+				}
+			}
+		}
 	}
 	
 	if (ShouldCampBomb(actor))
@@ -438,16 +455,7 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 		
 		if (IsWeapon(actor, TF_WEAPON_FLAMETHROWER))
 		{
-			int iThreat = threat.GetEntity();
-			
-			if (BaseEntity_IsPlayer(iThreat) && TF2_HasTheFlag(iThreat))
-			{
-				float threatOrigin[3]; GetClientAbsOrigin(iThreat, threatOrigin);
-				
-				//We're close to the bomb carrier and he;s right near the hatch, try to airblast him away from it
-				if (myBot.IsRangeLessThanEx(threatOrigin, 300.0) && GetVectorDistance(threatOrigin, GetBombHatchPosition()) <= 100.0)
-					VS_PressAltFireButton(actor);
-			}
+			UtilizeCompressionBlast(actor, myBot, threat);
 		}
 	}
 	
@@ -763,6 +771,8 @@ public Action CTFBotUpgrade_Update(BehaviorAction action, int actor, float inter
 	{
 		//It shouldn't take us this long to upgrade...
 		
+		FakeClientCommand(actor, "tournament_player_readystate 1");
+		
 		if (redbots_manager_debug_actions.BoolValue)
 			PrintToChatAll("%N upgrade for long with %d credits left!", actor, TF2_GetCurrency(actor));
 		
@@ -945,10 +955,7 @@ public Action CTFBotGetAmmo_Update(BehaviorAction action, int actor, float inter
 
 public Action CTFBotGetAmmo_ShouldHurry(BehaviorAction action, Address nextbot, QueryResultType& result)
 {
-	if (redbots_manager_debug_actions.BoolValue)
-		PrintToChatAll("CTFBotGetAmmo HURRY");
-	
-	//This disables dodging, but more importantly stops us from revving the minigun
+	//Disables dodging and we won't spin the minigun after recently seeing threats
 	result = ANSWER_YES;
 	return Plugin_Handled;
 }
@@ -4140,4 +4147,32 @@ int GetBombCamperCount()
 	}
 	
 	return count;
+}
+
+void UtilizeCompressionBlast(int client, INextBot bot, const CKnownEntity threat)
+{
+	int iThreat = threat.GetEntity();
+	
+	if (BaseEntity_IsPlayer(iThreat))
+	{
+		float threatOrigin[3]; GetClientAbsOrigin(iThreat, threatOrigin);
+		
+		//Make sure we're close enough to actually airblast them
+		if (bot.IsRangeLessThanEx(threatOrigin, 250.0))
+		{
+			if (TF2_IsInvulnerable(iThreat))
+			{
+				//Shove ubers away from us
+				VS_PressAltFireButton(client);
+				return;
+			}
+			
+			if (TF2_HasTheFlag(iThreat) && GetVectorDistance(threatOrigin, GetBombHatchPosition()) <= 100.0)
+			{
+				//Shove the bomb carrier off the hatch
+				VS_PressAltFireButton(client);
+				return;
+			}
+		}
+	}
 }

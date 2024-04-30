@@ -134,8 +134,8 @@
 			//NOTE: variable offsets are calculated based on these values with the base netprop offset in the Keys section
 			"CTFPlayer::m_isLookingAroundForEnemies" //Property on class CTFBot
 			{
-				"windows"	"612" //build 8622567: 10336
-				"linux"		"612" //build 8622567: 10332
+				"windows"	"612" //build 8835751: 10336
+				"linux"		"612" //build 8835751: 10332
 			}
 			"CPopulationManager::m_nStartingCurrency"
 			{

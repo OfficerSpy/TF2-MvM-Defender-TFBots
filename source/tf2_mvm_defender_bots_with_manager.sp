@@ -32,6 +32,7 @@ float g_flNextReadyTime;
 bool g_bIsDefenderBot[MAXPLAYERS + 1];
 bool g_bIsBeingRevived[MAXPLAYERS + 1];
 int g_iAdditionalButtons[MAXPLAYERS + 1];
+int g_iSubtractiveButtons[MAXPLAYERS + 1];
 
 static float m_flNextCommand[MAXPLAYERS + 1];
 static float m_flLastReadyInputTime[MAXPLAYERS + 1];
@@ -80,7 +81,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.0.2",
+	version = "1.0.3",
 	url = ""
 };
 
@@ -179,6 +180,7 @@ public void OnClientDisconnect(int client)
 public void OnClientPutInServer(int client)
 {
 	g_iAdditionalButtons[client] = 0;
+	g_iSubtractiveButtons[client] = 0;
 	m_flNextCommand[client] = GetGameTime();
 	m_flLastReadyInputTime[client] = 0.0;
 	
@@ -218,7 +220,24 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			g_iAdditionalButtons[client] = 0;
 		}
 		
+		if (g_iSubtractiveButtons[client] != 0)
+		{
+			buttons &= ~g_iSubtractiveButtons[client];
+			g_iSubtractiveButtons[client] = 0;
+		}
+		
 		PluginBot_SimulateFrame(client);
+		
+		if (buttons & IN_ATTACK)
+		{
+			int currentWeapon = BaseCombatCharacter_GetActiveWeapon(client);
+			
+			if (currentWeapon != -1 && TF2Util_GetWeaponID(currentWeapon) == TF_WEAPON_MINIGUN && !HasAmmo(currentWeapon))
+			{
+				//Don't keep spinning the minigun if it ran out of ammo
+				buttons &= ~IN_ATTACK;
+			}
+		}
 	}
 	
 	return Plugin_Continue;
