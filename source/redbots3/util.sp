@@ -285,12 +285,13 @@ void TF2_DetonateObjectsOfType(int client, TFObjectType type)
 
 int TF2_GetObject(int client, TFObjectType type)
 {
-	int iObject = INVALID_ENT_REFERENCE;
+	int iObject = -1;
+	
 	while ((iObject = FindEntityByClassname(iObject, "obj_*")) != -1)
 	{
 		TFObjectType iObjType = TF2_GetObjectType(iObject);
 		
-		if(GetEntPropEnt(iObject, Prop_Send, "m_hBuilder") == client && iObjType == type 
+		if (GetEntPropEnt(iObject, Prop_Send, "m_hBuilder") == client && iObjType == type 
 		&& !GetEntProp(iObject, Prop_Send, "m_bPlacing")
 		&& !GetEntProp(iObject, Prop_Send, "m_bDisposableBuilding"))
 		{			
@@ -552,6 +553,31 @@ int GerNearestTeammate(int client, float max_distance)
 		{
 			bestDistance = distance;
 			bestEntity = i;
+		}
+	}
+	
+	return bestEntity;
+}
+
+int GetNearestReviveMarker(int client, const float max_distance)
+{
+	float origin[3]; GetClientAbsOrigin(client, origin);
+	
+	float bestDistance = 999999.0;
+	int bestEntity = -1;
+	
+	int iEnt = -1;
+	while ((iEnt = FindEntityByClassname(iEnt, "entity_revive_marker")) != -1)
+	{
+		if (BaseEntity_GetTeamNumber(iEnt) != GetClientTeam(client))
+			continue;
+		
+		float distance = GetVectorDistance(origin, GetAbsOrigin(iEnt));
+		
+		if (distance <= bestDistance && distance <= max_distance)
+		{
+			bestDistance = distance;
+			bestEntity = iEnt;
 		}
 	}
 	

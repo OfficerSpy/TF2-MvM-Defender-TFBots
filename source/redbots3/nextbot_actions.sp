@@ -3,6 +3,7 @@
 #define TANK_ATTACK_RANGE_DEFAULT	100.0
 #define BOMB_TOO_CLOSE_RANGE	1000.0
 #define PURCHASE_UPGRADES_MAX_TIME	30.0
+#define MEDIC_REVIVE_RANGE	450.0
 
 static char g_strHealthAndAmmoEntities[][] = 
 {
@@ -229,16 +230,20 @@ public Action CTFBotMedicHeal_UpdatePost(BehaviorAction action, int actor, float
 {
 	if (g_bIsDefenderBot[actor])
 	{
-		//In mvm mode, medic bots will go for the flag when there's no patient available
-		//Let's be smarter about it instead
 		if (result.type == CHANGE_TO)
 		{
+			//In mvm mode, medic bots will go for the flag when there's no patient available
+			//Let's be smarter about it instead
+			
 			BehaviorAction resultingAction = result.action;
 			char name[ACTION_NAME_LENGTH]; resultingAction.GetName(name);
 			
 			if (StrEqual(name, "FetchFlag"))
 				return action.SuspendFor(CTFBotDefenderAttack(), "Stop the bomb");
 		}
+		
+		if (CTFBotMedicRevive_IsPossible(actor))
+			return action.SuspendFor(CTFBotMedicRevive(), "Revive teammate");
 		
 		int myWeapon = BaseCombatCharacter_GetActiveWeapon(actor);
 		
@@ -419,7 +424,7 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 		}
 	}
 	
-	if (ShouldCampBomb(actor))
+	if (CTFBotCampBomb_IsPossible(actor))
 		return action.ChangeTo(CTFBotCampBomb(), "Camp bomb");
 	
 	//TODO: Other classes should go for money, but only when there isn't a threat around
@@ -436,13 +441,13 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 	//Path if out of range or cannot see target
 	if (myBot.IsRangeGreaterThanEx(targetOrigin, GetDesiredAttackRange(actor)) || !TF2_IsLineOfFireClear(actor, myEyePos, targetOrigin))
 	{
-		m_pPath[actor].Update(myBot);
-		
 		if (m_flRepathTime[actor] <= GetGameTime())
 		{
 			m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.5, 1.0);
 			m_pPath[actor].ComputeToTarget(myBot, m_iAttackTarget[actor]);
 		}
+		
+		m_pPath[actor].Update(myBot);
 	}
 	
 	IVision myVision = myBot.GetVisionInterface();
@@ -574,13 +579,13 @@ public Action CTFBotMarkGiant_Update(BehaviorAction action, int actor, float int
 	}
 	
 	//TODO: stop pathing once we reached the desired attack range
-	m_pPath[actor].Update(myBot);
-	
 	if (m_flRepathTime[actor] <= GetGameTime())
 	{
 		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(1.0, 2.0);
 		m_pPath[actor].ComputeToTarget(myBot, m_iTarget[actor]);
 	}
+	
+	m_pPath[actor].Update(myBot);
 	
 	return action.Continue();
 }
@@ -621,13 +626,13 @@ public Action CTFBotCollectMoney_Update(BehaviorAction action, int actor, float 
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 	
-	m_pPath[actor].Update(myBot);
-	
 	if (m_flRepathTime[actor] <= GetGameTime())
 	{
 		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(1.0, 2.0);
 		m_pPath[actor].ComputeToPos(myBot, WorldSpaceCenter(m_iCurrencyPack[actor]));
 	}
+	
+	m_pPath[actor].Update(myBot);
 	
 	return action.Continue();
 }
@@ -711,13 +716,13 @@ public Action CTFBotGotoUpgrade_Update(BehaviorAction action, int actor, float i
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 	
-	m_pPath[actor].Update(myBot);
-	
 	if (m_flRepathTime[actor] <= GetGameTime())
 	{
 		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(1.0, 2.0);
 		m_pPath[actor].ComputeToPos(myBot, center);
 	}
+	
+	m_pPath[actor].Update(myBot);
 	
 	return action.Continue();
 }
@@ -937,13 +942,13 @@ public Action CTFBotGetAmmo_Update(BehaviorAction action, int actor, float inter
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 	
-	m_pPath[actor].Update(myBot);
-	
 	if (m_flRepathTime[actor] <= GetGameTime())
 	{
 		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.9, 1.0);
 		m_pPath[actor].ComputeToPos(myBot, WorldSpaceCenter(m_iAmmoPack[actor]));
 	}
+	
+	m_pPath[actor].Update(myBot);
 	
 	CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
 	
@@ -1064,13 +1069,13 @@ public Action CTFBotMoveToFront_Update(BehaviorAction action, int actor, float i
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 	
-	m_pPath[actor].Update(myBot);
-	
 	if (m_flRepathTime[actor] <= GetGameTime())
 	{
 		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(3.0, 4.0);
 		m_pPath[actor].ComputeToPos(myBot, m_vecGoalArea[actor]);
 	}
+	
+	m_pPath[actor].Update(myBot);
 	
 	return action.Continue();
 }
@@ -1169,13 +1174,13 @@ public Action CTFBotGetHealth_Update(BehaviorAction action, int actor, float int
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 	
-	m_pPath[actor].Update(myBot);
-	
 	if (m_flRepathTime[actor] <= GetGameTime())
 	{
 		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.9, 1.0);
 		m_pPath[actor].ComputeToPos(myBot, WorldSpaceCenter(m_iHealthPack[actor]));
 	}
+	
+	m_pPath[actor].Update(myBot);
 	
 	CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
 	
@@ -1220,6 +1225,9 @@ public Action CTFBotEngineerIdle_OnStart(BehaviorAction action, int actor, Behav
 
 public Action CTFBotEngineerIdle_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
+	// if (CTFBotEvadeBuster_IsPossible(actor))
+		// return action.SuspendFor(CTFBotEvadeBuster(), "Sentry buster!");
+	
 	int sentry    = TF2_GetObject(actor, TFObject_Sentry);
 	int dispenser = TF2_GetObject(actor, TFObject_Dispenser);
 	
@@ -1282,8 +1290,8 @@ public Action CTFBotEngineerIdle_Update(BehaviorAction action, int actor, float 
 				
 				//TODO: replace both of these with IBody AimHeadTowards, whenever it gets exposed that is
 				//Do it for all usage of FaceTowards
-				myLoco.FaceTowards(WorldSpaceCenter(building));
-				// SnapViewToPosition(actor, WorldSpaceCenter(building));
+				// myLoco.FaceTowards(WorldSpaceCenter(building));
+				SnapViewToPosition(actor, WorldSpaceCenter(building));
 				
 				VS_PressAltFireButton(actor);
 				
@@ -1302,10 +1310,8 @@ public Action CTFBotEngineerIdle_Update(BehaviorAction action, int actor, float 
 				if (flDistanceToGoal < 200.0)
 				{	
 					//Crouch when closer than 200 hu
-					if (!myLoco.IsStuck())
-					{
+					// if (!myLoco.IsStuck())
 						g_iAdditionalButtons[actor] |= IN_DUCK;
-					}
 					
 					if (flDistanceToGoal < 70.0)
 					{
@@ -1450,17 +1456,15 @@ public Action CTFBotEngineerIdle_Update(BehaviorAction action, int actor, float 
 			
 			if (dist < 90.0) 
 			{
-				if (!myLoco.IsStuck())
-				{
+				// if (!myLoco.IsStuck())
 					g_iAdditionalButtons[actor] |= IN_DUCK;
-				}
 				
 				EquipWeaponSlot(actor, TFWeaponSlot_Melee);
 				
 				UpdateLookAroundForEnemies(actor, false);
 				
-				myLoco.FaceTowards(WorldSpaceCenter(dispenser));
-				// SnapViewToPosition(actor, WorldSpaceCenter(dispenser));
+				// myLoco.FaceTowards(WorldSpaceCenter(dispenser));
+				SnapViewToPosition(actor, WorldSpaceCenter(dispenser));
 				VS_PressFireButton(actor);				
 			}
 			
@@ -1498,17 +1502,15 @@ public Action CTFBotEngineerIdle_Update(BehaviorAction action, int actor, float 
 		
 		if (dist < 90.0) 
 		{
-			if (!myLoco.IsStuck())
-			{
+			// if (!myLoco.IsStuck())
 				g_iAdditionalButtons[actor] |= IN_DUCK;
-			}
 			
 			EquipWeaponSlot(actor, TFWeaponSlot_Melee);
 			
 			UpdateLookAroundForEnemies(actor, false);
 			
-			myLoco.FaceTowards(WorldSpaceCenter(sentry));
-			// SnapViewToPosition(actor, WorldSpaceCenter(sentry));
+			// myLoco.FaceTowards(WorldSpaceCenter(sentry));
+			SnapViewToPosition(actor, WorldSpaceCenter(sentry));
 			VS_PressFireButton(actor);
 		}
 	}
@@ -1569,13 +1571,11 @@ public Action CTFBotBuildSentrygun_Update(BehaviorAction action, int actor, floa
 		
 		ILocomotion myLoco = myBot.GetLocomotionInterface();
 		
-		if (!myLoco.IsStuck())
-		{
+		// if (!myLoco.IsStuck())
 			g_iAdditionalButtons[actor] |= IN_DUCK;
-		}
 		
-		myLoco.FaceTowards(areaCenter);
-		// SnapViewToPosition(actor, areaCenter);
+		// myLoco.FaceTowards(areaCenter);
+		SnapViewToPosition(actor, areaCenter);
 	}
 	
 	if (range_to_hint > 70.0)
@@ -1903,6 +1903,142 @@ public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 public void CTFBotSpyLurkMvM_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
 	m_iAttackTarget[actor] = -1;
+}
+
+BehaviorAction CTFBotMedicRevive()
+{
+	BehaviorAction action = ActionsManager.Create("DefenderMedicRevive");
+	
+	action.OnStart = CTFBotMedicRevive_OnStart;
+	action.Update = CTFBotMedicRevive_Update;
+	action.OnEnd = CTFBotMedicRevive_OnEnd;
+	
+	return action;
+}
+
+public Action CTFBotMedicRevive_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+{
+	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
+	
+	return action.Continue();
+}
+
+public Action CTFBotMedicRevive_Update(BehaviorAction action, int actor, float interval, ActionResult result)
+{
+	int secondary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Secondary);
+	
+	if (secondary == -1)
+		return action.Done("No medigun!");
+	
+	int marker = GetNearestReviveMarker(actor, MEDIC_REVIVE_RANGE);
+	
+	if (marker == -1)
+		return action.Done("No reanimator!");
+	
+	float markerPos[3]; markerPos = WorldSpaceCenter(marker);
+	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
+	
+	if (myBot.IsRangeLessThanEx(markerPos, WEAPON_MEDIGUN_RANGE) && TF2_IsLineOfFireClear2(actor, markerPos))
+	{
+		TF2Util_SetPlayerActiveWeapon(actor, secondary);
+		SnapViewToPosition(actor, markerPos);
+		VS_PressFireButton(actor);
+		
+		return action.Continue();
+	}
+	
+	if (m_flRepathTime[actor] <= GetGameTime())
+	{
+		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.9, 1.2);
+		m_pPath[actor].ComputeToPos(myBot, markerPos);
+	}
+	
+	m_pPath[actor].Update(myBot);
+	
+	int primary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Primary);
+	
+	if (primary != -1)
+		TF2Util_SetPlayerActiveWeapon(actor, primary);
+	
+	return action.Continue();
+}
+
+public void CTFBotMedicRevive_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+{
+	// CBaseNPC_GetNextBotOfEntity(actor).GetBodyInterface().ClearPendingAimReply();
+}
+
+BehaviorAction CTFBotEvadeBuster()
+{
+	BehaviorAction action = ActionsManager.Create("DefenderEvadeBuster");
+	
+	action.OnStart = CTFBotEvadeBuster_OnStart;
+	action.Update = CTFBotEvadeBuster_Update;
+	
+	return action;
+}
+
+public Action CTFBotEvadeBuster_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+{
+	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
+	
+	return action.Continue();
+}
+
+public Action CTFBotEvadeBuster_Update(BehaviorAction action, int actor, float interval, ActionResult result)
+{
+	if (!IsValidClientIndex(g_iDetonatingPlayer))
+		return action.Done("No buster");
+	
+	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
+	float myOrigin[3]; GetClientAbsOrigin(actor, myOrigin);
+	float goalPos[3];
+	int mySentry = TF2_GetPlayerClass(actor) == TFClass_Engineer ? TF2_GetObject(actor, TFObject_Sentry) : -1;
+	
+	if (mySentry != -1 && !TF2_IsCarryingObject(actor) && myBot.IsRangeLessThan(mySentry, 500.0))
+	{
+		//I should go get my sentry
+		goalPos = GetAbsOrigin(mySentry);
+		
+		if (myBot.IsRangeLessThanEx(goalPos, 200.0))
+		{
+			SnapViewToPosition(actor, goalPos);
+			VS_PressAltFireButton(actor);
+		}
+	}
+	else
+	{
+		//Find areas to escape the sentry buster
+		AreasCollector hAreas = TheNavMesh.CollectAreasInRadius(myOrigin, 1000.0);
+		
+		for (int i = 0; i < hAreas.Count(); i++)
+		{
+			CNavArea area = hAreas.Get(i);
+			float center[3]; area.GetCenter(center);
+			
+			//It can't be too close to me
+			if (myBot.IsRangeLessThanEx(center, 100.0))
+				continue;
+			
+			goalPos = center;
+			break;
+		}
+		
+		delete hAreas;
+	}
+	
+	if (IsZeroVector(goalPos))
+		return action.Done("No escape route");
+	
+	if (m_flRepathTime[actor] <= GetGameTime())
+	{
+		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.5, 1.0);
+		m_pPath[actor].ComputeToPos(myBot, goalPos);
+	}
+	
+	m_pPath[actor].Update(myBot);
+	
+	return action.Continue();
 }
 
 BehaviorAction CTFBotCampBomb()
@@ -2332,8 +2468,8 @@ void CollectUpgrades(int client)
 	
 	iArraySlots.Push(-1); //Always buy player upgrades
 	
-	bool bDemoKnight = (!IsCombatWeapon(GetPlayerWeaponSlot(client, TFWeaponSlot_Primary)));
-	bool bEngineer = (TF2_GetPlayerClass(client) == TFClass_Engineer);
+	bool bDemoKnight = !IsCombatWeapon(GetPlayerWeaponSlot(client, TFWeaponSlot_Primary));
+	bool bEngineer = TF2_GetPlayerClass(client) == TFClass_Engineer;
 	
 	if (bEngineer)
 	{
@@ -2356,7 +2492,7 @@ void CollectUpgrades(int client)
 		else if (TF2_GetPlayerClass(client) == TFClass_Spy)
 		{
 			//Buy upgrades for our sapper and knife
-			iArraySlots.Push(TF_LOADOUT_SLOT_SECONDARY);
+			iArraySlots.Push(TF_LOADOUT_SLOT_BUILDING);
 			iArraySlots.Push(TF_LOADOUT_SLOT_MELEE);
 		}
 
@@ -2364,9 +2500,7 @@ void CollectUpgrades(int client)
 		iArraySlots.Push(bDemoKnight ? TF_LOADOUT_SLOT_MELEE : TF_LOADOUT_SLOT_PRIMARY);
 	
 		if (TF2_IsShieldEquipped(client))
-		{
 			iArraySlots.Push(TF_LOADOUT_SLOT_SECONDARY);
-		}
 	}
 
 	for (int i = 0; i < iArraySlots.Length; i++)
@@ -4083,7 +4217,7 @@ void MonitorKnownEntities(int client, IVision vision)
 	}
 }
 
-bool ShouldCampBomb(int client)
+bool CTFBotCampBomb_IsPossible(int client)
 {
 	int flag = FindBombNearestToHatch();
 	
@@ -4106,13 +4240,12 @@ bool ShouldCampBomb(int client)
 	}
 	
 	int iEnt = -1;
+	const float maxWatchRadius = 1000.0;
 	
 	while ((iEnt = FindEntityByClassname(iEnt, "obj_sentrygun")) != -1)
 	{
 		if (BaseEntity_GetTeamNumber(iEnt) != GetClientTeam(client))
 			continue;
-		
-		const float maxWatchRadius = 1000.0;
 		
 		if (GetVectorDistance(bombPosition, WorldSpaceCenter(iEnt)) <= maxWatchRadius)
 		{
@@ -4121,7 +4254,7 @@ bool ShouldCampBomb(int client)
 		}
 	}
 	
-	if (GetBombCamperCount() > 0)
+	if (GetBotBombCampCount() > 0)
 	{
 		//There;s too many of us doing this behavior
 		return false;
@@ -4130,7 +4263,7 @@ bool ShouldCampBomb(int client)
 	return true;
 }
 
-int GetBombCamperCount()
+int GetBotBombCampCount()
 {
 	int count = 0;
 	
@@ -4175,4 +4308,32 @@ void UtilizeCompressionBlast(int client, INextBot bot, const CKnownEntity threat
 			}
 		}
 	}
+}
+
+bool CTFBotMedicRevive_IsPossible(int client)
+{
+	int marker = GetNearestReviveMarker(client, MEDIC_REVIVE_RANGE);
+	
+	if (marker == -1)
+		return false;
+	
+	if (!IsPathToVectorPossible(client, GetAbsOrigin(marker)))
+		return false;
+	
+	return true;
+}
+
+bool CTFBotEvadeBuster_IsPossible(int client)
+{
+	if (!IsValidClientIndex(g_iDetonatingPlayer))
+		return false;
+	
+	float myOrigin[3]; GetClientAbsOrigin(client, myOrigin);
+	float theirOrigin[3]; GetClientAbsOrigin(g_iDetonatingPlayer, theirOrigin);
+	
+	//Not a threat to me
+	if (GetVectorDistance(myOrigin, theirOrigin) > 300.0)
+		return false;
+	
+	return true;
 }

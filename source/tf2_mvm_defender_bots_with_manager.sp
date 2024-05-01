@@ -28,6 +28,7 @@ enum
 
 bool g_bAreBotsEnabled;
 float g_flNextReadyTime;
+int g_iDetonatingPlayer = -1;
 
 bool g_bIsDefenderBot[MAXPLAYERS + 1];
 bool g_bIsBeingRevived[MAXPLAYERS + 1];
@@ -241,6 +242,16 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	}
 	
 	return Plugin_Continue;
+}
+
+public void TF2_OnConditionAdded(int client, TFCond condition)
+{
+	if (condition == TFCond_Taunting && TF2_GetClientTeam(client) == TFTeam_Blue && IsSentryBusterRobot(client))
+	{
+		//Keep track of the player that is detonating
+		g_iDetonatingPlayer = client;
+		CreateTimer(2.0, Timer_ForgetDetonatingPlayer, client);
+	}
 }
 
 public Action Command_Votebots(int client, int args)
@@ -512,6 +523,18 @@ public Action Timer_CheckBotImbalance(Handle timer)
 	return Plugin_Continue;
 }
 
+public Action Timer_ForgetDetonatingPlayer(Handle timer, any data)
+{
+	//They should have detonated by now
+	
+	//Another player might have started detonating
+	//Don't forget the newest one so soon
+	if (g_iDetonatingPlayer == data)
+		g_iDetonatingPlayer = -1;
+	
+	return Plugin_Stop;
+}
+
 public Action DefenderBot_Touch(int entity, int other)
 {
 	if (BaseEntity_IsPlayer(other) && CBaseNPC_GetNextBotOfEntity(entity).IsEnemy(other))
@@ -650,23 +673,21 @@ eMissionDifficulty GetMissionDifficulty()
 	ReplaceString(missionName, sizeof(missionName), "scripts/population/", "");
 	ReplaceString(missionName, sizeof(missionName), ".pop", "");
 	
-	eMissionDifficulty type;
-	
-	type = Config_GetMissionDifficultyFromName(missionName);
+	eMissionDifficulty type = Config_GetMissionDifficultyFromName(missionName);
 	
 	//No config file specified a difficulty, search for one ourselves
 	if (type == MISSION_UNKNOWN)
 	{
 		char mapName[PLATFORM_MAX_PATH]; GetCurrentMap(mapName, sizeof(mapName));
 		
-		if (StrEqual(missionName, mapName))
+		//Searching by prefix or suffix
+		if (StrEqual(missionName, mapName) || StrContains(missionName, "_norm_", false) != -1)
 		{
 			//If the mission name is the same as the map's name, it's typically a normal mission
 			type = MISSION_NORMAL;
 		}
 		else if (StrContains(missionName, "_intermediate", false) != -1 || StrContains(missionName, "_int_", false) != -1)
 		{
-			//Searching by prefix or suffix
 			type = MISSION_INTERMEDIATE;
 		}
 		else if (StrContains(missionName, "_advanced", false) != -1 || StrContains(missionName, "_adv_", false) != -1)
