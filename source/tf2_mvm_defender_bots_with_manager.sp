@@ -61,6 +61,7 @@ ConVar tf_bot_health_ok_ratio;
 ConVar tf_bot_ammo_search_range;
 ConVar tf_bot_health_search_far_range;
 ConVar tf_bot_health_search_near_range;
+ConVar tf_bot_suicide_bomb_range;
 
 #if defined METHOD_MVM_UPGRADES
 Address g_pMannVsMachineUpgrades;
@@ -82,7 +83,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.0.3",
+	version = "1.0.4",
 	url = ""
 };
 
@@ -206,6 +207,7 @@ public void OnConfigsExecuted()
 	tf_bot_ammo_search_range = FindConVar("tf_bot_ammo_search_range");
 	tf_bot_health_search_far_range = FindConVar("tf_bot_health_search_far_range");
 	tf_bot_health_search_near_range = FindConVar("tf_bot_health_search_near_range");
+	tf_bot_suicide_bomb_range = FindConVar("tf_bot_suicide_bomb_range");
 }
 
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])

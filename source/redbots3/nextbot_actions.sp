@@ -115,7 +115,7 @@ void PluginBot_SimulateFrame(int client)
 				else if (shouldPathToEntity)
 					m_pPath[client].ComputeToTarget(myBot, pb_iPathGoalEntity[client]);
 				
-				m_flRepathTime[client] = GetGameTime() + GetRandomFloat(1.0, 2.0);
+				m_flRepathTime[client] = GetGameTime() + 0.2;
 			}
 			
 			//I don't see a reason to use UpdateLastKnownArea again
@@ -459,9 +459,7 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 		EquipBestWeaponForThreat(actor, threat);
 		
 		if (IsWeapon(actor, TF_WEAPON_FLAMETHROWER))
-		{
 			UtilizeCompressionBlast(actor, myBot, threat);
-		}
 	}
 	
 	return action.Continue();
@@ -1208,6 +1206,7 @@ BehaviorAction CTFBotEngineerIdle()
 	action.OnStart = CTFBotEngineerIdle_OnStart;
 	action.Update = CTFBotEngineerIdle_Update;
 	action.OnEnd = CTFBotEngineerIdle_OnEnd;
+	action.OnSuspend = CTFBotEngineerIdle_OnSuspend;
 	
 	return action;
 }
@@ -1225,8 +1224,8 @@ public Action CTFBotEngineerIdle_OnStart(BehaviorAction action, int actor, Behav
 
 public Action CTFBotEngineerIdle_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
-	// if (CTFBotEvadeBuster_IsPossible(actor))
-		// return action.SuspendFor(CTFBotEvadeBuster(), "Sentry buster!");
+	if (CTFBotEvadeBuster_IsPossible(actor))
+		return action.SuspendFor(CTFBotEvadeBuster(), "Sentry buster!");
 	
 	int sentry    = TF2_GetObject(actor, TFObject_Sentry);
 	int dispenser = TF2_GetObject(actor, TFObject_Dispenser);
@@ -1523,6 +1522,13 @@ public void CTFBotEngineerIdle_OnEnd(BehaviorAction action, int actor, BehaviorA
 	pb_bPath[actor] = false;
 	pb_vecPathGoal[actor] = NULL_VECTOR;
 	pb_iPathGoalEntity[actor] = false;
+}
+
+public Action CTFBotEngineerIdle_OnSuspend(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+{
+	pb_bPath[actor] = false;
+	
+	return action.Continue();
 }
 
 BehaviorAction CTFBotBuildSentrygun()
@@ -1920,6 +1926,9 @@ public Action CTFBotMedicRevive_OnStart(BehaviorAction action, int actor, Behavi
 {
 	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	
+	//Stop current healing
+	g_iSubtractiveButtons[actor] = IN_ATTACK;
+	
 	return action.Continue();
 }
 
@@ -1995,12 +2004,12 @@ public Action CTFBotEvadeBuster_Update(BehaviorAction action, int actor, float i
 	float goalPos[3];
 	int mySentry = TF2_GetPlayerClass(actor) == TFClass_Engineer ? TF2_GetObject(actor, TFObject_Sentry) : -1;
 	
-	if (mySentry != -1 && !TF2_IsCarryingObject(actor) && myBot.IsRangeLessThan(mySentry, 500.0))
+	if (mySentry != -1 && !TF2_IsCarryingObject(actor) && myBot.IsRangeLessThan(mySentry, 600.0))
 	{
 		//I should go get my sentry
-		goalPos = GetAbsOrigin(mySentry);
+		goalPos = WorldSpaceCenter(mySentry);
 		
-		if (myBot.IsRangeLessThanEx(goalPos, 200.0))
+		if (myBot.IsRangeLessThanEx(goalPos, 100.0))
 		{
 			SnapViewToPosition(actor, goalPos);
 			VS_PressAltFireButton(actor);
@@ -2017,7 +2026,7 @@ public Action CTFBotEvadeBuster_Update(BehaviorAction action, int actor, float i
 			float center[3]; area.GetCenter(center);
 			
 			//It can't be too close to me
-			if (myBot.IsRangeLessThanEx(center, 100.0))
+			if (myBot.IsRangeLessThanEx(center, 500.0))
 				continue;
 			
 			goalPos = center;
@@ -2032,7 +2041,7 @@ public Action CTFBotEvadeBuster_Update(BehaviorAction action, int actor, float i
 	
 	if (m_flRepathTime[actor] <= GetGameTime())
 	{
-		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.5, 1.0);
+		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.3, 0.4);
 		m_pPath[actor].ComputeToPos(myBot, goalPos);
 	}
 	
@@ -4325,6 +4334,7 @@ bool CTFBotMedicRevive_IsPossible(int client)
 
 bool CTFBotEvadeBuster_IsPossible(int client)
 {
+	//Nobody is detonating themselves
 	if (!IsValidClientIndex(g_iDetonatingPlayer))
 		return false;
 	
@@ -4332,7 +4342,7 @@ bool CTFBotEvadeBuster_IsPossible(int client)
 	float theirOrigin[3]; GetClientAbsOrigin(g_iDetonatingPlayer, theirOrigin);
 	
 	//Not a threat to me
-	if (GetVectorDistance(myOrigin, theirOrigin) > 300.0)
+	if (GetVectorDistance(myOrigin, theirOrigin) > tf_bot_suicide_bomb_range.FloatValue)
 		return false;
 	
 	return true;
