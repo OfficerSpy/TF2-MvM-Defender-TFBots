@@ -16,6 +16,8 @@
 
 #define METHOD_MVM_UPGRADES
 
+// #define EXTRA_PLUGINBOT
+
 #define PLUGIN_PREFIX	"[BotManager]"
 #define TFBOT_IDENTITY_NAME	"TFBOT_SEX_HAVER"
 
@@ -83,7 +85,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.0.4",
+	version = "1.0.5",
 	url = ""
 };
 
@@ -229,7 +231,9 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			g_iSubtractiveButtons[client] = 0;
 		}
 		
+#if defined EXTRA_PLUGINBOT
 		PluginBot_SimulateFrame(client);
+#endif
 		
 		if (buttons & IN_ATTACK)
 		{
@@ -498,8 +502,8 @@ public Action Timer_CheckBotImbalance(Handle timer)
 	{
 		case MANAGER_MODE_MANUAL_BOTS, MANAGER_MODE_READY_BOTS:
 		{
-			//Bots are added pre-round, don't monitor them during the round
-			if (GameRules_GetRoundState() != RoundState_BetweenRounds)
+			//Bots are added pre-round, but we can also monitor them during the round
+			if (GameRules_GetRoundState() != RoundState_BetweenRounds && GameRules_GetRoundState() != RoundState_RoundRunning)
 				return Plugin_Stop;
 			
 			if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < redbots_manager_defender_team_size.IntValue)

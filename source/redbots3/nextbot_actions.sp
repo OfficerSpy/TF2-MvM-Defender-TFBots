@@ -4,6 +4,7 @@
 #define BOMB_TOO_CLOSE_RANGE	1000.0
 #define PURCHASE_UPGRADES_MAX_TIME	30.0
 #define MEDIC_REVIVE_RANGE	450.0
+#define SENTRY_WATCH_BOMB_RANGE	400.0
 
 static char g_strHealthAndAmmoEntities[][] = 
 {
@@ -36,22 +37,15 @@ static int m_iAmmoPack[MAXPLAYERS + 1];
 static float m_vecGoalArea[MAXPLAYERS + 1][3];
 static float m_ctMoveTimeout[MAXPLAYERS + 1];
 static int m_iHealthPack[MAXPLAYERS + 1];
-static float m_ctSentrySafe[MAXPLAYERS + 1];
-static float m_ctSentryCooldown[MAXPLAYERS + 1];
-static float m_ctDispenserSafe[MAXPLAYERS + 1]; 
-static float m_ctDispenserCooldown[MAXPLAYERS + 1];
-static float m_ctFindNestHint[MAXPLAYERS + 1]; 
-static float m_ctAdvanceNestSpot[MAXPLAYERS + 1]; 
-static float m_ctRecomputePathMvMEngiIdle[MAXPLAYERS + 1];
-static CNavArea m_aNestArea[MAXPLAYERS + 1] = {NULL_AREA, ...};
-static bool g_bGoingToGrabBuilding[MAXPLAYERS + 1];
-static int m_iBuildingToGrab[MAXPLAYERS + 1];
+static float m_vecNestArea[MAXPLAYERS + 1][3];
 static float m_flUpgradingTime[MAXPLAYERS + 1];
 
+#if defined EXTRA_PLUGINBOT
 //Replicate behavior of PathFollower's PluginBot
 bool pb_bPath[MAXPLAYERS + 1];
 float pb_vecPathGoal[MAXPLAYERS + 1][3];
 int pb_iPathGoalEntity[MAXPLAYERS + 1];
+#endif
 
 void InitNextBotPathing()
 {
@@ -76,23 +70,17 @@ void ResetNextBot(int client)
 	m_vecGoalArea[client] = NULL_VECTOR;
 	m_ctMoveTimeout[client] = 0.0;
 	m_iHealthPack[client] = -1;
-	m_ctSentrySafe[client] = 0.0;
-	m_ctSentryCooldown[client] = 0.0;
-	m_ctDispenserSafe[client] = 0.0;
-	m_ctDispenserCooldown[client] = 0.0;
-	m_ctFindNestHint[client] = 0.0;
-	m_ctAdvanceNestSpot[client] = 0.0;
-	m_ctRecomputePathMvMEngiIdle[client] = 0.0;
-	m_aNestArea[client] = NULL_AREA;
-	g_bGoingToGrabBuilding[client] = false;
-	m_iBuildingToGrab[client] = -1;
+	m_vecNestArea[client] = NULL_VECTOR;
 	m_flUpgradingTime[client] = 0.0;
 	
+#if defined EXTRA_PLUGINBOT
 	pb_bPath[client] = false;
 	pb_vecPathGoal[client] = NULL_VECTOR;
 	pb_iPathGoalEntity[client] = -1;
+#endif
 }
 
+#if defined EXTRA_PLUGINBOT
 void PluginBot_SimulateFrame(int client)
 {
 	//SimulateFrame > PFContext::RecalculatePath
@@ -124,6 +112,7 @@ void PluginBot_SimulateFrame(int client)
 		}
 	}
 }
+#endif
 
 public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 {
@@ -880,9 +869,11 @@ BehaviorAction CTFBotGetAmmo()
 
 public Action CTFBotGetAmmo_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
+#if defined EXTRA_PLUGINBOT
 	//Disable constant pathing cause we don't need it here
 	//Will cause conflcting pathing issues otherwise
 	pb_bPath[actor] = false;
+#endif
 	
 	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	
@@ -1099,7 +1090,9 @@ BehaviorAction CTFBotGetHealth()
 
 public Action CTFBotGetHealth_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
+#if defined EXTRA_PLUGINBOT
 	pb_bPath[actor] = false;
+#endif
 	
 	float health_ratio = view_as<float>(GetClientHealth(actor)) / view_as<float>(TF2Util_GetEntityMaxHealth(actor));
 	float ratio = ClampFloat((health_ratio - tf_bot_health_critical_ratio.FloatValue) / (tf_bot_health_ok_ratio.FloatValue - tf_bot_health_critical_ratio.FloatValue), 0.0, 1.0);
@@ -1215,10 +1208,6 @@ public Action CTFBotEngineerIdle_OnStart(BehaviorAction action, int actor, Behav
 {
 	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	
-	CTFBotEngineerIdleResetVars(actor);
-	
-	// CBaseNPC_GetNextBotOfEntity(actor).GetBodyInterface().ClearPendingAimReply();
-	
 	return action.Continue();
 }
 
@@ -1227,307 +1216,156 @@ public Action CTFBotEngineerIdle_Update(BehaviorAction action, int actor, float 
 	if (CTFBotEvadeBuster_IsPossible(actor))
 		return action.SuspendFor(CTFBotEvadeBuster(), "Sentry buster!");
 	
-	int sentry    = TF2_GetObject(actor, TFObject_Sentry);
-	int dispenser = TF2_GetObject(actor, TFObject_Dispenser);
+	int mySentry = TF2_GetObject(actor, TFObject_Sentry);
 	
-	bool bShouldAdvance = CTFBotEngineerIdle_ShouldAdvanceNestSpot(actor);
-	
-	if (bShouldAdvance && !g_bGoingToGrabBuilding[actor])
-	{
-		//TF2_DetonateObjectsOfType(actor, TFObject_Sentry);
-		//TF2_DetonateObjectsOfType(actor, TFObject_Dispenser);
-		
-		if (redbots_manager_debug_actions.BoolValue)
-			PrintToServer("ADVANCE");
-		
-		CTFBotEngineerIdleResetVars(actor);
-		
-		m_aNestArea[actor] = PickBuildArea(actor);
-		
-		if (sentry != INVALID_ENT_REFERENCE && m_aNestArea[actor] != NULL_AREA)
-		{
-			g_bGoingToGrabBuilding[actor] = true;
-			
-			m_iBuildingToGrab[actor] = EntIndexToEntRef(sentry);
-			
-			SetGoalEntity(actor, sentry);
-		}
-	}
+	if (mySentry == -1)
+		return action.SuspendFor(CTFBotBuildSentrygun(), "No sentry");
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
-	ILocomotion myLoco = myBot.GetLocomotionInterface();
+	float sentryPosition[3]; sentryPosition = WorldSpaceCenter(mySentry);
+	int flag = FindBombNearestToHatch();
+	int melee = GetPlayerWeaponSlot(actor, TFWeaponSlot_Melee);
+	bool bWatchForEnemies = true;
+	bool bGrabBuilding = false;
+	float pathGoalPosition[3];
 	
-	if (g_bGoingToGrabBuilding[actor])
+	if (flag != -1)
 	{
-		int building = EntRefToEntIndex(m_iBuildingToGrab[actor]);
+		float flagPosition[3]; flagPosition = GetAbsOrigin(flag);
 		
-		if (building == INVALID_ENT_REFERENCE)
+		if (TF2_IsCarryingObject(actor))
 		{
-			g_bGoingToGrabBuilding[actor] = false;
-			m_iBuildingToGrab[actor] = INVALID_ENT_REFERENCE;
+			bWatchForEnemies = false;
+			bGrabBuilding = true;
 			
-			if (redbots_manager_debug_actions.BoolValue)
-				PrintToServer("g_bGoingToGrabBuilding : building %i | m_aNestArea %x", building, m_aNestArea[actor]);
-			
-			TF2_DetonateObjectsOfType(actor, TFObject_Sentry);
-			TF2_DetonateObjectsOfType(actor, TFObject_Dispenser);
-			
-			pb_bPath[actor] = false;
-			
-			return action.Continue();
-		}
-		
-		UpdateLookAroundForEnemies(actor, false);
-		
-		if (!TF2_IsCarryingObject(actor))
-		{
-			float flDistanceToBuilding = GetVectorDistance(GetAbsOrigin(actor), GetAbsOrigin(building));
-			
-			if (flDistanceToBuilding < 90.0)
+			if (IsZeroVector(m_vecNestArea[actor]))
 			{
-				EquipWeaponSlot(actor, TFWeaponSlot_Melee);
+				//Find a spot near the bomb to put the sentry at
+				CTFBotEngineerIdle_FindNestAreaAroundVec(actor, flagPosition);
+			}
+			
+			pathGoalPosition = m_vecNestArea[actor];
+			
+			if (myBot.IsRangeLessThanEx(m_vecNestArea[actor], 75.0))
+				VS_PressFireButton(actor);
+		}
+		else if (GetVectorDistance(flagPosition, sentryPosition) > SENTRY_WATCH_BOMB_RANGE)
+		{
+			CTFNavArea area = view_as<CTFNavArea>(TheNavMesh.GetNavArea(flagPosition));
+			
+			//We only care if the bomb is currently out of the spawn room
+			if (area && !area.HasAttributeTF(RED_SPAWN_ROOM) && !area.HasAttributeTF(BLUE_SPAWN_ROOM))
+			{
+				//My sentry isn't watching the bomb, we need to go get it
+				//Our current nest area is no longer good either, invalidate!
+				pathGoalPosition = sentryPosition;
+				m_vecNestArea[actor] = NULL_VECTOR;
+				bGrabBuilding = true;
 				
-				//TODO: replace both of these with IBody AimHeadTowards, whenever it gets exposed that is
-				//Do it for all usage of FaceTowards
-				// myLoco.FaceTowards(WorldSpaceCenter(building));
-				SnapViewToPosition(actor, WorldSpaceCenter(building));
-				
-				VS_PressAltFireButton(actor);
-				
-				//PrintToServer("Grab");
+				if (myBot.IsRangeLessThanEx(sentryPosition, 100.0))
+				{
+					bWatchForEnemies = false;
+					SnapViewToPosition(actor, sentryPosition);
+					VS_PressAltFireButton(actor);
+				}
 			}
 		}
-		else
+	}
+	
+	if (!bGrabBuilding)
+	{
+		bool bRepairSentry = false;
+		
+		if (BaseEntity_GetHealth(mySentry) < TF2Util_GetEntityMaxHealth(mySentry) || TF2_GetUpgradeLevel(mySentry) < 3)
 		{
-			if (m_aNestArea[actor] != NULL_AREA)
+			//Go repair my sentry
+			pathGoalPosition = sentryPosition;
+			bRepairSentry = true;
+			
+			if (myBot.IsRangeLessThanEx(sentryPosition, 100.0))
 			{
-				float center[3]; m_aNestArea[actor].GetCenter(center);
-				SetGoalVector(actor, center);
+				if (melee != -1)
+					TF2Util_SetPlayerActiveWeapon(actor, melee);
 				
-				float flDistanceToGoal = GetVectorDistance(GetAbsOrigin(actor), center);
+				bWatchForEnemies = false;
+				SnapViewToPosition(actor, sentryPosition);
+				VS_PressFireButton(actor);
+			}
+		}
+		
+		if (!bRepairSentry)
+		{
+			int myDispenser = TF2_GetObject(actor, TFObject_Dispenser);
+			
+			if (myDispenser == -1)
+				return action.SuspendFor(CTFBotBuildDispenser(), "No dispenser");
+			
+			float dispenserPosition[3]; dispenserPosition = WorldSpaceCenter(myDispenser);
+			bool bRepairDispenser = false;
+			
+			if (BaseEntity_GetHealth(myDispenser) < TF2Util_GetEntityMaxHealth(myDispenser) || TF2_GetUpgradeLevel(myDispenser) < 3)
+			{
+				//Go repair my dispenser
+				pathGoalPosition = dispenserPosition;
+				bRepairDispenser = true;
 				
-				if (flDistanceToGoal < 200.0)
-				{	
-					//Crouch when closer than 200 hu
-					// if (!myLoco.IsStuck())
-						g_iAdditionalButtons[actor] |= IN_DUCK;
+				if (myBot.IsRangeLessThanEx(dispenserPosition, 100.0))
+				{
+					if (melee != -1)
+						TF2Util_SetPlayerActiveWeapon(actor, melee);
 					
-					if (flDistanceToGoal < 70.0)
-					{
-						//Try placing building when closer than 70 hu
-						int objBeingBuilt = TF2_GetCarriedObject(actor);
-						
-						if (!IsValidEntity(objBeingBuilt))
-							return action.Continue();
-						
-						bool m_bPlacementOK = !!GetEntData(objBeingBuilt, FindSendPropInfo("CObjectSentrygun", "m_iKills") - 4);
-						
-						VS_PressFireButton(actor);
-						
-						IBody myBody = myBot.GetBodyInterface();
-						
-						if (!m_bPlacementOK && myBody.IsHeadAimingOnTarget() && myBody.GetHeadSteadyDuration() > 0.6 )
-						{
-							//That spot was no good.
-							//Time to pick a new spot.
-							m_aNestArea[actor] = PickBuildArea(actor);
-						}
-						else
-						{
-							g_bGoingToGrabBuilding[actor] = false;
-							m_iBuildingToGrab[actor] = INVALID_ENT_REFERENCE;
-							
-							pb_bPath[actor] = false;
-						}
-					}
+					bWatchForEnemies = false;
+					SnapViewToPosition(actor, dispenserPosition);
+					VS_PressFireButton(actor);
 				}
-				
-				//PrintToServer("Travel");
-			}
-		}
-		
-		pb_bPath[actor] = true;
-		
-		return action.Continue();
-	}
-	
-	if ((m_aNestArea[actor] == NULL_AREA || bShouldAdvance) || sentry == INVALID_ENT_REFERENCE)
-	{
-		//HasStarted && !IsElapsed
-		if (m_ctFindNestHint[actor] > 0.0 && m_ctFindNestHint[actor] > GetGameTime()) 
-			return action.Continue();
-		
-		//Start
-		m_ctFindNestHint[actor] = GetGameTime() + (GetRandomFloat(1.0, 2.0));
-		
-		m_aNestArea[actor] = PickBuildArea(actor);
-		
-		if (redbots_manager_debug_actions.BoolValue)
-			PrintToServer("DEBUG: SEARCHING AREA: 0x%X", m_aNestArea[actor]);
-	}
-	
-	if (bShouldAdvance)
-		return action.Continue();
-	
-	if (m_aNestArea[actor] != NULL_AREA)
-	{
-		if (sentry != INVALID_ENT_REFERENCE)
-		{
-			if (GetEntProp(sentry, Prop_Send, "m_iHealth") >= GetEntProp(sentry, Prop_Send, "m_iMaxHealth") 
-			&& !TF2_IsBuilding(sentry)
-			&& TF2_GetUpgradeLevel(sentry) >= 3
-			&& GetEntProp(sentry, Prop_Send, "m_iAmmoShells") > 0)
-			{
-				m_ctSentrySafe[actor] = GetGameTime() + 3.0;
 			}
 			
-			m_ctSentryCooldown[actor] = GetGameTime() + 3.0;	
-		}
-		else 
-		{
-			/* do not have a sentry; retreat for a few seconds if we had a
-			 * sentry before this; then build a new sentry */
-			if (m_ctSentryCooldown[actor] < GetGameTime()) 
+			if (!bRepairDispenser)
 			{
-				m_ctSentryCooldown[actor] = GetGameTime() + 3.0;
+				//We're just gonna work on my sentry
+				pathGoalPosition = sentryPosition;
 				
-				return action.SuspendFor(CTFBotBuildSentrygun(), "No sentry - building a new one");
-			}
-		}
-		
-		//Don't build a dispenser if we don't have a sentry...
-		if (sentry != INVALID_ENT_REFERENCE)
-		{
-			if (dispenser != INVALID_ENT_REFERENCE)
-			{
-				//sentry is not safe.
-				if(m_ctSentrySafe[actor] < GetGameTime())
+				if (myBot.IsRangeLessThanEx(sentryPosition, 100.0))
 				{
-					m_ctDispenserCooldown[actor] = GetGameTime() + 3.0;
-				}
-				
-				//m_ctDispenserCooldown[actor] = GetGameTime() + 3.0;	
-			}
-			else 
-			{
-				/* do not have a dispenser; retreat for a few seconds if we had a
-				 * dispenser before this; then build a new dispenser */
-				if (m_ctDispenserCooldown[actor] < GetGameTime() && m_ctSentrySafe[actor] > GetGameTime())
-				{
-					m_ctDispenserCooldown[actor] = GetGameTime() + 3.0;
+					if (melee != -1)
+						TF2Util_SetPlayerActiveWeapon(actor, melee);
 					
-					return action.SuspendFor(CTFBotBuildDispenser(), "Sentry safe, No dispenser - building one");
+					bWatchForEnemies = false;
+					SnapViewToPosition(actor, sentryPosition);
+					VS_PressFireButton(actor);
 				}
 			}
 		}
 	}
 	
-	if (dispenser != INVALID_ENT_REFERENCE && m_ctSentrySafe[actor] > GetGameTime())
+	UpdateLookAroundForEnemies(actor, bWatchForEnemies);
+	
+	if (bWatchForEnemies)
 	{
-		if (TF2_GetUpgradeLevel(dispenser) < 3 || GetEntProp(dispenser, Prop_Send, "m_iHealth") < GetEntProp(dispenser, Prop_Send, "m_iMaxHealth"))
-		{
-			float dist = GetVectorDistance(GetAbsOrigin(actor), GetAbsOrigin(dispenser));
-			
-			if (m_ctRecomputePathMvMEngiIdle[actor] < GetGameTime()) 
-			{
-				m_ctRecomputePathMvMEngiIdle[actor] = GetGameTime() + GetRandomFloat(1.0, 2.0);
-				
-				float dir[3];
-				SubtractVectors(GetAbsAngles(dispenser), GetAbsOrigin(actor), dir);
-				NormalizeVector(dir, dir);
-				
-				float goal[3]; goal = GetAbsOrigin(dispenser);
-				goal[0] -= (50.0 * dir[0]);
-				goal[1] -= (50.0 * dir[1]);
-				goal[2] -= (50.0 * dir[2]);
-				
-				if (IsPathToVectorPossible(actor, goal, _))
-				{
-					SetGoalVector(actor, goal);
-				}
-				else
-				{
-					SetGoalEntity(actor, sentry);
-				}
-				
-				pb_bPath[actor] = true;
-			}
-			
-			if (dist < 90.0) 
-			{
-				// if (!myLoco.IsStuck())
-					g_iAdditionalButtons[actor] |= IN_DUCK;
-				
-				EquipWeaponSlot(actor, TFWeaponSlot_Melee);
-				
-				UpdateLookAroundForEnemies(actor, false);
-				
-				// myLoco.FaceTowards(WorldSpaceCenter(dispenser));
-				SnapViewToPosition(actor, WorldSpaceCenter(dispenser));
-				VS_PressFireButton(actor);				
-			}
-			
-			return action.Continue();
-		}
+		int primary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Primary);
+		
+		if (primary != -1)
+			TF2Util_SetPlayerActiveWeapon(actor, primary);
 	}
 	
-	if (sentry != INVALID_ENT_REFERENCE) 
+	if (m_flRepathTime[actor] <= GetGameTime())
 	{
-		float dist = GetVectorDistance(GetAbsOrigin(actor), GetAbsOrigin(sentry));
-		
-		if (m_ctRecomputePathMvMEngiIdle[actor] < GetGameTime()) 
-		{
-			m_ctRecomputePathMvMEngiIdle[actor] = GetGameTime() + GetRandomFloat(1.0, 2.0);
-			
-			float dir[3];
-			GetAngleVectors(GetTurretAngles(sentry), dir, NULL_VECTOR, NULL_VECTOR);
-			
-			float goal[3]; goal = GetAbsOrigin(sentry);
-			goal[0] -= (50.0 * dir[0]);
-			goal[1] -= (50.0 * dir[1]);
-			goal[2] -= (50.0 * dir[2]);
-			
-			if (IsPathToVectorPossible(actor, goal))
-			{
-				SetGoalVector(actor, goal);
-			}
-			else
-			{
-				SetGoalEntity(actor, sentry);
-			}
-			
-			pb_bPath[actor] = true;
-		}
-		
-		if (dist < 90.0) 
-		{
-			// if (!myLoco.IsStuck())
-				g_iAdditionalButtons[actor] |= IN_DUCK;
-			
-			EquipWeaponSlot(actor, TFWeaponSlot_Melee);
-			
-			UpdateLookAroundForEnemies(actor, false);
-			
-			// myLoco.FaceTowards(WorldSpaceCenter(sentry));
-			SnapViewToPosition(actor, WorldSpaceCenter(sentry));
-			VS_PressFireButton(actor);
-		}
+		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.5, 1.0);
+		m_pPath[actor].ComputeToPos(myBot, pathGoalPosition);
 	}
+	
+	m_pPath[actor].Update(myBot);
 	
 	return action.Continue();
 }
 
 public void CTFBotEngineerIdle_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-	pb_bPath[actor] = false;
-	pb_vecPathGoal[actor] = NULL_VECTOR;
-	pb_iPathGoalEntity[actor] = false;
+	
 }
 
 public Action CTFBotEngineerIdle_OnSuspend(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-	pb_bPath[actor] = false;
-	
 	return action.Continue();
 }
 
@@ -1544,105 +1382,70 @@ BehaviorAction CTFBotBuildSentrygun()
 
 public Action CTFBotBuildSentrygun_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-	UpdateLookAroundForEnemies(actor, true);
-	
 	return action.Continue();
 }
 
 public Action CTFBotBuildSentrygun_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
-	if (m_aNestArea[actor] == NULL_AREA) 
-		return action.Done("No hint entity");
-	
-	if (CTFBotEngineerIdle_ShouldAdvanceNestSpot(actor))
+	if (TF2_GetObject(actor, TFObject_Sentry) != -1)
 	{
-		//And you.
+		//TODO: disposable
 		
-		return action.Done("No sentry");
+		return action.Done("Built sentry");
 	}
 	
-	float areaCenter[3]; m_aNestArea[actor].GetCenter(areaCenter);
-	
-	float range_to_hint = GetVectorDistance(GetAbsOrigin(actor), areaCenter);
+	if (IsZeroVector(m_vecNestArea[actor]))
+	{
+		int flag = FindBombNearestToHatch();
+		
+		if (flag == -1)
+		{
+			//No bomb active, try to build near the robot spawn
+			return action.Continue();
+		}
+		
+		CTFBotEngineerIdle_FindNestAreaAroundVec(actor, GetAbsOrigin(flag));
+		
+		return action.Continue();
+	}
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
+	bool bWatchForEnemies = true;
 	
-	if (range_to_hint < 200.0) 
+	if (myBot.IsRangeLessThanEx(m_vecNestArea[actor], 75.0))
 	{
-		//Start building a sentry
 		if (!IsWeapon(actor, TF_WEAPON_BUILDER))
-			FakeClientCommandThrottled(actor, "build 2");
+			FakeClientCommandThrottled(actor, "build 2 0");
 		
-		UpdateLookAroundForEnemies(actor, false);
-		
-		ILocomotion myLoco = myBot.GetLocomotionInterface();
-		
-		// if (!myLoco.IsStuck())
-			g_iAdditionalButtons[actor] |= IN_DUCK;
-		
-		// myLoco.FaceTowards(areaCenter);
-		SnapViewToPosition(actor, areaCenter);
-	}
-	
-	if (range_to_hint > 70.0)
-	{
-		//PrintToServer("%f %f %f", areaCenter[0], areaCenter[1], areaCenter[2]);
-	
-		SetGoalVector(actor, areaCenter);
-		pb_bPath[actor] = true;
-	
-		if (range_to_hint > 300.0)
-		{
-			//Fuck em up.
-			EquipWeaponSlot(actor, TFWeaponSlot_Primary);
-		}
-	
-		UpdateLookAroundForEnemies(actor, true);
-		
-		return action.Continue();
-	}
-	
-	pb_bPath[actor] = false;
-	
-	if (IsWeapon(actor, TF_WEAPON_BUILDER))
-	{
-		int objBeingBuilt = GetEntPropEnt(BaseCombatCharacter_GetActiveWeapon(actor), Prop_Send, "m_hObjectBeingBuilt");
-		
-		if (!IsValidEntity(objBeingBuilt))
-			return action.Continue();
-		
-		bool m_bPlacementOK = !!GetEntData(objBeingBuilt, FindSendPropInfo("CObjectSentrygun", "m_iKills") - 4);
-		
+		bWatchForEnemies = false;
+		SnapViewToPosition(actor, m_vecNestArea[actor]);
 		VS_PressFireButton(actor);
-		
-		IBody myBody = myBot.GetBodyInterface();
-		
-		if (!m_bPlacementOK && myBody.IsHeadAimingOnTarget() && myBody.GetHeadSteadyDuration() > 0.6)
-		{
-			//That spot was no good.
-			//Time to pick a new spot.
-			m_aNestArea[actor] = PickBuildArea(actor);
-			
-			return action.Continue();
-		}
 	}
 	
-	int sentry = TF2_GetObject(actor, TFObject_Sentry);
+	UpdateLookAroundForEnemies(actor, bWatchForEnemies);
 	
-	if (sentry == INVALID_ENT_REFERENCE)
-		return action.Continue();
+	if (bWatchForEnemies)
+	{
+		int primary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Primary);
+		
+		if (primary != -1)
+			TF2Util_SetPlayerActiveWeapon(actor, primary);
+	}
 	
-	FakeClientCommandThrottled(actor, "tournament_player_readystate 1");
-	return action.Done("Built a sentry");
+	if (m_flRepathTime[actor] <= GetGameTime())
+	{
+		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.5, 1.0);
+		m_pPath[actor].ComputeToPos(myBot, m_vecNestArea[actor]);
+	}
+	
+	m_pPath[actor].Update(myBot);
+	
+	return action.Continue();
 }
 
 public void CTFBotBuildSentrygun_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-	UpdateLookAroundForEnemies(actor, true);
 	
-	pb_bPath[actor] = false;
-	pb_vecPathGoal[actor] = NULL_VECTOR;
-	pb_iPathGoalEntity[actor] = false;
 }
 
 BehaviorAction CTFBotBuildDispenser()
@@ -1658,98 +1461,58 @@ BehaviorAction CTFBotBuildDispenser()
 
 public Action CTFBotBuildDispenser_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-	UpdateLookAroundForEnemies(actor, true);
-	
 	return action.Continue();
 }
 
 public Action CTFBotBuildDispenser_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
-	if (m_aNestArea[actor] == NULL_AREA) 
-		return action.Done("No hint entity");
+	if (TF2_GetObject(actor, TFObject_Dispenser) != -1)
+		return action.Done("Built dispenser");
 	
-	if (TF2_GetObject(actor, TFObject_Sentry) == INVALID_ENT_REFERENCE)
+	if (IsZeroVector(m_vecNestArea[actor]))
 	{
-		//Fuck you.
-		
-		return action.Done("No sentry");
-	}
-	else
-	{
-		//sentry is not safe.
-		if (m_ctSentrySafe[actor] < GetGameTime())
-			return action.Done("Sentry not safe");
+		//Our nest area should not be invalid here
+		//If it is, then our sentry is probably in a bad spot and needs to be moved
+		return action.Done("No nest area");
 	}
 	
-	if (CTFBotEngineerIdle_ShouldAdvanceNestSpot(actor))
+	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
+	bool bWatchForEnemies = true;
+	
+	if (myBot.IsRangeLessThanEx(m_vecNestArea[actor], 150.0))
 	{
-		//Fuck you too.
-		
-		return action.Done("Need to advance nest");
-	}
-	
-	float areaCenter[3]; CNavArea_GetRandomPoint(m_aNestArea[actor], areaCenter);
-	
-	float range_to_hint = GetVectorDistance(GetAbsOrigin(actor), areaCenter);
-	
-	if (range_to_hint < 200.0) 
-	{
-		//Start building a dispenser
 		if (!IsWeapon(actor, TF_WEAPON_BUILDER))
-			FakeClientCommandThrottled(actor, "build 0");
+			FakeClientCommandThrottled(actor, "build 0 0");
 		
-		//Look in "random" directions in an attempt to find a place to fit a dispenser.
-		UpdateLookAroundForEnemies(actor, true);
-		
-	//	if(g_flNextLookTime[actor] > GetGameTime())
-	//		return false;
-		
-	//	g_flNextLookTime[actor] = GetGameTime() + GetRandomFloat(0.3, 1.0);
-		
-		// UpdateLookingAroundForIncomingPlayers(actor, false);
-		
-		//BotAim(actor).AimHeadTowards(areaCenter, OVERRIDE_ALL, 0.1, "Placing sentry");
+		bWatchForEnemies = false;
+		SnapViewToPosition(actor, m_vecNestArea[actor]);
+		VS_PressFireButton(actor);
 	}
 	
-	if (range_to_hint > 70.0)
+	UpdateLookAroundForEnemies(actor, bWatchForEnemies);
+	
+	if (bWatchForEnemies)
 	{
-		//PrintToServer("%f %f %f", areaCenter[0], areaCenter[1], areaCenter[2]);
-	
-		SetGoalVector(actor, areaCenter);
-		pb_bPath[actor] = true;
-	
-		//if(range_to_hint > 300.0)
-		//{
-			//Fuck em up.
-			//EquipWeaponSlot(actor, TFWeaponSlot_Melee);
-		//}
+		int primary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Primary);
 		
-		return action.Continue();
+		if (primary != -1)
+			TF2Util_SetPlayerActiveWeapon(actor, primary);
 	}
 	
-	pb_bPath[actor] = false;
+	if (m_flRepathTime[actor] <= GetGameTime())
+	{
+		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.5, 1.0);
+		m_pPath[actor].ComputeToPos(myBot, m_vecNestArea[actor]);
+	}
 	
-	VS_PressFireButton(actor);
+	m_pPath[actor].Update(myBot);
 	
-	int sentry = TF2_GetObject(actor, TFObject_Dispenser);
-	
-	if (sentry == INVALID_ENT_REFERENCE)
-		return action.Continue();
-	
-	//DispatchKeyValueVector(sentry, "origin", areaCenter);
-	//DispatchKeyValueVector(sentry, "angles", GetAbsAngles(EntRefToEntIndex(m_hintEntity[actor])));
-	
-	FakeClientCommandThrottled(actor, "tournament_player_readystate 1");
-	return action.Done("Built a dispenser");
+	return action.Continue();
 }
 
 public void CTFBotBuildDispenser_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-	UpdateLookAroundForEnemies(actor, true);
 	
-	pb_bPath[actor] = false;
-	pb_vecPathGoal[actor] = NULL_VECTOR;
-	pb_iPathGoalEntity[actor] = false;
 }
 
 BehaviorAction CTFBotAttackTank()
@@ -2126,9 +1889,9 @@ Action GetDesiredBotAction(int client, BehaviorAction action)
 	}
 	else if (state == RoundState_RoundRunning)
 	{
-		if (redbots_manager_bot_use_upgrades.BoolValue && redbots_manager_mode.IntValue == MANAGER_MODE_AUTO_BOTS && g_bHasBoughtUpgrades[client] == false && !TF2_IsInUpgradeZone(client))
+		if (redbots_manager_bot_use_upgrades.BoolValue && g_bHasBoughtUpgrades[client] == false && !TF2_IsInUpgradeZone(client))
 		{
-			//Bots are added during the round, so we must upgrade now if haven't before
+			//We joined during an active round, so we must upgrade now
 			return action.SuspendFor(CTFBotGotoUpgrade(), "Buy upgrades now");
 		}
 		
@@ -2954,407 +2717,84 @@ bool IsValidHealth(int pack)
 	return true;
 }
 
-bool CTFBotEngineerIdle_ShouldAdvanceNestSpot(int actor)
+void CTFBotEngineerIdle_FindNestAreaAroundVec(int client, float vec[3])
 {
-	if (m_aNestArea[actor] == NULL_AREA)
-		return false;
+	AreasCollector hAreas = TheNavMesh.CollectAreasInRadius(vec, SENTRY_WATCH_BOMB_RANGE);
 	
-	if (m_ctAdvanceNestSpot[actor] <= 0.0)
+	for (int i = 0; i < hAreas.Count(); i++)
 	{
-		m_ctAdvanceNestSpot[actor] = GetGameTime() + 5.0;
-		return false;
-	}
-	
-	int obj = TF2_GetObject(actor, TFObject_Sentry);
-	if (obj != INVALID_ENT_REFERENCE && GetEntProp(obj, Prop_Send, "m_iHealth") < GetEntProp(obj, Prop_Send, "m_iMaxHealth"))
-	{
-		m_ctAdvanceNestSpot[actor] = GetGameTime() + 5.0;
-		return false;
-	}
-	
-	//IsElapsed
-	if (GetGameTime() > m_ctAdvanceNestSpot[actor])
-	{
-		m_ctAdvanceNestSpot[actor] = -1.0;
-	}
-	
-	JSONObject bombinfo = new JSONObject();
-	if (!GetBombInfo(bombinfo)) 
-	{
-		delete bombinfo;
-		return false;
-	}
-	
-	float m_flBombTargetDistance = GetBombTargetDistance(m_aNestArea[actor]);
-	
-	//No point in advancing now.
-	if (m_flBombTargetDistance <= 1000.0)
-	{
-		delete bombinfo;
-		return false;
-	}
-	
-	bool bigger = (m_flBombTargetDistance > bombinfo.GetFloat("hatch_dist_back"));
-	
-	//PrintToServer("m_flBombTargetDistance %f > bombinfo.hatch_dist_back %f = %s", m_flBombTargetDistance, bombinfo.GetFloat("hatch_dist_back"), bigger ? "Yes" : "No");
-
-	delete bombinfo;
-	return bigger;
-}
-
-bool GetBombInfo(JSONObject info)
-{
-	int iAreaCount = TheNavMesh.GetNavAreaCount();
-
-	//Check that this map has any nav areas
-	if (iAreaCount <= 0)
-		return false;
-
-	float hatch_dist = 0.0;
-	
-	for (int i = 0; i < (iAreaCount - 1); i++)
-	{
-		CTFNavArea area = view_as<CTFNavArea>(TheNavAreas.Get(i)); //NOTE: does this work?
+		CTFNavArea area = view_as<CTFNavArea>(hAreas.Get(i));
 		
-		//Skip spawn areas		
-		if (area.HasAttributeTF(BLUE_SPAWN_ROOM) || area.HasAttributeTF(BLUE_SPAWN_ROOM))
-		{
-			//PrintToServer("Skip spawn area.. #%i", area.GetID());
-			continue;
-		}
-		
-		float m_flBombTargetDistance = GetBombTargetDistance(area);
-		
-		hatch_dist = MaxFloat(MaxFloat(m_flBombTargetDistance, hatch_dist), 0.0);
-	}
-	
-	int closest_flag = INVALID_ENT_REFERENCE;
-	float closest_flag_pos[3];
-	
-	int flag = -1;
-	while ((flag = FindEntityByClassname(flag, "item_teamflag")) != -1)
-	{
-		//Ignore bombs not in play
-		if (GetEntProp(flag, Prop_Send, "m_nFlagStatus") == 0)
+		//Can't build in spawn rooms
+		if (area.HasAttributeTF(RED_SPAWN_ROOM) || area.HasAttributeTF(BLUE_SPAWN_ROOM))
 			continue;
 		
-		//Ignore bombs not on our team
-		//if (GetEntProp(flag, Prop_Send, "m_iTeamNum") != view_as<int>(TFTeam_Blue))
-			//continue;
-			
-		float flag_pos[3];
-		
-		int owner = BaseEntity_GetOwnerEntity(flag);
-		
-		if (IsValidClientIndex(owner))
-			flag_pos = GetAbsOrigin(owner);
-		else
-			flag_pos = WorldSpaceCenter(flag);
-		
-		CTFNavArea area = view_as<CTFNavArea>(TheNavMesh.GetNearestNavArea(flag_pos));
-		
-		if (area == NULL_AREA)
-			continue;
-			
-		if (area.HasAttributeTF(BLUE_SPAWN_ROOM) || area.HasAttributeTF(BLUE_SPAWN_ROOM))
-			continue;
-		
-		float m_flBombTargetDistance = GetBombTargetDistance(area);
-		
-		if (m_flBombTargetDistance < hatch_dist) 
-		{
-			closest_flag = flag;
-			hatch_dist = m_flBombTargetDistance;
-			closest_flag_pos = flag_pos;
-		}
-	}
-	
-	//float range_back = FindConVar("tf_bot_engineer_mvm_sentry_hint_bomb_backward_range").FloatValue;
-	//float range_fwd  = FindConVar("tf_bot_engineer_mvm_sentry_hint_bomb_forward_range").FloatValue;
-	
-	float range_fwd   = 2300.0;
-	float range_back  = 1000.0;
-	
-	info.SetFloat("closest_pos_x", closest_flag_pos[0]);
-	info.SetFloat("closest_pos_y", closest_flag_pos[1]);
-	info.SetFloat("closest_pos_z", closest_flag_pos[2]);
-	info.SetFloat("hatch_dist_back", hatch_dist + range_back);
-	info.SetFloat("hatch_dist_fwd",  hatch_dist - range_fwd);
-	
-	return (closest_flag != INVALID_ENT_REFERENCE);
-}
-
-//TODO Gamedata me
-const int g_iBombTargetDistance = 548;	//windows 0x224h | 0x228h linux
-
-float GetBombTargetDistance(CNavArea area)
-{
-	float m_flBombTargetDistance = view_as<float>(LoadFromAddress(view_as<Address>(area) + view_as<Address>(g_iBombTargetDistance), NumberType_Int32));
-	
-	return m_flBombTargetDistance;
-}
-
-CNavArea PickBuildArea(int client, float SentryRange = 1300.0)
-{
-	int iAreaCount = TheNavMesh.GetNavAreaCount();
-
-	//Check that this map has any nav areas
-	if (iAreaCount <= 0)
-		return NULL_AREA;
-	
-	JSONObject bombinfo = new JSONObject();
-	
-	if (!GetBombInfo(bombinfo)) 
-	{	
-		delete bombinfo;
-		return PickBuildAreaPreRound(client);
-	}
-	
-	float vecTargetPos[3];
-	vecTargetPos[0] = bombinfo.GetFloat("closest_pos_x");
-	vecTargetPos[1] = bombinfo.GetFloat("closest_pos_y");
-	vecTargetPos[2] = bombinfo.GetFloat("closest_pos_z") + 40.0;
-	
-	CTFNavArea bombArea = view_as<CTFNavArea>(TheNavMesh.GetNearestNavArea(vecTargetPos, false, 90000.0, false, true, TEAM_ANY));
-	
-	if (bombArea == NULL_AREA)
-		return NULL_AREA;
-	
-	if (bombArea.HasAttributeTF(BLUE_SPAWN_ROOM) || bombArea.HasAttributeTF(RED_SPAWN_ROOM))
-		return NULL_AREA;
-
-	//Areas forward of the bomb within some distance and visible to bomb.
-	ArrayList ForwardVisibleAreas = new ArrayList();
-	//Areas forward of the bomb but not necessarily visible.
-	ArrayList ForwardAreas        = new ArrayList();
-	//Areas visible to the bomb but not nescessarily forward of it.
-	ArrayList VisibleAreasAround  = new ArrayList();
-	
-	//Loop all nav areas
-	for (int i = 0; i < iAreaCount; i++)
-	{	
-		CTFNavArea area = view_as<CTFNavArea>(TheNavAreas.Get(i));
-		
-		if (area == NULL_AREA)
-			continue;
-		
-		//Area in spawn
-		if (area.HasAttributeTF(BLUE_SPAWN_ROOM) || area.HasAttributeTF(RED_SPAWN_ROOM))		
-			continue;
-		
-		//TODO
-		//Better solution because this will break on all non mvm maps.
-		//Most likely areachable area
-		if (!area.HasAttributeTF(BOMB_DROP))
-			continue;
-		
-		float m_flBombTargetDistanceAtArea = GetBombTargetDistance(area);
-		float m_flBombTargetDistanceAtBomb = GetBombTargetDistance(bombArea);
-		
-		if (m_flBombTargetDistanceAtArea < 180.0)
-			continue;
-		
-		float areaCenter[3]; area.GetCenter(areaCenter);
-		areaCenter[2] += 50.0;
-		
-		float flAreaDistanceToBomb = GetVectorDistance(areaCenter, vecTargetPos);
-		
-		if (flAreaDistanceToBomb >= SentryRange)
-			continue;
-
-		bool bAreaVisibleToBomb = CNavArea_IsVisible(area, vecTargetPos);
-		
-		if (bAreaVisibleToBomb)
-			VisibleAreasAround.Push(area);
-		
-		if (m_flBombTargetDistanceAtBomb > m_flBombTargetDistanceAtArea)
-		{
-			if (flAreaDistanceToBomb <= SentryRange * GetRandomFloat(0.8, 1.75) && bAreaVisibleToBomb)
-				ForwardVisibleAreas.Push(area);
-			
-			ForwardAreas.Push(area);
-		}
-	}
-	
-	if (redbots_manager_debug.BoolValue)
-		PrintToServer("PickBuildArea %i ForwardVisibleAreas | %i ForwardAreas | %i VisibleAreasAroundBomb", ForwardVisibleAreas.Length, ForwardAreas.Length, VisibleAreasAround.Length);
-	
-	CNavArea randomArea = NULL_AREA;
-	
-	if (ForwardVisibleAreas.Length > 0)
-		randomArea = ForwardVisibleAreas.Get(GetRandomInt(0, ForwardVisibleAreas.Length - 1));
-	else if (ForwardAreas.Length > 0)
-		randomArea = ForwardAreas.Get(GetRandomInt(0, ForwardAreas.Length - 1));
-	else if (VisibleAreasAround.Length > 0)
-		randomArea = VisibleAreasAround.Get(GetRandomInt(0, VisibleAreasAround.Length - 1));
-	
-	delete ForwardVisibleAreas;
-	delete ForwardAreas;
-	delete VisibleAreasAround;
-	
-	delete bombinfo;
-	
-	return randomArea;
-}
-
-CNavArea PickBuildAreaPreRound(int client, float SentryRange = 1300.0)
-{
-	int iAreaCount = TheNavMesh.GetNavAreaCount();
-	
-	//Check that this map has any nav areas
-	if (iAreaCount <= 0)
-		return NULL_AREA;
-	
-	ArrayList EnemySpawnExits = new ArrayList();	
-
-	//Collect enemy exit areas after spawn door.
-	for (int i = 0; i < iAreaCount; i++)
-	{	
-		CTFNavArea area = view_as<CTFNavArea>(TheNavAreas.Get(i));
-		
-		if (area == NULL_AREA)
-			continue;
-			
-		//BLOCKED
-		if (area.HasAttributeTF(BLOCKED))
-			continue;
-		
-		//BLOCKED
-		if (area.HasAttributeTF(BLOCKED_AFTER_POINT_CAPTURE))
-			continue;
-		
-		//BLOCKED
-		if (area.HasAttributeTF(BLOCKED_UNTIL_POINT_CAPTURE))
-			continue;
-		
-		//Area in spawn but not an exit
-		if (GetBombTargetDistance(area) <= 0.0 && !area.HasAttributeTF(SPAWN_ROOM_EXIT))
-			continue;
-		
-		//Area not an enemy spawn room exit
-		if (GetEnemyTeamOfPlayer(client) == TFTeam_Blue && !area.HasAttributeTF(BLUE_SPAWN_ROOM))
-			continue;
-		
-		//Area not an enemy spawn room exit
-		if (GetEnemyTeamOfPlayer(client) == TFTeam_Red && !area.HasAttributeTF(RED_SPAWN_ROOM))
-			continue;
-		
-		float flLowestBombTargetDistance = 999999.0;
-		CNavArea bestConnection = NULL_AREA;
-		
-		//Check spawn exit connections 
-		for (NavDirType dir = NORTH; dir < NUM_DIRECTIONS; dir++)
-		{
-			//Only connections with BOMB_DROP attribute are considered good.
-			for (int iConnection = 0; iConnection < area.GetAdjacentCount(dir); iConnection++)
-			{			
-				CTFNavArea adjArea = view_as<CTFNavArea>(area.GetAdjacentArea(dir, iConnection));
-				
-				//Area still in spawn... BAD
-				if (area.HasAttributeTF(BLUE_SPAWN_ROOM) || area.HasAttributeTF(RED_SPAWN_ROOM))
-					continue;
-				
-				float flBombTargetDistance = GetBombTargetDistance(adjArea);
-				
-				//Area most likely in spawn
-				if (flBombTargetDistance <= 0.0)
-					continue;
-				
-				if (flBombTargetDistance <= flLowestBombTargetDistance)
-				{
-					bestConnection = adjArea;
-					flLowestBombTargetDistance = flBombTargetDistance;
-				}
-			}
-		}
-		
-		if (bestConnection != NULL_AREA)
-		{
-			EnemySpawnExits.Push(bestConnection);
-			//g_hAreasToDraw.Push(bestConnection);
-		}
-	}
-	
-	//We've failed men.
-	if (EnemySpawnExits.Length <= 0)
-	{
-		delete EnemySpawnExits;
-		return NULL_AREA;
-	}
-	
-	//Random valid exit point.
-	CNavArea RandomEnemySpawnExit = EnemySpawnExits.Get(GetRandomInt(0, EnemySpawnExits.Length - 1));
-
-	//Search outward of the random exit untill we are some distance away.
-	float vecExitCenter[3];
-	RandomEnemySpawnExit.GetCenter(vecExitCenter);
-	vecExitCenter[2] += 45.0;
-	
-	if (redbots_manager_debug.BoolValue)
-		PrintToServer("%f %f %f", vecExitCenter[0], vecExitCenter[1], vecExitCenter[2]);
-	
-	ArrayList AreasCloser = new ArrayList();	//Not necessarily visible but still <= 3000.0
-	ArrayList VisibleAreas = new ArrayList();
-	ArrayList VisibleAreasAfterSentryRange = new ArrayList();	//>= SentryRange
-	
-	for (int i = 0; i < iAreaCount; i++)
-	{	
-		CTFNavArea area = view_as<CTFNavArea>(TheNavAreas.Get(i));
-		
-		if (area == NULL_AREA)
-			continue;
-		
-		if (area.HasAttributeTF(BLUE_SPAWN_ROOM | RED_SPAWN_ROOM))
-			continue;
-			
-		//TODO
-		//Better solution because this will break on all non mvm maps.
-		if (!area.HasAttributeTF(BOMB_DROP))
-			continue;
-			
 		float center[3]; area.GetCenter(center);
 		
-		float flDistance = GetVectorDistance(center, vecExitCenter);
-		
-		if (flDistance <= SentryRange)
-			AreasCloser.Push(area);
-		
-		if (!CNavArea_IsVisible(area, vecExitCenter))
+		//Not too close...
+		if (GetVectorDistance(vec, center) < 100.0)
 			continue;
 		
-		if (flDistance > (SentryRange * 0.75) && flDistance <= SentryRange * 1.25)
-		{
-			VisibleAreasAfterSentryRange.Push(area);
-			//g_hAreasToDraw.Push(area);
-		}
-		
-		if (flDistance <= SentryRange)
-			VisibleAreasAfterSentryRange.Push(area);	
-		
-		VisibleAreas.Push(area);
+		m_vecNestArea[client] = center;
+		break;
 	}
 	
-	if (redbots_manager_debug.BoolValue)
-		PrintToServer("PickBuildAreaPreRound %i VisibleAreas | %i VisibleAreasAfterSentryRange | %i AreasCloser", VisibleAreas.Length, VisibleAreasAfterSentryRange.Length, AreasCloser.Length);
-	
-	CNavArea bestArea = NULL_AREA;
-	
-	if (VisibleAreasAfterSentryRange.Length > 0)
-		bestArea = VisibleAreasAfterSentryRange.Get(GetRandomInt(0, VisibleAreasAfterSentryRange.Length - 1));
-	else if (VisibleAreas.Length > 0)
-		bestArea = VisibleAreas.Get(GetRandomInt(0, VisibleAreas.Length - 1));
-	else if (AreasCloser.Length > 0)
-		bestArea = AreasCloser.Get(GetRandomInt(0, AreasCloser.Length - 1));
-	
-	delete AreasCloser;
-	delete VisibleAreas;
-	delete VisibleAreasAfterSentryRange;
-	
-	//DrawArea(bestArea, false, 6.0);
-	return bestArea;
+	delete hAreas;
 }
 
-bool CNavArea_IsVisible(CNavArea area, float eye[3], float visSpot[3] = NULL_VECTOR)
+void CTFBotEngineerIdle_FindNestAreaNearTeamSpawnroom(int client, TFTeam team)
+{
+	int iAreaCount = TheNavMesh.GetNavAreaCount();
+	CTFNavArea foundArea;
+	
+	for (int i = 0; i < iAreaCount; i++)
+	{
+		CTFNavArea area = view_as<CTFNavArea>(TheNavAreas.Get(i));
+		
+		//Area must be a spawn room exit
+		if (!area.HasAttributeTF(SPAWN_ROOM_EXIT))
+			continue;
+		
+		//Area should be in the team's spawn room
+		if (team == TFTeam_Blue && !area.HasAttributeTF(BLUE_SPAWN_ROOM))
+			continue;
+		
+		if (team == TFTeam_Red && !area.HasAttributeTF(RED_SPAWN_ROOM))
+			continue;
+		
+		//Found a spawn room exit area
+		foundArea = area;
+		break;
+	}
+	
+	AreasCollector hAreas = TheNavMesh.CollectSurroundingAreas(foundArea, 1500.0, 18.0);
+	CTFNavArea buildArea;
+	
+	for (int i = 0; i < hAreas.Count(); i++)
+	{
+		CTFNavArea area = view_as<CTFNavArea>(hAreas.Get(i));
+		
+		//Our build area should not actually be on an exit
+		if (area.HasAttributeTF(SPAWN_ROOM_EXIT))
+			continue;
+		
+		//We can't build in spawn rooms
+		if (area.HasAttributeTF(BLUE_SPAWN_ROOM))
+			continue;
+		
+		if (area.HasAttributeTF(RED_SPAWN_ROOM))
+			continue;
+		
+		buildArea = area;
+		break;
+	}
+	
+	delete hAreas;
+	
+	buildArea.GetCenter(m_vecNestArea[client]);
+}
+
+/* bool CNavArea_IsVisible(CNavArea area, float eye[3], float visSpot[3] = NULL_VECTOR)
 {
 	float offset = 0.75 * 71;
 
@@ -3399,7 +2839,7 @@ bool CNavArea_IsVisible(CNavArea area, float eye[3], float visSpot[3] = NULL_VEC
 	
 	delete result;
 	return false;
-}
+} */
 
 bool CTFBotGetAmmo_IsPossible(int actor)
 {
@@ -3494,50 +2934,27 @@ bool CTFBotGetHealth_IsPossible(int actor)
 	return bPossible;
 }
 
-void CTFBotEngineerIdleResetVars(int actor)
-{
-	m_iBuildingToGrab[actor] = INVALID_ENT_REFERENCE;
-	g_bGoingToGrabBuilding[actor] = false;
-	
-	m_ctRecomputePathMvMEngiIdle[actor] = -1.0;
-	
-	m_ctSentrySafe[actor] = -1.0;
-	m_ctSentryCooldown[actor] = -1.0;
-	
-	m_ctDispenserSafe[actor] = -1.0;
-	m_ctDispenserCooldown[actor] = -1.0;
-
-	m_ctFindNestHint[actor] = -1.0;
-	m_ctAdvanceNestSpot[actor] = -1.0;
-	
-	pb_bPath[actor] = true;
-}
-
 bool CTFBotAttackTank_IsPossible(int actor)
 {
 	return GetTankToTarget(actor) != -1;
 }
 
+#if defined EXTRA_PLUGINBOT
 void SetGoalVector(int bot_entidx, float vec[3])
 {
 	pb_iPathGoalEntity[bot_entidx] = -1; //Can't have both
-	
 	pb_vecPathGoal[bot_entidx] = vec;
 }
 
 void SetGoalEntity(int bot_entidx, int goal_entidx)
 {
 	pb_vecPathGoal[bot_entidx] = NULL_VECTOR;
-	
 	pb_iPathGoalEntity[bot_entidx] = goal_entidx;
 }
+#endif
 
 bool IsAmmoLow(int client)
 {
-	/* if(g_iCurrentAction[client] == ACTION_MVM_ENGINEER_BUILD_SENTRYGUN && !CTFBotMvMEngineerBuildSentryGun_IsPossible(client)
-	|| g_iCurrentAction[client] == ACTION_MVM_ENGINEER_BUILD_DISPENSER && !CTFBotMvMEngineerBuildDispenser_IsPossible(client))
-		return true; */
-
 	int Primary = GetPlayerWeaponSlot(client, TFWeaponSlot_Primary);
 
 	if (IsValidEntity(Primary) && !HasAmmo(Primary))

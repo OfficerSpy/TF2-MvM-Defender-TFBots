@@ -285,21 +285,26 @@ void TF2_DetonateObjectsOfType(int client, TFObjectType type)
 
 int TF2_GetObject(int client, TFObjectType type)
 {
-	int iObject = -1;
+	int iEnt = -1;
 	
-	while ((iObject = FindEntityByClassname(iObject, "obj_*")) != -1)
+	while ((iEnt = FindEntityByClassname(iEnt, "obj_*")) != -1)
 	{
-		TFObjectType iObjType = TF2_GetObjectType(iObject);
+		if (TF2_GetBuilder(iEnt) != client)
+			continue;
 		
-		if (GetEntPropEnt(iObject, Prop_Send, "m_hBuilder") == client && iObjType == type 
-		&& !GetEntProp(iObject, Prop_Send, "m_bPlacing")
-		&& !GetEntProp(iObject, Prop_Send, "m_bDisposableBuilding"))
-		{			
-			return iObject;
-		}
+		if (TF2_GetObjectType(iEnt) != type)
+			continue;
+		
+		if (TF2_IsPlacing(iEnt))
+			continue;
+		
+		if (TF2_IsDisposableBuilding(iEnt))
+			continue;
+		
+		return iEnt;
 	}
 	
-	return iObject;
+	return iEnt;
 }
 
 float[] GetAbsOrigin(int client)
@@ -312,7 +317,7 @@ float[] GetAbsOrigin(int client)
 	return vec;
 }
 
-float[] GetTurretAngles(int sentry)
+/* float[] GetTurretAngles(int sentry)
 {
 	// if (!IsBaseObject(sentry))
 		// return NULL_VECTOR;
@@ -328,7 +333,7 @@ float[] GetTurretAngles(int sentry)
 	
 	return angle;
 }
-
+ */
 bool IsWeapon(int client, int iWeaponID)
 {
 	int iWeapon = BaseCombatCharacter_GetActiveWeapon(client);
@@ -420,7 +425,7 @@ int FindBombNearestToHatch()
 	return iBestEntity;
 }
 
-float[] GetAbsAngles(int client)
+/* float[] GetAbsAngles(int client)
 {
 	// if (client <= 0)
 		// return NULL_VECTOR;
@@ -428,7 +433,7 @@ float[] GetAbsAngles(int client)
 	float vec[3]; BaseEntity_GetLocalAngles(client, vec);
 	
 	return vec;
-}
+} */
 
 int SelectRandomReachableEnemy(int actor)
 {
