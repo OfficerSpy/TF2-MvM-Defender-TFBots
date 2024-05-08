@@ -283,10 +283,6 @@ void AddBotsBasedOnPreferences(int amount)
 			
 			AddDefenderTFBot(1, class, "red", "expert");
 		}
-		
-		//Prevent bots flooding the server after using command tf_bot_add
-		//I swear this used to be okay prior to an update many years ago
-		ServerCommand("tf_bot_quota 0");
 	}
 	else
 	{

@@ -18,6 +18,8 @@
 
 // #define EXTRA_PLUGINBOT
 
+// #define MOD_REQUEST_CREDITS
+
 #define PLUGIN_PREFIX	"[BotManager]"
 #define TFBOT_IDENTITY_NAME	"TFBOT_SEX_HAVER"
 
@@ -57,6 +59,10 @@ ConVar redbots_manager_ready_cooldown;
 ConVar redbots_manager_bot_upgrade_interval;
 ConVar redbots_manager_bot_use_upgrades;
 
+#if defined MOD_REQUEST_CREDITS
+ConVar redbots_manager_bot_request_credits;
+#endif
+
 ConVar tf_bot_path_lookahead_range;
 ConVar tf_bot_health_critical_ratio;
 ConVar tf_bot_health_ok_ratio;
@@ -85,7 +91,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.0.5",
+	version = "1.0.6",
 	url = ""
 };
 
@@ -108,6 +114,10 @@ public void OnPluginStart()
 	redbots_manager_ready_cooldown = CreateConVar("sm_redbots_manager_ready_cooldown", "30.0", _, FCVAR_NOTIFY, true, 0.0);
 	redbots_manager_bot_upgrade_interval = CreateConVar("sm_redbots_manager_bot_upgrade_interval", "-1", _, FCVAR_NOTIFY);
 	redbots_manager_bot_use_upgrades = CreateConVar("sm_redbots_manager_bot_use_upgrades", "1", "Enable bots to buy upgrades.", FCVAR_NOTIFY);
+	
+#if defined MOD_REQUEST_CREDITS
+	redbots_manager_bot_request_credits = CreateConVar("sm_redbots_manager_bot_request_credits", "1", _, FCVAR_NOTIFY);
+#endif
 	
 	HookConVarChange(redbots_manager_mode, ConVarChanged_ManagerMode);
 	
@@ -636,9 +646,9 @@ void MakePlayerDance(int client)
 	}
 }
 
-void AddDefenderTFBot(int count, char[] class, char[] team, char[] difficulty)
+void AddDefenderTFBot(int count, char[] class, char[] team, char[] difficulty, bool quotaManaged = false)
 {
-	ServerCommand("tf_bot_add %d %s %s %s %s", count, class, team, difficulty, TFBOT_IDENTITY_NAME);
+	ServerCommand("tf_bot_add %d %s %s %s %s %s", count, class, team, difficulty, quotaManaged ? "" : "noquota", TFBOT_IDENTITY_NAME);
 }
 
 void AddRandomDefenderBots(int amount)
@@ -647,8 +657,25 @@ void AddRandomDefenderBots(int amount)
 	
 	for (int i = 1; i <= amount; i++)
 		AddDefenderTFBot(1, g_sRawPlayerClassNames[GetRandomInt(1, 9)], "red", "expert");
+}
+
+void AddBotsWithPresetTeamComp(int count = 6, int teamType = 0)
+{
+	int total = 0;
 	
-	ServerCommand("tf_bot_quota 0");
+	for (int i = 0; i < count; i++)
+	{
+		//We're done here
+		if (total >= count)
+			break;
+		
+		//We asked for more than the array size, cycle back from the beginning
+		if (i >= sizeof(g_sBotTeamCompositions[]))
+			i = 0;
+		
+		AddDefenderTFBot(1, g_sBotTeamCompositions[teamType][i], "red", "expert");
+		total++;
+	}
 }
 
 void SetupSniperSpotHints()

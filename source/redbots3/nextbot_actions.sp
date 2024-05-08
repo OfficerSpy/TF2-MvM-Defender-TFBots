@@ -3,7 +3,7 @@
 #define TANK_ATTACK_RANGE_DEFAULT	100.0
 #define BOMB_TOO_CLOSE_RANGE	1000.0
 #define PURCHASE_UPGRADES_MAX_TIME	30.0
-#define MEDIC_REVIVE_RANGE	450.0
+#define MEDIC_REVIVE_RANGE	500.0
 #define SENTRY_WATCH_BOMB_RANGE	400.0
 
 static char g_strHealthAndAmmoEntities[][] = 
@@ -59,6 +59,7 @@ void InitNextBotPathing()
 void ResetNextBot(int client)
 {
 	m_flRepathTime[client] = 0.0;
+	
 	m_iAttackTarget[client] = -1;
 	m_iTarget[client] = -1;
 	m_flNextMarkTime[client] = 0.0;
@@ -119,7 +120,11 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 	//TFBots are players, ignore all other nextbots
 	if (actor <= MaxClients)
 	{
-		if (StrEqual(name, "TacticalMonitor"))
+		if (StrEqual(name, "MainAction"))
+		{
+			// action.SelectTargetPoint = CTFBotMainAction_SelectTargetPoint;
+		}
+		else if (StrEqual(name, "TacticalMonitor"))
 		{
 			action.Update = CTFBotTacticalMonitor_Update;
 		}
@@ -153,31 +158,130 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 	}
 }
 
+//TODO: this doesn't work correctly for some reaosn as entity returns a bunch of numbers that doesn't seem to correspond with an actual index
+/* public Action CTFBotMainAction_SelectTargetPoint(BehaviorAction action, Address nextbot, int entity, float vec[3])
+{
+	int me = action.Actor;
+	
+	if (g_bIsDefenderBot[me] == false)
+		return Plugin_Continue;
+	
+	int myWeapon = BaseCombatCharacter_GetActiveWeapon(me);
+	
+	if (myWeapon != -1)
+	{
+		switch (TF2Util_GetWeaponID(myWeapon))
+		{
+			case TF_WEAPON_GRENADELAUNCHER, TF_WEAPON_PIPEBOMBLAUNCHER:
+			{
+				float target_point[3]; target_point = WorldSpaceCenter(entity);
+				float vecTarget[3], vecActor[3];
+				vecTarget = GetAbsOrigin(entity);
+				GetClientAbsOrigin(me, vecActor);
+				
+				float distance = GetVectorDistance(vecTarget, vecActor);
+				
+				if (distance > 150.0)
+				{
+					distance = distance / GetProjectileSpeed(myWeapon);
+					
+					float absVelocity[3]; CBaseEntity(entity).GetAbsVelocity(absVelocity);
+					
+					target_point[0] = vecTarget[0] + absVelocity[0] * distance;
+					target_point[1] = vecTarget[1] + absVelocity[1] * distance;
+					target_point[2] = vecTarget[2] + absVelocity[2] * distance;
+				}
+				else
+				{
+					target_point = WorldSpaceCenter(entity);
+				}
+				
+				float vecToTarget[3]; SubtractVectors(target_point, vecActor, vecToTarget);
+				
+				float a5 = NormalizeVector(vecToTarget, vecToTarget);
+				
+				float ballisticElevation = 0.0125 * a5;
+				
+				if (ballisticElevation > 45.0)
+					ballisticElevation = 45.0;
+				
+				float elevation = ballisticElevation * (FLOAT_PI / 180.0);
+				float sineValue = Sine(elevation);
+				float cosineValue = Cosine(elevation);
+				
+				if (cosineValue != 0.0)
+					target_point[2] += (sineValue * a5) / cosineValue;
+				
+				vec = target_point;
+				return Plugin_Changed;
+			}
+			case TF_WEAPON_PARTICLE_CANNON:
+			{
+				float target_point[3];
+				float vecTarget[3], vecActor[3];
+				vecTarget = GetAbsOrigin(entity);
+				vecActor = GetAbsOrigin(entity);
+				
+				float distance = GetVectorDistance(vecTarget, vecActor);
+				
+				if (distance > 150.0)
+				{
+					distance = distance * 0.00090909092;
+					
+					float absVelocity[3]; CBaseEntity(entity).GetAbsVelocity(absVelocity);
+					
+					target_point[0] = vecTarget[0] + absVelocity[0] * distance;
+					target_point[1] = vecTarget[1] + absVelocity[1] * distance;
+					target_point[2] = vecTarget[2] + absVelocity[2] * distance;
+					
+					if (!TF2_IsLineOfFireClear2(me, target_point))
+					{
+						vecTarget = WorldSpaceCenter(entity);
+						
+						target_point[0] = vecTarget[0] + absVelocity[0] * distance;
+						target_point[1] = vecTarget[1] + absVelocity[1] * distance;
+						target_point[2] = vecTarget[2] + absVelocity[2] * distance;
+					}
+				}
+				else
+				{
+					target_point = WorldSpaceCenter(entity);
+				}
+				
+				vec = target_point;
+				return Plugin_Changed;
+			}
+		}
+	}
+	
+	return Plugin_Continue;
+} */
+
 public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
-	if (g_bIsDefenderBot[actor])
+	if (g_bIsDefenderBot[actor] == false)
+		return Plugin_Continue;
+	
+	MonitorKnownEntities(actor, CBaseNPC_GetNextBotOfEntity(actor).GetVisionInterface());
+	
+	if (GameRules_GetRoundState() == RoundState_RoundRunning)
 	{
-		MonitorKnownEntities(actor, CBaseNPC_GetNextBotOfEntity(actor).GetVisionInterface());
+		bool low_health = false;
 		
-		if (GameRules_GetRoundState() == RoundState_RoundRunning)
-		{
-			bool low_health = false;
-			
-			float health_ratio = view_as<float>(GetClientHealth(actor)) / view_as<float>(TF2Util_GetEntityMaxHealth(actor));
-			
-			if ((GetTimeSinceWeaponFired(actor) > 2.0 || TF2_GetPlayerClass(actor) == TFClass_Sniper) && health_ratio < tf_bot_health_critical_ratio.FloatValue)
-				low_health = true;
-			else if (health_ratio < tf_bot_health_ok_ratio.FloatValue)
-				low_health = true;
-			
-			if (low_health && CTFBotGetHealth_IsPossible(actor) && !TF2_IsInvulnerable(actor))
-				return action.SuspendFor(CTFBotGetHealth(), "Getting health");
-			else if (IsAmmoLow(actor) && CTFBotGetAmmo_IsPossible(actor))
-				return action.SuspendFor(CTFBotGetAmmo(), "Getting ammo");
-			
-			OpportunisticallyUseWeaponAbilities(actor);
-			//TODO: use canteens
-		}
+		float health_ratio = view_as<float>(GetClientHealth(actor)) / view_as<float>(TF2Util_GetEntityMaxHealth(actor));
+		
+		if ((GetTimeSinceWeaponFired(actor) > 2.0 || TF2_GetPlayerClass(actor) == TFClass_Sniper) && health_ratio < tf_bot_health_critical_ratio.FloatValue)
+			low_health = true;
+		else if (health_ratio < tf_bot_health_ok_ratio.FloatValue)
+			low_health = true;
+		
+		if (low_health && CTFBotGetHealth_IsPossible(actor) && !TF2_IsInvulnerable(actor))
+			return action.SuspendFor(CTFBotGetHealth(), "Getting health");
+		else if (IsAmmoLow(actor) && CTFBotGetAmmo_IsPossible(actor))
+			return action.SuspendFor(CTFBotGetAmmo(), "Getting ammo");
+		
+		OpportunisticallyUseWeaponAbilities(actor);
+		//TODO: use canteens
 	}
 	
 	return Plugin_Continue;
@@ -185,12 +289,12 @@ public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, flo
 
 public Action CTFBotScenarioMonitor_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
+	if (g_bIsDefenderBot[actor] == false)
+		return Plugin_Continue;
+	
 	//Suspend for the action we desire
 	//Once it has ended, we will return here and suspend for another one
-	if (g_bIsDefenderBot[actor])
-		return GetDesiredBotAction(actor, action);
-		
-	return Plugin_Continue;
+	return GetDesiredBotAction(actor, action);
 }
 
 public Action CTFBotScenarioMonitor_InitialContainedAction(BehaviorAction action, int actor, BehaviorAction& child)
@@ -217,42 +321,42 @@ public Action CTFBotScenarioMonitor_InitialContainedActionPost(BehaviorAction ac
 
 public Action CTFBotMedicHeal_UpdatePost(BehaviorAction action, int actor, float interval, ActionResult result)
 {
-	if (g_bIsDefenderBot[actor])
+	if (g_bIsDefenderBot[actor] == false)
+		return Plugin_Continue;
+	
+	if (result.type == CHANGE_TO)
 	{
-		if (result.type == CHANGE_TO)
+		//In mvm mode, medic bots will go for the flag when there's no patient available
+		//Let's be smarter about it instead
+		
+		BehaviorAction resultingAction = result.action;
+		char name[ACTION_NAME_LENGTH]; resultingAction.GetName(name);
+		
+		if (StrEqual(name, "FetchFlag"))
+			return action.SuspendFor(CTFBotDefenderAttack(), "Stop the bomb");
+	}
+	
+	if (CTFBotMedicRevive_IsPossible(actor))
+		return action.SuspendFor(CTFBotMedicRevive(), "Revive teammate");
+	
+	int myWeapon = BaseCombatCharacter_GetActiveWeapon(actor);
+	
+	if (myWeapon != -1 && TF2Util_GetWeaponID(myWeapon) == TF_WEAPON_MEDIGUN && GetMedigunType(myWeapon) == MEDIGUN_RESIST)
+	{
+		//TODO: get the value of m_patient instead
+		int myPatient = GetEntPropEnt(myWeapon, Prop_Send, "m_hHealingTarget");
+		
+		if (myPatient > 0)
 		{
-			//In mvm mode, medic bots will go for the flag when there's no patient available
-			//Let's be smarter about it instead
+			int iResistType = GetResistType(actor);
+			int iLastDmgType = GetLastDamageType(myPatient);
 			
-			BehaviorAction resultingAction = result.action;
-			char name[ACTION_NAME_LENGTH]; resultingAction.GetName(name);
-			
-			if (StrEqual(name, "FetchFlag"))
-				return action.SuspendFor(CTFBotDefenderAttack(), "Stop the bomb");
-		}
-		
-		if (CTFBotMedicRevive_IsPossible(actor))
-			return action.SuspendFor(CTFBotMedicRevive(), "Revive teammate");
-		
-		int myWeapon = BaseCombatCharacter_GetActiveWeapon(actor);
-		
-		if (myWeapon != -1 && TF2Util_GetWeaponID(myWeapon) == TF_WEAPON_MEDIGUN && GetMedigunType(myWeapon) == MEDIGUN_RESIST)
-		{
-			//TODO: get the value of m_patient instead
-			int myPatient = GetEntPropEnt(myWeapon, Prop_Send, "m_hHealingTarget");
-			
-			if (myPatient > 0)
-			{
-				int iResistType = GetResistType(actor);
-				int iLastDmgType = GetLastDamageType(myPatient);
-				
-				if (iLastDmgType & DMG_BULLET && iResistType != MEDIGUN_BULLET_RESIST)
-					g_iAdditionalButtons[actor] |= IN_RELOAD;
-				else if (iLastDmgType & DMG_BLAST && iResistType != MEDIGUN_BLAST_RESIST)
-					g_iAdditionalButtons[actor] |= IN_RELOAD;
-				else if (iLastDmgType & DMG_BURN && iResistType != MEDIGUN_FIRE_RESIST)
-					g_iAdditionalButtons[actor] |= IN_RELOAD;
-			}
+			if (iLastDmgType & DMG_BULLET && iResistType != MEDIGUN_BULLET_RESIST)
+				g_iAdditionalButtons[actor] |= IN_RELOAD;
+			else if (iLastDmgType & DMG_BLAST && iResistType != MEDIGUN_BLAST_RESIST)
+				g_iAdditionalButtons[actor] |= IN_RELOAD;
+			else if (iLastDmgType & DMG_BURN && iResistType != MEDIGUN_FIRE_RESIST)
+				g_iAdditionalButtons[actor] |= IN_RELOAD;
 		}
 	}
 	
@@ -261,50 +365,50 @@ public Action CTFBotMedicHeal_UpdatePost(BehaviorAction action, int actor, float
 
 public Action CTFBotFetchFlag_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-	if (g_bIsDefenderBot[actor])
-		return action.Done();
+	if (g_bIsDefenderBot[actor] == false)
+		return Plugin_Continue;
 	
-	return Plugin_Continue;
+	return action.Done();
 }
 
 public Action CTFBotMvMEngineerIdle_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-	if (g_bIsDefenderBot[actor])
-		return action.Done();
+	if (g_bIsDefenderBot[actor] == false)
+		return Plugin_Continue;
 	
-	return Plugin_Continue;
+	return action.Done();
 }
 
 public Action CTFBotSniperLurk_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
-	if (g_bIsDefenderBot[actor])
+	if (g_bIsDefenderBot[actor] == false)
+		return Plugin_Continue;
+	
+	if (TF2_IsPlayerInCondition(actor, TFCond_Zoomed))
 	{
-		if (TF2_IsPlayerInCondition(actor, TFCond_Zoomed))
+		//TODO: this needs to be more precise with actually getting our current m_lookAtSubject in PlayerBody as this can cause jittery aim
+		INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
+		CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
+		
+		if (threat != NULL_KNOWN_ENTITY && threat.IsVisibleInFOVNow())
 		{
-			//TODO: this needs to be more precise with actually getting our current m_lookAtSubject in PlayerBody as this can cause jittery aim
-			INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
-			CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
+			int threatEnt = threat.GetEntity();
 			
-			if (threat != NULL_KNOWN_ENTITY && threat.IsVisibleInFOVNow())
+			if (BaseEntity_IsPlayer(threatEnt))
 			{
-				int threatEnt = threat.GetEntity();
+				//Help aim towards the desired target point
+				float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(threatEnt, aimPos);
+				SnapViewToPosition(actor, aimPos);
 				
-				if (BaseEntity_IsPlayer(threatEnt))
-				{
-					//Help aim towards the desired target point
-					float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(threatEnt, aimPos);
-					SnapViewToPosition(actor, aimPos);
-					
-					if (m_flNextSnipeFireTime[actor] <= GetGameTime())
-						VS_PressFireButton(actor);
-				}
+				if (m_flNextSnipeFireTime[actor] <= GetGameTime())
+					VS_PressFireButton(actor);
 			}
 		}
-		else
-		{
-			//Delay before we fire again
-			m_flNextSnipeFireTime[actor] = GetGameTime() + 1.0;
-		}
+	}
+	else
+	{
+		//Delay before we fire again
+		m_flNextSnipeFireTime[actor] = GetGameTime() + 1.0;
 	}
 	
 	return Plugin_Continue;
@@ -312,6 +416,11 @@ public Action CTFBotSniperLurk_Update(BehaviorAction action, int actor, float in
 
 public Action CTFBotSniperLurk_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
 {
+	int me = action.Actor;
+	
+	if (g_bIsDefenderBot[me] == false)
+		return Plugin_Continue;
+	
 	//Return NULL so the normal threat targetting happens
 	knownEntity = Address_Null;
 	
@@ -447,8 +556,15 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 		//We have a threat, prepare to fight it
 		EquipBestWeaponForThreat(actor, threat);
 		
-		if (IsWeapon(actor, TF_WEAPON_FLAMETHROWER))
-			UtilizeCompressionBlast(actor, myBot, threat);
+		int myWeapon = BaseCombatCharacter_GetActiveWeapon(actor);
+		
+		if (myWeapon != -1)
+		{
+			int weaponID = TF2Util_GetWeaponID(myWeapon);
+			
+			if (weaponID == TF_WEAPON_FLAMETHROWER || weaponID == TF_WEAPON_FLAME_BALL)
+				UtilizeCompressionBlast(actor, myBot, threat);
+		}
 	}
 	
 	return action.Continue();
@@ -768,6 +884,8 @@ public Action CTFBotUpgrade_Update(BehaviorAction action, int actor, float inter
 		if (redbots_manager_debug_actions.BoolValue)
 			PrintToChatAll("%N upgrade for long with %d credits left!", actor, TF2_GetCurrency(actor));
 		
+		PurchaseRandomAffordableCanteens(actor);
+		
 		return GetUpgradePostAction(actor, action);
 	}
 	
@@ -942,7 +1060,19 @@ public Action CTFBotGetAmmo_Update(BehaviorAction action, int actor, float inter
 	CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
 	
 	if (threat)
+	{
 		EquipBestWeaponForThreat(actor, threat);
+		
+		int myWeapon = BaseCombatCharacter_GetActiveWeapon(actor);
+		
+		if (myWeapon != -1)
+		{
+			int weaponID = TF2Util_GetWeaponID(myWeapon);
+			
+			if (weaponID == TF_WEAPON_FLAMETHROWER || weaponID == TF_WEAPON_FLAME_BALL)
+				UtilizeCompressionBlast(actor, myBot, threat);
+		}
+	}
 	
 	return action.Continue();
 }
@@ -1176,7 +1306,19 @@ public Action CTFBotGetHealth_Update(BehaviorAction action, int actor, float int
 	CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
 	
 	if (threat)
+	{
 		EquipBestWeaponForThreat(actor, threat);
+		
+		int myWeapon = BaseCombatCharacter_GetActiveWeapon(actor);
+		
+		if (myWeapon != -1)
+		{
+			int weaponID = TF2Util_GetWeaponID(myWeapon);
+			
+			if (weaponID == TF_WEAPON_FLAMETHROWER || weaponID == TF_WEAPON_FLAME_BALL)
+				UtilizeCompressionBlast(actor, myBot, threat);
+		}
+	}
 	
 	return action.Continue();
 }
@@ -1238,16 +1380,29 @@ public Action CTFBotEngineerIdle_Update(BehaviorAction action, int actor, float 
 			bWatchForEnemies = false;
 			bGrabBuilding = true;
 			
-			if (IsZeroVector(m_vecNestArea[actor]))
+			int carrier = BaseEntity_GetOwnerEntity(flag);
+			
+			if (carrier != -1)
 			{
-				//Find a spot near the bomb to put the sentry at
-				CTFBotEngineerIdle_FindNestAreaAroundVec(actor, flagPosition);
+				//The bomb is being carried, move towards the bomb carrier
+				GetClientAbsOrigin(carrier, pathGoalPosition);
+				
+				if (myBot.IsRangeLessThanEx(pathGoalPosition, SENTRY_WATCH_BOMB_RANGE))
+					VS_PressFireButton(actor);
 			}
-			
-			pathGoalPosition = m_vecNestArea[actor];
-			
-			if (myBot.IsRangeLessThanEx(m_vecNestArea[actor], 75.0))
-				VS_PressFireButton(actor);
+			else
+			{
+				if (IsZeroVector(m_vecNestArea[actor]))
+				{
+					//Find a spot near the bomb to put the sentry at
+					CTFBotEngineerIdle_FindNestAreaAroundVec(actor, flagPosition);
+				}
+				
+				pathGoalPosition = m_vecNestArea[actor];
+				
+				if (myBot.IsRangeLessThanEx(m_vecNestArea[actor], 75.0))
+					VS_PressFireButton(actor);
+			}
 		}
 		else if (GetVectorDistance(flagPosition, sentryPosition) > SENTRY_WATCH_BOMB_RANGE)
 		{
@@ -1394,10 +1549,10 @@ public Action CTFBotBuildSentrygun_Update(BehaviorAction action, int actor, floa
 		return action.Done("Built sentry");
 	}
 	
+	int flag = FindBombNearestToHatch();
+	
 	if (IsZeroVector(m_vecNestArea[actor]))
 	{
-		int flag = FindBombNearestToHatch();
-		
 		if (flag == -1)
 		{
 			//No bomb active, try to build near the robot spawn
@@ -1407,6 +1562,19 @@ public Action CTFBotBuildSentrygun_Update(BehaviorAction action, int actor, floa
 		CTFBotEngineerIdle_FindNestAreaAroundVec(actor, GetAbsOrigin(flag));
 		
 		return action.Continue();
+	}
+	
+	if (flag != -1)
+	{
+		float flagPosition[3]; flagPosition = GetAbsOrigin(flag);
+		
+		if (GetVectorDistance(m_vecNestArea[actor], flagPosition) > SENTRY_WATCH_BOMB_RANGE)
+		{
+			//Our desired build area is too far from the bomb, invalidate!
+			m_vecNestArea[actor] = NULL_VECTOR;
+			
+			return action.Continue();
+		}
 	}
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
@@ -1689,8 +1857,11 @@ public Action CTFBotMedicRevive_OnStart(BehaviorAction action, int actor, Behavi
 {
 	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	
+	int primary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Primary);
+	
 	//Stop current healing
-	g_iSubtractiveButtons[actor] = IN_ATTACK;
+	if (primary != -1)
+		TF2Util_SetPlayerActiveWeapon(actor, primary);
 	
 	return action.Continue();
 }
@@ -2530,7 +2701,7 @@ JSONObject CTFBotPurchaseUpgrades_ChooseUpgrade(int actor)
 		if (attr.Address == Address_Null)
 			continue;
 		
-		int iAttribIndex = attr.GetIndex(); 
+		int iAttribIndex = attr.GetIndex();
 		if (!CanUpgradeWithAttrib(actor, info.GetInt("slot"), iAttribIndex, upgrades.Address))
 		{
 			//PrintToServer("upgrade %d/%d: cannot be upgraded with", info.GetInt("slot"), info.GetInt("index"));
@@ -2576,10 +2747,10 @@ void KV_MVM_Upgrade(int client, int count, int slot, int index)
 	KeyValues kv = new KeyValues("MVM_Upgrade");
 	kv.JumpToKey("upgrade", true);
 	kv.SetNum("itemslot", slot);
-	kv.SetNum("upgrade",  index);
-	kv.SetNum("count",    count);
+	kv.SetNum("upgrade", index);
+	kv.SetNum("count", count);
 	FakeClientCommandKeyValues(client, kv);
-	delete kv; 
+	delete kv;
 }
 
 void KV_MvM_UpgradesDone(int client)
@@ -2719,7 +2890,7 @@ bool IsValidHealth(int pack)
 
 void CTFBotEngineerIdle_FindNestAreaAroundVec(int client, float vec[3])
 {
-	AreasCollector hAreas = TheNavMesh.CollectAreasInRadius(vec, SENTRY_WATCH_BOMB_RANGE);
+	AreasCollector hAreas = TheNavMesh.CollectAreasInRadius(vec, SENTRY_WATCH_BOMB_RANGE - 1.0);
 	
 	for (int i = 0; i < hAreas.Count(); i++)
 	{
@@ -2955,16 +3126,16 @@ void SetGoalEntity(int bot_entidx, int goal_entidx)
 
 bool IsAmmoLow(int client)
 {
-	int Primary = GetPlayerWeaponSlot(client, TFWeaponSlot_Primary);
+	int primary = GetPlayerWeaponSlot(client, TFWeaponSlot_Primary);
 
-	if (IsValidEntity(Primary) && !HasAmmo(Primary))
-	{
+	if (IsValidEntity(primary) && !HasAmmo(primary))
 		return true;
-	}
-
-	if (!IsWeapon(client, TF_WEAPON_WRENCH))
+	
+	int myWeapon = BaseCombatCharacter_GetActiveWeapon(client);
+	
+	if (myWeapon != -1 && TF2Util_GetWeaponID(myWeapon) != TF_WEAPON_WRENCH)
 	{
-		if (!IsMeleeWeapon(client))
+		if (!IsMeleeWeapon(myWeapon))
 		{
 			float flAmmoRation = float(GetAmmoCount(client, TF_AMMO_PRIMARY)) / float(GetMaxAmmo(client, TF_AMMO_PRIMARY));
 			return flAmmoRation < 0.2;
@@ -3763,4 +3934,59 @@ bool CTFBotEvadeBuster_IsPossible(int client)
 		return false;
 	
 	return true;
+}
+
+void PurchaseRandomAffordableCanteens(int client, int count = 3)
+{
+	int currency = TF2_GetCurrency(client);
+	const int slot = TF_LOADOUT_SLOT_ACTION;
+	int iClass = view_as<int>(TF2_GetPlayerClass(client));
+	ArrayList adtAffordableGroups = new ArrayList();
+	
+	for (int index = 0; index < MAX_UPGRADES; index++)
+	{
+		CMannVsMachineUpgrades upgrades = CMannVsMachineUpgradeManager().GetUpgradeByIndex(index);
+		
+		//Powerup bottle is ui_group 2
+		if (upgrades.m_iUIGroup() != 2) 
+			continue;
+		
+		char attributeName[PLATFORM_MAX_PATH]; attributeName = upgrades.m_szAttribute();
+		
+		CEconItemAttributeDefinition attr = CEIAD_GetAttributeDefinitionByName(attributeName);
+		
+		//Attribute doesn't exist
+		if (attr.Address == Address_Null)
+			continue;
+		
+		int attribDefinitionIndex = attr.GetIndex();
+		
+		//Likely a class that can't use this upgrade
+		if (!CanUpgradeWithAttrib(client, slot, attribDefinitionIndex, upgrades.Address))
+			continue;
+		
+		int cost = GetCostForUpgrade(upgrades.Address, slot, iClass, client) * count;
+		
+		//I can;t afford this group
+		if (cost > currency)
+			continue;
+		
+		adtAffordableGroups.Push(index);
+	}
+	
+	if (adtAffordableGroups.Length == 0)
+	{
+		//Not this time buddy
+		return;
+	}
+	
+	//Purchase a random trio of canteens
+	int selectedIndex = adtAffordableGroups.Get(GetRandomInt(0, adtAffordableGroups.Length - 1));
+	
+	delete adtAffordableGroups;
+	
+	KV_MVM_Upgrade(client, count, slot, selectedIndex);
+	
+	if (redbots_manager_debug.BoolValue)
+		PrintToChatAll("PurchaseRandomAffordableCanteens: %N purchased %d canteens (upgrade %d)", client, count, selectedIndex);
 }

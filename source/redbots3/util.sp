@@ -73,7 +73,7 @@ char g_sPlayerUseMyNameResponse[][] =
 	"You totally stole my name."
 };
 
-//Make sure this matches with the eMissionDifficulty enum size
+//NOTE: Make sure this matches with the eMissionDifficulty enum size
 char g_sMissionDifficultyFilePaths[][] =
 {
 	"",
@@ -82,6 +82,13 @@ char g_sMissionDifficultyFilePaths[][] =
 	"configs/defender_bots_manager/mission_advanced.txt",
 	"configs/defender_bots_manager/mission_expert.txt",
 	"configs/defender_bots_manager/mission_nightmare.txt"
+};
+
+char g_sBotTeamCompositions[][][] =
+{
+	{"scout", "soldier", "demoman", "heavyweapons", "engineer", "medic"},
+	{"scout", "heavyweapons", "heavyweapons", "heavyweapons", "engineer", "sniper"},
+	{"scout", "heavyweapons", "heavyweapons", "pyro", "engineer", "demoman"}
 };
 
 char g_sRawPlayerClassNames[][] =
@@ -587,6 +594,60 @@ int GetNearestReviveMarker(int client, const float max_distance)
 	}
 	
 	return bestEntity;
+}
+
+void PowerupBottle_Reset(int bottle)
+{
+	SetEntProp(bottle, Prop_Send, "m_bActive", false);
+}
+
+PowerupBottleType_t PowerupBottle_GetType(int bottle)
+{
+	if (TF2Attrib_HookValueInt(0, "critboost", bottle))
+		return POWERUP_BOTTLE_CRITBOOST;
+	
+	if (TF2Attrib_HookValueInt(0, "ubercharge", bottle))
+		return POWERUP_BOTTLE_UBERCHARGE;
+	
+	if (TF2Attrib_HookValueInt(0, "recall", bottle))
+		return POWERUP_BOTTLE_RECALL;
+	
+	if (TF2Attrib_HookValueInt(0, "refill_ammo", bottle))
+		return POWERUP_BOTTLE_REFILL_AMMO;
+	
+	if (TF2Attrib_HookValueInt(0, "building_instant_upgrade", bottle))
+		return POWERUP_BOTTLE_BUILDINGS_INSTANT_UPGRADE;
+	
+	return POWERUP_BOTTLE_NONE;
+}
+
+void PowerupBottle_SetNumCharges(int bottle, int numCharges)
+{
+	SetEntProp(bottle, Prop_Send, "m_usNumCharges", numCharges);
+	
+	TF2Attrib_SetByName(bottle, "powerup charges", float(numCharges));
+}
+
+int PowerupBottle_GetNumCharges(int bottle)
+{
+	return GetEntProp(bottle, Prop_Send, "m_usNumCharges");
+}
+
+int PowerupBottle_GetMaxNumCharges(int bottle)
+{
+	return TF2Attrib_HookValueInt(0, "powerup_max_charges", bottle);
+}
+
+int GetCostOfCanteenType(PowerupBottleType_t type)
+{
+	switch (type)
+	{
+		case POWERUP_BOTTLE_CRITBOOST:	return 100;
+		case POWERUP_BOTTLE_UBERCHARGE:	return 75;
+		case POWERUP_BOTTLE_RECALL:	return 10;
+		case POWERUP_BOTTLE_REFILL_AMMO:	return 25;
+		case POWERUP_BOTTLE_BUILDINGS_INSTANT_UPGRADE:	return 50;
+	}
 }
 
 stock void RefundPlayerUpgrades(int client)

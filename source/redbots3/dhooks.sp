@@ -148,7 +148,7 @@ static MRESReturn DHookCallback_ManageRegularWeapons_Post(int pThis)
 }
 
 // VIRTUAL HOOKS
-// Only hooked on certain entities, which in this case should only be our bots
+// Only hooked on certain entities or data, which in this case should mostly be related to our bots
 
 static MRESReturn DHookCallback_MyTouch_Pre(int pThis, DHookReturn hReturn, DHookParam hParams)
 {
@@ -243,8 +243,9 @@ static MRESReturn DHookCallback_IsIgnored_Pre(Address pThis, DHookReturn hReturn
 {
 	int subject = hParams.Get(1);
 	int myself = view_as<IVision>(pThis).GetBot().GetEntity();
+	int myTeam = GetClientTeam(myself);
 	
-	if (BaseEntity_IsPlayer(subject) && TF2_GetClientTeam(subject) != TFTeam_Red)
+	if (BaseEntity_IsPlayer(subject) && GetClientTeam(subject) != myTeam)
 	{
 		if (IsSentryBusterRobot(subject))
 		{
@@ -270,7 +271,7 @@ static MRESReturn DHookCallback_IsIgnored_Pre(Address pThis, DHookReturn hReturn
 			{
 				switch (TF2Util_GetWeaponID(myWeapon))
 				{
-					case TF_WEAPON_ROCKETLAUNCHER, TF_WEAPON_GRENADELAUNCHER, TF_WEAPON_PIPEBOMBLAUNCHER, TF_WEAPON_DIRECTHIT, TF_WEAPON_FLAMETHROWER:
+					case TF_WEAPON_ROCKETLAUNCHER, TF_WEAPON_GRENADELAUNCHER, TF_WEAPON_PIPEBOMBLAUNCHER, TF_WEAPON_DIRECTHIT, TF_WEAPON_FLAMETHROWER, TF_WEAPON_FLAME_BALL:
 					{
 						//Don't ignore when using these, as they have knockback potential
 					}
@@ -283,6 +284,16 @@ static MRESReturn DHookCallback_IsIgnored_Pre(Address pThis, DHookReturn hReturn
 					}
 				}
 			}
+		}
+	}
+	else if (BaseEntity_IsBaseObject(subject) && BaseEntity_GetTeamNumber(subject) != myTeam)
+	{
+		if (TF2_HasSapper(subject))
+		{
+			//NOTE: these are ignored outside of mvm mode
+			hReturn.Value = true;
+			
+			return MRES_Supercede;
 		}
 	}
 	

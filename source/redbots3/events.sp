@@ -31,10 +31,12 @@ static void Event_MvmWaveFailed(Event event, const char[] name, bool dontBroadca
 		g_flNextReadyTime = GetGameTime() + redbots_manager_ready_cooldown.FloatValue;
 	}
 	
-	if (IsPluginMvMCreditsLoaded())
+#if defined MOD_REQUEST_CREDITS
+	if (redbots_manager_bot_request_credits.BoolValue)
 		for (int i = 1; i <= MaxClients; i++)
 			if (IsClientInGame(i) && g_bIsDefenderBot[i])
 				FakeClientCommand(i, "sm_requestcredits");
+#endif
 }
 
 public void Event_MvmWaveComplete(Event event, const char[] name, bool dontBroadcast)
@@ -42,7 +44,9 @@ public void Event_MvmWaveComplete(Event event, const char[] name, bool dontBroad
 	if (redbots_manager_kick_bots.BoolValue)
 		RemoveAllDefenderBots("BotManager3: Wave complete!", IsFinalWave());
 	
-	bool bRequestCredits = IsPluginMvMCreditsLoaded();
+#if defined MOD_REQUEST_CREDITS
+	bool bRequestCredits = redbots_manager_bot_request_credits.BoolValue;
+#endif
 	
 	for (int i = 1; i <= MaxClients; i++)
 	{
@@ -51,8 +55,10 @@ public void Event_MvmWaveComplete(Event event, const char[] name, bool dontBroad
 			//Wave complete, rethink what we should do
 			ResetIntentionInterface(i);
 			
+#if defined MOD_REQUEST_CREDITS
 			if (bRequestCredits)
 				FakeClientCommand(i, "sm_requestcredits");
+#endif
 		}
 	}
 }
