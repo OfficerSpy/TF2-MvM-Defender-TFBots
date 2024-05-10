@@ -135,7 +135,7 @@
 			"CTFPlayer::m_isLookingAroundForEnemies" //Property on class CTFBot
 			{
 				"windows"	"612" //build 8835751: 10336
-				"linux"		"612" //build 8835751: 10332
+				"linux"		"604" //build 8835751: 10332
 			}
 			"CPopulationManager::m_nStartingCurrency"
 			{
@@ -145,7 +145,7 @@
 			"CTFPlayer::m_mission" //Property on class CTFBot
 			{
 				"windows"	"664" //build 8835751: 10388
-				"linux"		"664" //build 8835751: 10384
+				"linux"		"656" //build 8835751: 10384
 			}
 		}
 		"Functions"
