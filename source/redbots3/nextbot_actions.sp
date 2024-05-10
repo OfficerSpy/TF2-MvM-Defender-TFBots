@@ -22,6 +22,8 @@ PathFollower m_pPath[MAXPLAYERS + 1];
 // ChasePath m_chasePath[MAXPLAYERS + 1];
 static float m_flRepathTime[MAXPLAYERS + 1];
 
+static PowerupBottleType_t m_nCurrentPowerupBottle[MAXPLAYERS + 1];
+static float m_flNextBottleUseTime[MAXPLAYERS + 1];
 static float m_flNextSnipeFireTime[MAXPLAYERS + 1];
 
 static int m_iAttackTarget[MAXPLAYERS + 1];
@@ -60,6 +62,10 @@ void ResetNextBot(int client)
 {
 	m_flRepathTime[client] = 0.0;
 	
+	m_nCurrentPowerupBottle[client] = POWERUP_BOTTLE_NONE;
+	m_flNextBottleUseTime[client] = 0.0;
+	// m_flNextSnipeFireTime[client] = 0.0;
+	
 	m_iAttackTarget[client] = -1;
 	m_iTarget[client] = -1;
 	m_flNextMarkTime[client] = 0.0;
@@ -79,6 +85,19 @@ void ResetNextBot(int client)
 	pb_vecPathGoal[client] = NULL_VECTOR;
 	pb_iPathGoalEntity[client] = -1;
 #endif
+}
+
+bool UpdatePowerupBottleType(int client)
+{
+	int bottle = GetPowerupBottle(client);
+	
+	if (bottle != -1)
+	{
+		m_nCurrentPowerupBottle[client] = PowerupBottle_GetType(bottle);
+		return true;
+	}
+	
+	return false;
 }
 
 #if defined EXTRA_PLUGINBOT
@@ -281,7 +300,7 @@ public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, flo
 			return action.SuspendFor(CTFBotGetAmmo(), "Getting ammo");
 		
 		OpportunisticallyUseWeaponAbilities(actor);
-		//TODO: use canteens
+		OpportunisticallyUsePowerupBottle(actor);
 	}
 	
 	return Plugin_Continue;
@@ -885,6 +904,7 @@ public Action CTFBotUpgrade_Update(BehaviorAction action, int actor, float inter
 			PrintToChatAll("%N upgrade for long with %d credits left!", actor, TF2_GetCurrency(actor));
 		
 		PurchaseRandomAffordableCanteens(actor);
+		UpdatePowerupBottleType(actor);
 		
 		return GetUpgradePostAction(actor, action);
 	}
@@ -3320,6 +3340,90 @@ bool OpportunisticallyUseWeaponAbilities(int client)
 	return false;
 }
 
+bool OpportunisticallyUsePowerupBottle(int client)
+{
+	int bottle = GetPowerupBottle(client);
+	
+	if (bottle == -1)
+		return false;
+	
+	if (PowerupBottle_GetNumCharges(bottle) < 1)
+		return false;
+	
+	switch (m_nCurrentPowerupBottle[client])
+	{
+		case POWERUP_BOTTLE_CRITBOOST:
+		{
+			//Medic would rather share this than use it for himself
+			if (TF2_GetPlayerClass(client) == TFClass_Medic)
+				return false;
+			
+			INextBot myBot = CBaseNPC_GetNextBotOfEntity(client);
+			CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
+			
+			if (threat)
+			{
+				int iThreat = threat.GetEntity();
+				
+				if (BaseEntity_IsPlayer(iThreat))
+				{
+					//TODO
+				}
+				else if (IsBaseBoss(iThreat))
+				{
+					//Crit against the tank
+					UseActionSlotItem(client);
+					return true;
+				}
+			}
+		}
+		case POWERUP_BOTTLE_UBERCHARGE:
+		{
+			if (TF2_IsInvulnerable(client))
+				return false;
+			
+			float healthRatio = view_as<float>(GetClientHealth(client)) / view_as<float>(TF2Util_GetEntityMaxHealth(client));
+			
+			if (healthRatio < tf_bot_health_critical_ratio.FloatValue && m_flNextBottleUseTime[client] <= GetGameTime())
+			{
+				//I'm about to die
+				UseActionSlotItem(client);
+				m_flNextBottleUseTime[client] = GetGameTime() + GetRandomFloat(10.0, 30.0);
+				return true;
+			}
+			
+			if (TF2_IsPlayerInCondition(client, TFCond_Gas))
+			{
+				//This gas might be explosive
+				UseActionSlotItem(client);
+				m_flNextBottleUseTime[client] = GetGameTime() + GetRandomFloat(20.0, 30.0);
+				return true;
+			}
+		}
+		case POWERUP_BOTTLE_RECALL:
+		{
+			//TODO
+		}
+		case POWERUP_BOTTLE_REFILL_AMMO:
+		{
+			int primary = GetPlayerWeaponSlot(client, TFWeaponSlot_Primary);
+			
+			if (primary != -1 && !HasAmmo(primary))
+			{
+				//I got no ammo
+				UseActionSlotItem(client);
+				return true;
+			}
+		}
+		case POWERUP_BOTTLE_BUILDINGS_INSTANT_UPGRADE:
+		{
+			//TODO
+		}
+	}
+	
+	return false;
+}
+
 void EquipBestWeaponForThreat(int client, const CKnownEntity threat)
 {
 	//Don't care about any weapon restrictions here
@@ -3976,7 +4080,8 @@ void PurchaseRandomAffordableCanteens(int client, int count = 3)
 	
 	if (adtAffordableGroups.Length == 0)
 	{
-		//Not this time buddy
+		//Not this time
+		delete adtAffordableGroups;
 		return;
 	}
 	

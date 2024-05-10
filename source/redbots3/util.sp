@@ -650,6 +650,19 @@ int GetCostOfCanteenType(PowerupBottleType_t type)
 	}
 }
 
+int GetPowerupBottle(int client)
+{
+	int ent = -1;
+	
+	while ((ent = FindEntityByClassname(ent, "tf_powerup_bottle")) != -1)
+	{
+		if (BaseEntity_GetOwnerEntity(ent) == client)
+			break;
+	}
+	
+	return ent;
+}
+
 stock void RefundPlayerUpgrades(int client)
 {
 	KeyValues kv = new KeyValues("MVM_Respec");
@@ -748,4 +761,11 @@ stock bool IsPluginRTDLoaded()
 {
 	//rtd
 	return FindConVar("sm_rtd2_version") != null;
+}
+
+stock void UseActionSlotItem(int client)
+{
+	KeyValues kv = new KeyValues("use_action_slot_item_server");
+	FakeClientCommandKeyValues(client, kv);
+	delete kv;
 }

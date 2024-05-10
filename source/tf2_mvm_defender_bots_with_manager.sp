@@ -14,11 +14,11 @@
 
 // #define TESTING_ONLY
 
+#define MOD_REQUEST_CREDITS
+
 #define METHOD_MVM_UPGRADES
 
 // #define EXTRA_PLUGINBOT
-
-// #define MOD_REQUEST_CREDITS
 
 #define PLUGIN_PREFIX	"[BotManager]"
 #define TFBOT_IDENTITY_NAME	"TFBOT_SEX_HAVER"
