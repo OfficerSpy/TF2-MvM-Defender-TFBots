@@ -24,7 +24,6 @@ static float m_flRepathTime[MAXPLAYERS + 1];
 
 static PowerupBottleType_t m_nCurrentPowerupBottle[MAXPLAYERS + 1];
 static float m_flNextBottleUseTime[MAXPLAYERS + 1];
-static float m_flNextSnipeFireTime[MAXPLAYERS + 1];
 
 static int m_iAttackTarget[MAXPLAYERS + 1];
 // float g_flRevalidateTarget[MAXPLAYERS + 1];
@@ -64,7 +63,6 @@ void ResetNextBot(int client)
 	
 	m_nCurrentPowerupBottle[client] = POWERUP_BOTTLE_NONE;
 	m_flNextBottleUseTime[client] = 0.0;
-	// m_flNextSnipeFireTime[client] = 0.0;
 	
 	m_iAttackTarget[client] = -1;
 	m_iTarget[client] = -1;
@@ -141,6 +139,7 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 	{
 		if (StrEqual(name, "MainAction"))
 		{
+			action.SelectMoreDangerousThreat = CTFBotMainAction_SelectMoreDangerousThreat;
 			// action.SelectTargetPoint = CTFBotMainAction_SelectTargetPoint;
 		}
 		else if (StrEqual(name, "TacticalMonitor"))
@@ -167,7 +166,6 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 		}
 		else if (StrEqual(name, "SniperLurk"))
 		{
-			action.Update = CTFBotSniperLurk_Update;
 			action.SelectMoreDangerousThreat = CTFBotSniperLurk_SelectMoreDangerousThreat;
 		}
 		else if (StrEqual(name, "SpyAttack"))
@@ -175,6 +173,37 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 			action.SelectMoreDangerousThreat = CTFBotSpyAttack_SelectMoreDangerousThreat;
 		}
 	}
+}
+
+public Action CTFBotMainAction_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
+{
+	int me = action.Actor;
+	
+	if (g_bIsDefenderBot[me] == false)
+		return Plugin_Continue;
+	
+	CKnownEntity knownThreat1 = view_as<CKnownEntity>(threat1);
+	CKnownEntity knownThreat2 = view_as<CKnownEntity>(threat2);
+	
+	// if (!knownThreat1.IsVisibleRecently() && !knownThreat2.IsVisibleRecently())
+		// return Plugin_Continue;
+	
+	CKnownEntity closeThreat = SelectCloserThreat(view_as<INextBot>(nextbot), knownThreat1, knownThreat2);
+	
+	if (BaseEntity_IsPlayer(closeThreat.GetEntity()))
+	{
+		//For players, target their healer first if they have one
+		knownEntity = view_as<Address>(GetHealerOfThreat(view_as<INextBot>(nextbot), closeThreat));
+	}
+	else
+	{
+		//We target the closest threat to us
+		knownEntity = view_as<Address>(closeThreat);
+	}
+	
+	// PrintToChatAll("CTFBotMainAction_SelectMoreDangerousThreat");
+	
+	return Plugin_Changed;
 }
 
 //TODO: this doesn't work correctly for some reaosn as entity returns a bunch of numbers that doesn't seem to correspond with an actual index
@@ -281,8 +310,6 @@ public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, flo
 	if (g_bIsDefenderBot[actor] == false)
 		return Plugin_Continue;
 	
-	MonitorKnownEntities(actor, CBaseNPC_GetNextBotOfEntity(actor).GetVisionInterface());
-	
 	if (GameRules_GetRoundState() == RoundState_RoundRunning)
 	{
 		bool low_health = false;
@@ -294,13 +321,10 @@ public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, flo
 		else if (health_ratio < tf_bot_health_ok_ratio.FloatValue)
 			low_health = true;
 		
-		if (low_health && CTFBotGetHealth_IsPossible(actor) && !TF2_IsInvulnerable(actor))
+		if (low_health && CTFBotGetHealth_IsPossible(actor))
 			return action.SuspendFor(CTFBotGetHealth(), "Getting health");
 		else if (IsAmmoLow(actor) && CTFBotGetAmmo_IsPossible(actor))
 			return action.SuspendFor(CTFBotGetAmmo(), "Getting ammo");
-		
-		OpportunisticallyUseWeaponAbilities(actor);
-		OpportunisticallyUsePowerupBottle(actor);
 	}
 	
 	return Plugin_Continue;
@@ -398,41 +422,6 @@ public Action CTFBotMvMEngineerIdle_OnStart(BehaviorAction action, int actor, Be
 	return action.Done();
 }
 
-public Action CTFBotSniperLurk_Update(BehaviorAction action, int actor, float interval, ActionResult result)
-{
-	if (g_bIsDefenderBot[actor] == false)
-		return Plugin_Continue;
-	
-	if (TF2_IsPlayerInCondition(actor, TFCond_Zoomed))
-	{
-		//TODO: this needs to be more precise with actually getting our current m_lookAtSubject in PlayerBody as this can cause jittery aim
-		INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
-		CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
-		
-		if (threat != NULL_KNOWN_ENTITY && threat.IsVisibleInFOVNow())
-		{
-			int threatEnt = threat.GetEntity();
-			
-			if (BaseEntity_IsPlayer(threatEnt))
-			{
-				//Help aim towards the desired target point
-				float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(threatEnt, aimPos);
-				SnapViewToPosition(actor, aimPos);
-				
-				if (m_flNextSnipeFireTime[actor] <= GetGameTime())
-					VS_PressFireButton(actor);
-			}
-		}
-	}
-	else
-	{
-		//Delay before we fire again
-		m_flNextSnipeFireTime[actor] = GetGameTime() + 1.0;
-	}
-	
-	return Plugin_Continue;
-}
-
 public Action CTFBotSniperLurk_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
 {
 	int me = action.Actor;
@@ -478,7 +467,6 @@ BehaviorAction CTFBotDefenderAttack()
 	action.OnStart = CTFBotDefenderAttack_OnStart;
 	action.Update = CTFBotDefenderAttack_Update;
 	action.OnEnd = CTFBotDefenderAttack_OnEnd;
-	action.SelectMoreDangerousThreat = CTFBotDefenderAttack_SelectMoreDangerousThreat;
 	
 	return action;
 }
@@ -574,16 +562,6 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 	{
 		//We have a threat, prepare to fight it
 		EquipBestWeaponForThreat(actor, threat);
-		
-		int myWeapon = BaseCombatCharacter_GetActiveWeapon(actor);
-		
-		if (myWeapon != -1)
-		{
-			int weaponID = TF2Util_GetWeaponID(myWeapon);
-			
-			if (weaponID == TF_WEAPON_FLAMETHROWER || weaponID == TF_WEAPON_FLAME_BALL)
-				UtilizeCompressionBlast(actor, myBot, threat);
-		}
 	}
 	
 	return action.Continue();
@@ -592,29 +570,6 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 public void CTFBotDefenderAttack_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
 	m_iAttackTarget[actor] = -1;
-}
-
-public Action CTFBotDefenderAttack_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
-{
-	CKnownEntity knownThreat1 = view_as<CKnownEntity>(threat1);
-	int iThreat1 = knownThreat1.GetEntity();
-	
-	CKnownEntity knownThreat2 = view_as<CKnownEntity>(threat2);
-	int iThreat2 = knownThreat2.GetEntity();
-	
-	if (BaseEntity_IsPlayer(iThreat1) && BaseEntity_IsPlayer(iThreat2))
-	{
-		//First get the closest threat to us
-		CKnownEntity closestThreat = SelectCloserThreat(view_as<INextBot>(nextbot), knownThreat1, knownThreat2);
-		
-		//Then target their healer if they have one, otherwise target them
-		knownEntity = view_as<Address>(GetHealerOfThreat(view_as<INextBot>(nextbot), closestThreat));
-	}
-	
-	//Use standard threat selection
-	knownEntity = Address_Null;
-	
-	return Plugin_Changed;
 }
 
 BehaviorAction CTFBotMarkGiant()
@@ -1080,19 +1035,7 @@ public Action CTFBotGetAmmo_Update(BehaviorAction action, int actor, float inter
 	CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
 	
 	if (threat)
-	{
 		EquipBestWeaponForThreat(actor, threat);
-		
-		int myWeapon = BaseCombatCharacter_GetActiveWeapon(actor);
-		
-		if (myWeapon != -1)
-		{
-			int weaponID = TF2Util_GetWeaponID(myWeapon);
-			
-			if (weaponID == TF_WEAPON_FLAMETHROWER || weaponID == TF_WEAPON_FLAME_BALL)
-				UtilizeCompressionBlast(actor, myBot, threat);
-		}
-	}
 	
 	return action.Continue();
 }
@@ -1326,19 +1269,7 @@ public Action CTFBotGetHealth_Update(BehaviorAction action, int actor, float int
 	CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
 	
 	if (threat)
-	{
 		EquipBestWeaponForThreat(actor, threat);
-		
-		int myWeapon = BaseCombatCharacter_GetActiveWeapon(actor);
-		
-		if (myWeapon != -1)
-		{
-			int weaponID = TF2Util_GetWeaponID(myWeapon);
-			
-			if (weaponID == TF_WEAPON_FLAMETHROWER || weaponID == TF_WEAPON_FLAME_BALL)
-				UtilizeCompressionBlast(actor, myBot, threat);
-		}
-	}
 	
 	return action.Continue();
 }
@@ -1754,9 +1685,6 @@ public Action CTFBotAttackTank_Update(BehaviorAction action, int actor, float in
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 	
-	//Always be aware of our target
-	myBot.GetVisionInterface().AddKnownEntity(m_iAttackTarget[actor]);
-	
 	bool canSeeTarget = TF2_IsLineOfFireClear3(actor, myEyePos, m_iAttackTarget[actor]);
 	float attackRange = GetIdealTankAttackRange(actor);
 	
@@ -1781,21 +1709,27 @@ public void CTFBotAttackTank_OnEnd(BehaviorAction action, int actor, BehaviorAct
 
 public Action CTFBotAttackTank_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
 {
-	int me = action.Actor;
-	
 	int iThreat1 = view_as<CKnownEntity>(threat1).GetEntity();
 	int iThreat2 = view_as<CKnownEntity>(threat2).GetEntity();
-	float myOrigin[3]; GetClientAbsOrigin(me, myOrigin);
-	float threatOrigin[3];
-	const float notSafeRange = 200.0;
+	INextBot myBot = view_as<INextBot>(nextbot);
+	
+	int me = action.Actor;
+	int myWeapon = BaseCombatCharacter_GetActiveWeapon(me);
+	
+	if (myWeapon != -1 && TF2Util_GetWeaponID(myWeapon) == TF_WEAPON_FLAMETHROWER || IsMeleeWeapon(myWeapon))
+	{
+		//Close range weapons only target the closest threat
+		knownEntity = view_as<Address>(SelectCloserThreat(myBot, view_as<CKnownEntity>(threat1), view_as<CKnownEntity>(threat2)));
+		return Plugin_Changed;
+	}
+	
+	//Nearby enemies might try to kill us
+	const float notSafeRange = 250.0;
 	
 	if (BaseEntity_IsPlayer(iThreat1))
 	{
-		GetClientAbsOrigin(iThreat1, threatOrigin);
-		
-		if (GetVectorDistance(myOrigin, threatOrigin) <= notSafeRange)
+		if (myBot.IsRangeLessThan(iThreat1, notSafeRange))
 		{
-			//This threat is too close, prioritize it!
 			knownEntity = threat1;
 			return Plugin_Changed;
 		}
@@ -1803,9 +1737,7 @@ public Action CTFBotAttackTank_SelectMoreDangerousThreat(BehaviorAction action, 
 	
 	if (BaseEntity_IsPlayer(iThreat2))
 	{
-		GetClientAbsOrigin(iThreat2, threatOrigin);
-		
-		if (GetVectorDistance(myOrigin, threatOrigin) <= notSafeRange)
+		if (myBot.IsRangeLessThan(iThreat2, notSafeRange))
 		{
 			knownEntity = threat2;
 			return Plugin_Changed;
@@ -2684,7 +2616,7 @@ float GetUpgradeInterval()
 	if (customInterval >= 0.0)
 		return customInterval;
 	
-	if (redbots_manager_mode.IntValue == MANAGER_MODE_AUTO_BOTS)
+	if (GameRules_GetRoundState() == RoundState_RoundRunning)
 	{
 		//Since we're joining in the middle of a round, we want to upgrade fast
 		return GetRandomFloat(0.3, 0.75);
@@ -3315,10 +3247,18 @@ float GetIdealTankAttackRange(int client)
 } */
 
 //Extension of the original function
-bool OpportunisticallyUseWeaponAbilities(int client)
+bool OpportunisticallyUseWeaponAbilities(int client, int weapon, INextBot bot, const CKnownEntity threat)
 {
-	//The Hitmans Heatmaker
-	if (HasSniperRifle(client) && TF2_IsPlayerInCondition(client, TFCond_Slowed))
+	if (!threat)
+		return false;
+	
+	if (weapon == -1)
+		return false;
+	
+	int weaponID = TF2Util_GetWeaponID(weapon);
+	
+	//Hitmans Heatmaker
+	if (weaponID == TF_WEAPON_SNIPERRIFLE && TF2_IsPlayerInCondition(client, TFCond_Slowed))
 	{
 		if (TF2_GetRageMeter(client) >= 0.0 && !TF2_IsRageDraining(client))
 		{
@@ -3328,7 +3268,7 @@ bool OpportunisticallyUseWeaponAbilities(int client)
 	}
 	
 	//Phlogistinator
-	if (IsWeapon(client, TF_WEAPON_FLAMETHROWER))
+	if (weaponID == TF_WEAPON_FLAMETHROWER && bot.IsRangeLessThan(threat.GetEntity(), 750.0))
 	{
 		if (TF2_GetRageMeter(client) >= 100.0 && !TF2_IsRageDraining(client))
 		{
@@ -3340,8 +3280,11 @@ bool OpportunisticallyUseWeaponAbilities(int client)
 	return false;
 }
 
-bool OpportunisticallyUsePowerupBottle(int client)
+bool OpportunisticallyUsePowerupBottle(int client, INextBot bot, const CKnownEntity threat)
 {
+	if (m_flNextBottleUseTime[client] > GetGameTime())
+		return false;
+	
 	int bottle = GetPowerupBottle(client);
 	
 	if (bottle == -1)
@@ -3357,9 +3300,6 @@ bool OpportunisticallyUsePowerupBottle(int client)
 			//Medic would rather share this than use it for himself
 			if (TF2_GetPlayerClass(client) == TFClass_Medic)
 				return false;
-			
-			INextBot myBot = CBaseNPC_GetNextBotOfEntity(client);
-			CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
 			
 			if (threat)
 			{
@@ -3384,7 +3324,7 @@ bool OpportunisticallyUsePowerupBottle(int client)
 			
 			float healthRatio = view_as<float>(GetClientHealth(client)) / view_as<float>(TF2Util_GetEntityMaxHealth(client));
 			
-			if (healthRatio < tf_bot_health_critical_ratio.FloatValue && m_flNextBottleUseTime[client] <= GetGameTime())
+			if (healthRatio < tf_bot_health_critical_ratio.FloatValue)
 			{
 				//I'm about to die
 				UseActionSlotItem(client);
@@ -3477,6 +3417,8 @@ void EquipBestWeaponForThreat(int client, const CKnownEntity threat)
 	if (GetAmmoCount(client, TFWeaponSlot_Secondary) <= 0)
 		secondary = -1;
 	
+	INextBot myBot = CBaseNPC_GetNextBotOfEntity(client);
+	
 	switch (TF2_GetPlayerClass(client))
 	{
 		case TFClass_DemoMan, TFClass_Heavy, TFClass_Spy, TFClass_Medic, TFClass_Engineer:
@@ -3486,22 +3428,40 @@ void EquipBestWeaponForThreat(int client, const CKnownEntity threat)
 		case TFClass_Scout:
 		{
 			if (secondary != -1)
-			{
-				//TODO: Clip1?
-			}
+				if (gun != -1 && !Clip1(gun))
+					gun = secondary;
 		}
 		case TFClass_Soldier:
 		{
-			//TODO: Clip1?
+			if (gun != -1 && !Clip1(gun))
+			{
+				if (secondary != -1 && Clip1(secondary))
+				{
+					const float closeSoldierRange = 500.0;
+					
+					float lastKnownPos[3]; threat.GetLastKnownPosition(lastKnownPos);
+					
+					if (myBot.IsRangeLessThanEx(lastKnownPos, closeSoldierRange))
+						gun = secondary;
+				}
+			}
 		}
 		case TFClass_Sniper:
 		{
-			const float closeSniperRange = 750.0;
-			
-			float lastKnownPos[3]; threat.GetLastKnownPosition(lastKnownPos);
-			
-			if (secondary != -1 && CBaseNPC_GetNextBotOfEntity(client).IsRangeLessThanEx(lastKnownPos, closeSniperRange))
-				gun = secondary;
+			if (primary != -1 && TF2Util_GetWeaponID(primary) == TF_WEAPON_COMPOUND_BOW)
+			{
+				//Always use the bow, unless it has no ammo
+				gun = primary;
+			}
+			else
+			{
+				const float closeSniperRange = 750.0;
+				
+				float lastKnownPos[3]; threat.GetLastKnownPosition(lastKnownPos);
+				
+				if (secondary != -1 && myBot.IsRangeLessThanEx(lastKnownPos, closeSniperRange))
+					gun = secondary;
+			}
 		}
 		case TFClass_Pyro:
 		{
@@ -3509,7 +3469,7 @@ void EquipBestWeaponForThreat(int client, const CKnownEntity threat)
 			
 			float lastKnownPos[3]; threat.GetLastKnownPosition(lastKnownPos);
 			
-			if (secondary != -1 && CBaseNPC_GetNextBotOfEntity(client).IsRangeGreaterThanEx(lastKnownPos, flameRange))
+			if (secondary != -1 && myBot.IsRangeGreaterThanEx(lastKnownPos, flameRange))
 				gun = secondary;
 			
 			int threatEnt = threat.GetEntity();
@@ -3896,25 +3856,28 @@ CKnownEntity SelectCloserThreat(INextBot bot, const CKnownEntity threat1, const 
 
 void MonitorKnownEntities(int client, IVision vision)
 {
-	for (int i = 1; i <= MaxClients; i++)
+	int myTeam = GetClientTeam(client);
+	
+	for (int i = 1; i <= GetEntityCount(); i++)
 	{
+		if (!IsValidEntity(i))
+			continue;
+		
 		if (i == client)
 			continue;
 		
-		if (!IsClientInGame(i))
+		if (BaseEntity_IsPlayer(i) && !IsPlayerAlive(i))
 			continue;
 		
-		if (GetClientTeam(i) == GetClientTeam(client))
+		if (CBaseEntity(i).IsCombatCharacter() == false)
 			continue;
 		
-		if (!IsPlayerAlive(i))
+		if (BaseEntity_GetTeamNumber(i) == myTeam)
 			continue;
 		
+		//If the threat is within our visible sightline, we will know about it
 		if (TF2_IsLineOfFireClear4(client, i))
-		{
-			//If the threat is within our visible sightline, we will know about it
 			vision.AddKnownEntity(i);
-		}
 	}
 }
 
@@ -3983,8 +3946,11 @@ int GetBotBombCampCount()
 	return count;
 }
 
-void UtilizeCompressionBlast(int client, INextBot bot, const CKnownEntity threat)
+void UtilizeCompressionBlast(int client, INextBot bot, const CKnownEntity threat, int enhancedStage = 0)
 {
+	if (!threat)
+		return;
+	
 	int iThreat = threat.GetEntity();
 	
 	if (BaseEntity_IsPlayer(iThreat))

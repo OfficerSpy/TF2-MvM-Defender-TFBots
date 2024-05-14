@@ -24,34 +24,19 @@ bool InitDHooks(GameData hGamedata)
 		failCount++;
 	
 	if (!RegisterHook(hGamedata, m_hMyTouch, "CItem::MyTouch"))
-	{
-		LogError("Failed to setup DynamicHook for CItem::MyTouch!");
 		failCount++;
-	}
 	
 	if (!RegisterHook(hGamedata, m_hIsBot, "CBasePlayer::IsBot"))
-	{
-		LogError("Failed to setup DynamicHook for CBasePlayer::IsBot!");
 		failCount++;
-	}
 	
 	if (!RegisterHook(hGamedata, m_hEventKilled, "CBaseEntity::Event_Killed"))
-	{
-		LogError("Failed to setup DynamicHook for CBaseEntity::Event_Killed!");
 		failCount++;
-	}
 	
 	if (!RegisterHook(hGamedata, m_hIsVisibleEntityNoticed, "IVision::IsVisibleEntityNoticed"))
-	{
-		LogError("Failed to setup DynamicHook for IVision::IsVisibleEntityNoticed!");
 		failCount++;
-	}
 	
 	if (!RegisterHook(hGamedata, m_hIsIgnored, "IVision::IsIgnored"))
-	{
-		LogError("Failed to setup DynamicHook for IVision::IsIgnored!");
 		failCount++;
-	}
 	
 	if (failCount > 0)
 	{
@@ -330,5 +315,11 @@ static bool RegisterHook(GameData gd, DynamicHook &hook, const char[] fnName)
 {
 	hook = DynamicHook.FromConf(gd, fnName);
 	
-	return hook != null;
+	if (hook == null)
+	{
+		LogError("Failed to setup DynamicHook for \"%s\"!", fnName);
+		return false;
+	}
+	
+	return true;
 }

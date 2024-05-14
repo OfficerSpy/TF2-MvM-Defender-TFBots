@@ -38,6 +38,8 @@ bool g_bIsDefenderBot[MAXPLAYERS + 1];
 bool g_bIsBeingRevived[MAXPLAYERS + 1];
 int g_iAdditionalButtons[MAXPLAYERS + 1];
 int g_iSubtractiveButtons[MAXPLAYERS + 1];
+float g_flNextSnipeFireTime[MAXPLAYERS + 1];
+float g_flBlockInputTime[MAXPLAYERS + 1];
 
 static float m_flNextCommand[MAXPLAYERS + 1];
 static float m_flLastReadyInputTime[MAXPLAYERS + 1];
@@ -91,7 +93,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.0.6",
+	version = "1.0.7",
 	url = ""
 };
 
@@ -195,6 +197,8 @@ public void OnClientPutInServer(int client)
 {
 	g_iAdditionalButtons[client] = 0;
 	g_iSubtractiveButtons[client] = 0;
+	// g_flNextSnipeFireTime[client] = 0.0;
+	g_flBlockInputTime[client] = 0.0;
 	m_flNextCommand[client] = GetGameTime();
 	m_flLastReadyInputTime[client] = 0.0;
 	
@@ -245,14 +249,88 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		PluginBot_SimulateFrame(client);
 #endif
 		
-		if (buttons & IN_ATTACK)
+		if (GameRules_GetRoundState() != RoundState_BetweenRounds)
 		{
-			int currentWeapon = BaseCombatCharacter_GetActiveWeapon(client);
+			int myWeapon = BaseCombatCharacter_GetActiveWeapon(client);
+			int weaponID = myWeapon != -1 ? TF2Util_GetWeaponID(myWeapon) : -1;
 			
-			if (currentWeapon != -1 && TF2Util_GetWeaponID(currentWeapon) == TF_WEAPON_MINIGUN && !HasAmmo(currentWeapon))
+			if (buttons & IN_ATTACK)
 			{
-				//Don't keep spinning the minigun if it ran out of ammo
-				buttons &= ~IN_ATTACK;
+				switch (weaponID)
+				{
+					case TF_WEAPON_MINIGUN:
+					{
+						if (!HasAmmo(myWeapon))
+						{
+							//Don't keep spinning the minigun if it ran out of ammo
+							buttons &= ~IN_ATTACK;
+						}
+					}
+					case TF_WEAPON_SNIPERRIFLE_CLASSIC:
+					{
+						if (GetEntPropFloat(myWeapon, Prop_Send, "m_flChargedDamage") >= 150.0)
+						{
+							//For the classic, let go on a full charge
+							buttons &= ~IN_ATTACK;
+						}
+					}
+					case TF_WEAPON_BUFF_ITEM:
+					{
+						//TODO: this is fucking rubbish, replace it
+						if (ActionsManager.GetAction(client, "UseItem") != INVALID_ACTION)
+						{
+							//We only want to blow the horn once, so stop holding the fire button once we've pressed it
+							if (g_flBlockInputTime[client] > GetGameTime())
+								buttons &= ~IN_ATTACK;
+							else if (TF2_GetRageMeter(client) >= 100.0)
+								g_flBlockInputTime[client] = GetGameTime() + 10.0;
+						}
+						else
+						{
+							g_flBlockInputTime[client] = 0.0;
+						}
+					}
+				}
+			}
+			
+			INextBot myBot = CBaseNPC_GetNextBotOfEntity(client);
+			IVision myVision = myBot.GetVisionInterface();
+			
+			MonitorKnownEntities(client, myVision);
+			
+			CKnownEntity threat = myVision.GetPrimaryKnownThreat(false);
+			
+			OpportunisticallyUseWeaponAbilities(client, myWeapon, myBot, threat);
+			OpportunisticallyUsePowerupBottle(client, myBot, threat);
+			
+			if (weaponID == TF_WEAPON_FLAMETHROWER || weaponID == TF_WEAPON_FLAME_BALL)
+				UtilizeCompressionBlast(client, myBot, threat);
+			
+			if (weaponID == TF_WEAPON_SNIPERRIFLE || weaponID == TF_WEAPON_SNIPERRIFLE_DECAP || weaponID == TF_WEAPON_SNIPERRIFLE_CLASSIC)
+			{
+				if (TF2_IsPlayerInCondition(client, TFCond_Zoomed))
+				{
+					//TODO: this needs to be more precise with actually getting our current m_lookAtSubject in PlayerBody as this can cause jittery aim
+					if (threat && threat.IsVisibleInFOVNow())
+					{
+						int iThreat = threat.GetEntity();
+						
+						if (BaseEntity_IsPlayer(iThreat))
+						{
+							//Help aim towards the desired target point
+							float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
+							SnapViewToPosition(client, aimPos);
+							
+							if (g_flNextSnipeFireTime[client] <= GetGameTime())
+								VS_PressFireButton(client);
+						}
+					}
+				}
+				else
+				{
+					//Delay before we fire again
+					g_flNextSnipeFireTime[client] = GetGameTime() + 1.0;
+				}
 			}
 		}
 	}

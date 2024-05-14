@@ -4,6 +4,7 @@ static Handle m_hHasAmmo;
 static Handle m_hGetMaxAmmo;
 static Handle m_hGetAmmoCount;
 static Handle m_hGetNextThink;
+static Handle m_hClip1;
 
 #if defined METHOD_MVM_UPGRADES
 static Handle m_hGEconItemSchema;
@@ -74,6 +75,15 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hGetNextThink = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CBaseEntity::GetNextThink!");
+		failCount++;
+	}
+	
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Virtual, "CTFWeaponBase::Clip1");
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	if ((m_hClip1 = EndPrepSDKCall()) == null)
+	{
+		LogError("Failed to create SDKCall for CTFWeaponBase::Clip1!");
 		failCount++;
 	}
 	
@@ -183,6 +193,11 @@ int GetAmmoCount(int client, int iAmmoIndex)
 float GetNextThink(int entity, const char[] szContext = "")
 {
 	return SDKCall(m_hGetNextThink, entity, szContext);
+}
+
+int Clip1(int weapon)
+{
+	return SDKCall(m_hClip1, weapon);
 }
 
 #if defined METHOD_MVM_UPGRADES
