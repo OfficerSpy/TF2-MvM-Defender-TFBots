@@ -5,6 +5,8 @@
 #define PURCHASE_UPGRADES_MAX_TIME	30.0
 #define MEDIC_REVIVE_RANGE	500.0
 #define SENTRY_WATCH_BOMB_RANGE	400.0
+#define FLAMETHROWER_REACH_RANGE	350.0
+#define FLAMEBALL_REACH_RANGE	526.0
 
 static char g_strHealthAndAmmoEntities[][] = 
 {
@@ -1887,17 +1889,17 @@ public Action CTFBotEvadeBuster_Update(BehaviorAction action, int actor, float i
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 	float myOrigin[3]; GetClientAbsOrigin(actor, myOrigin);
-	float goalPos[3];
+	float pathGoalPosition[3];
 	int mySentry = TF2_GetPlayerClass(actor) == TFClass_Engineer ? TF2_GetObject(actor, TFObject_Sentry) : -1;
 	
-	if (mySentry != -1 && !TF2_IsCarryingObject(actor) && myBot.IsRangeLessThan(mySentry, 600.0))
+	if (mySentry != -1 && !TF2_IsCarryingObject(actor) && myBot.IsRangeLessThan(mySentry, 500.0))
 	{
 		//I should go get my sentry
-		goalPos = WorldSpaceCenter(mySentry);
+		pathGoalPosition = WorldSpaceCenter(mySentry);
 		
-		if (myBot.IsRangeLessThanEx(goalPos, 100.0))
+		if (myBot.IsRangeLessThanEx(pathGoalPosition, 100.0))
 		{
-			SnapViewToPosition(actor, goalPos);
+			SnapViewToPosition(actor, pathGoalPosition);
 			VS_PressAltFireButton(actor);
 		}
 	}
@@ -1915,20 +1917,20 @@ public Action CTFBotEvadeBuster_Update(BehaviorAction action, int actor, float i
 			if (myBot.IsRangeLessThanEx(center, 500.0))
 				continue;
 			
-			goalPos = center;
+			pathGoalPosition = center;
 			break;
 		}
 		
 		delete hAreas;
 	}
 	
-	if (IsZeroVector(goalPos))
+	if (IsZeroVector(pathGoalPosition))
 		return action.Done("No escape route");
 	
 	if (m_flRepathTime[actor] <= GetGameTime())
 	{
 		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.3, 0.4);
-		m_pPath[actor].ComputeToPos(myBot, goalPos);
+		m_pPath[actor].ComputeToPos(myBot, pathGoalPosition);
 	}
 	
 	m_pPath[actor].Update(myBot);
@@ -2393,9 +2395,25 @@ void CollectUpgrades(int client)
 
 		//Demoknight doesn't buy primary weapon upgrades.
 		iArraySlots.Push(bDemoKnight ? TF_LOADOUT_SLOT_MELEE : TF_LOADOUT_SLOT_PRIMARY);
-	
+		
 		if (TF2_IsShieldEquipped(client))
+		{
 			iArraySlots.Push(TF_LOADOUT_SLOT_SECONDARY);
+		}
+		else
+		{
+			int secondary = GetPlayerWeaponSlot(client, TFWeaponSlot_Secondary);
+			int weaponID = secondary != -1 ? TF2Util_GetWeaponID(secondary) : -1;
+			
+			switch (weaponID)
+			{
+				case TF_WEAPON_PIPEBOMBLAUNCHER, TF_WEAPON_JAR, TF_WEAPON_JAR_MILK, TF_WEAPON_BUFF_ITEM, TF_WEAPON_JAR_GAS:
+				{
+					//Secondary items that have some use
+					iArraySlots.Push(TF_LOADOUT_SLOT_SECONDARY);
+				}
+			}
+		}
 	}
 
 	for (int i = 0; i < iArraySlots.Length; i++)
@@ -3247,15 +3265,15 @@ float GetIdealTankAttackRange(int client)
 } */
 
 //Extension of the original function
-bool OpportunisticallyUseWeaponAbilities(int client, int weapon, INextBot bot, const CKnownEntity threat)
+bool OpportunisticallyUseWeaponAbilities(int client, int activeWeapon, INextBot bot, const CKnownEntity threat)
 {
-	if (!threat)
+	if (threat == NULL_KNOWN_ENTITY)
 		return false;
 	
-	if (weapon == -1)
+	if (activeWeapon == -1)
 		return false;
 	
-	int weaponID = TF2Util_GetWeaponID(weapon);
+	int weaponID = TF2Util_GetWeaponID(activeWeapon);
 	
 	//Hitmans Heatmaker
 	if (weaponID == TF_WEAPON_SNIPERRIFLE && TF2_IsPlayerInCondition(client, TFCond_Slowed))
@@ -3280,7 +3298,7 @@ bool OpportunisticallyUseWeaponAbilities(int client, int weapon, INextBot bot, c
 	return false;
 }
 
-bool OpportunisticallyUsePowerupBottle(int client, INextBot bot, const CKnownEntity threat)
+bool OpportunisticallyUsePowerupBottle(int client, int activeWeapon, INextBot bot, const CKnownEntity threat)
 {
 	if (m_flNextBottleUseTime[client] > GetGameTime())
 		return false;
@@ -3297,24 +3315,43 @@ bool OpportunisticallyUsePowerupBottle(int client, INextBot bot, const CKnownEnt
 	{
 		case POWERUP_BOTTLE_CRITBOOST:
 		{
+			//Can't do anything useful without a weapon
+			if (activeWeapon == -1)
+				return false;
+			
+			//No threat to tactually use it against
+			if (threat == NULL_KNOWN_ENTITY)
+				return false;
+			
 			//Medic would rather share this than use it for himself
 			if (TF2_GetPlayerClass(client) == TFClass_Medic)
 				return false;
 			
-			if (threat)
+			int iThreat = threat.GetEntity();
+			
+			if (!TF2_IsLineOfFireClear4(client, iThreat))
+				return false;
+			
+			int weaponID = TF2Util_GetWeaponID(activeWeapon);
+			
+			if (weaponID == TF_WEAPON_FLAMETHROWER && bot.IsRangeGreaterThan(iThreat, FLAMETHROWER_REACH_RANGE))
+				return false;
+			
+			if (weaponID == TF_WEAPON_FLAME_BALL && bot.IsRangeGreaterThan(iThreat, FLAMEBALL_REACH_RANGE))
+				return false;
+			
+			if (IsMeleeWeapon(activeWeapon) && bot.IsRangeGreaterThan(iThreat, 100.0))
+				return false;
+			
+			if (BaseEntity_IsPlayer(iThreat))
 			{
-				int iThreat = threat.GetEntity();
-				
-				if (BaseEntity_IsPlayer(iThreat))
-				{
-					//TODO
-				}
-				else if (IsBaseBoss(iThreat))
-				{
-					//Crit against the tank
-					UseActionSlotItem(client);
-					return true;
-				}
+				//TODO
+			}
+			else if (IsBaseBoss(iThreat))
+			{
+				//Crit against the tank
+				UseActionSlotItem(client);
+				return true;
 			}
 		}
 		case POWERUP_BOTTLE_UBERCHARGE:
@@ -3856,9 +3893,14 @@ CKnownEntity SelectCloserThreat(INextBot bot, const CKnownEntity threat1, const 
 
 void MonitorKnownEntities(int client, IVision vision)
 {
+	static int maxEntCount = 0;
+	
+	if (maxEntCount == 0)
+		maxEntCount = GetMaxEntities();
+	
 	int myTeam = GetClientTeam(client);
 	
-	for (int i = 1; i <= GetEntityCount(); i++)
+	for (int i = 1; i <= maxEntCount; i++)
 	{
 		if (!IsValidEntity(i))
 			continue;
@@ -3948,7 +3990,7 @@ int GetBotBombCampCount()
 
 void UtilizeCompressionBlast(int client, INextBot bot, const CKnownEntity threat, int enhancedStage = 0)
 {
-	if (!threat)
+	if (threat == NULL_KNOWN_ENTITY)
 		return;
 	
 	int iThreat = threat.GetEntity();

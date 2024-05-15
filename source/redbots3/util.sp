@@ -596,10 +596,10 @@ int GetNearestReviveMarker(int client, const float max_distance)
 	return bestEntity;
 }
 
-void PowerupBottle_Reset(int bottle)
+/* void PowerupBottle_Reset(int bottle)
 {
 	SetEntProp(bottle, Prop_Send, "m_bActive", false);
-}
+} */
 
 PowerupBottleType_t PowerupBottle_GetType(int bottle)
 {
@@ -621,24 +621,24 @@ PowerupBottleType_t PowerupBottle_GetType(int bottle)
 	return POWERUP_BOTTLE_NONE;
 }
 
-void PowerupBottle_SetNumCharges(int bottle, int numCharges)
+/* void PowerupBottle_SetNumCharges(int bottle, int numCharges)
 {
 	SetEntProp(bottle, Prop_Send, "m_usNumCharges", numCharges);
 	
 	TF2Attrib_SetByName(bottle, "powerup charges", float(numCharges));
-}
+} */
 
 int PowerupBottle_GetNumCharges(int bottle)
 {
 	return GetEntProp(bottle, Prop_Send, "m_usNumCharges");
 }
 
-int PowerupBottle_GetMaxNumCharges(int bottle)
+/* int PowerupBottle_GetMaxNumCharges(int bottle)
 {
 	return TF2Attrib_HookValueInt(0, "powerup_max_charges", bottle);
-}
+} */
 
-int GetCostOfCanteenType(PowerupBottleType_t type)
+/* int GetCostOfCanteenType(PowerupBottleType_t type)
 {
 	switch (type)
 	{
@@ -648,7 +648,7 @@ int GetCostOfCanteenType(PowerupBottleType_t type)
 		case POWERUP_BOTTLE_REFILL_AMMO:	return 25;
 		case POWERUP_BOTTLE_BUILDINGS_INSTANT_UPGRADE:	return 50;
 	}
-}
+} */
 
 int GetPowerupBottle(int client)
 {
@@ -738,6 +738,7 @@ stock bool IsPlayerReady(int client)
 
 stock bool IsMeleeWeapon(int entity)
 {
+	//THINKFUNC Smack
 	return HasEntProp(entity, Prop_Data, "CTFWeaponBaseMeleeSmack");
 }
 

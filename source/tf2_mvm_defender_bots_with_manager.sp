@@ -260,35 +260,21 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				{
 					case TF_WEAPON_MINIGUN:
 					{
+						//Don't keep spinning the minigun if it ran out of ammo
 						if (!HasAmmo(myWeapon))
-						{
-							//Don't keep spinning the minigun if it ran out of ammo
 							buttons &= ~IN_ATTACK;
-						}
 					}
 					case TF_WEAPON_SNIPERRIFLE_CLASSIC:
 					{
+						//For the classic, let go on a full charge
 						if (GetEntPropFloat(myWeapon, Prop_Send, "m_flChargedDamage") >= 150.0)
-						{
-							//For the classic, let go on a full charge
 							buttons &= ~IN_ATTACK;
-						}
 					}
 					case TF_WEAPON_BUFF_ITEM:
 					{
-						//TODO: this is fucking rubbish, replace it
-						if (ActionsManager.GetAction(client, "UseItem") != INVALID_ACTION)
-						{
-							//We only want to blow the horn once, so stop holding the fire button once we've pressed it
-							if (g_flBlockInputTime[client] > GetGameTime())
-								buttons &= ~IN_ATTACK;
-							else if (TF2_GetRageMeter(client) >= 100.0)
-								g_flBlockInputTime[client] = GetGameTime() + 10.0;
-						}
-						else
-						{
-							g_flBlockInputTime[client] = 0.0;
-						}
+						//Once we blow the horn, stop pressing the fire button
+						if (IsPlayingHorn(myWeapon))
+							buttons &= ~IN_ATTACK;
 					}
 				}
 			}
@@ -301,7 +287,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			CKnownEntity threat = myVision.GetPrimaryKnownThreat(false);
 			
 			OpportunisticallyUseWeaponAbilities(client, myWeapon, myBot, threat);
-			OpportunisticallyUsePowerupBottle(client, myBot, threat);
+			OpportunisticallyUsePowerupBottle(client, myWeapon, myBot, threat);
 			
 			if (weaponID == TF_WEAPON_FLAMETHROWER || weaponID == TF_WEAPON_FLAME_BALL)
 				UtilizeCompressionBlast(client, myBot, threat);

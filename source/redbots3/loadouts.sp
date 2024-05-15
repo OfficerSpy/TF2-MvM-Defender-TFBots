@@ -146,7 +146,7 @@ public Action Timer_GiveCustomLoadout(Handle timer, int client)
 			TF2Econ_TranslateWeaponEntForClass(itemClassname, sizeof(itemClassname), TF2_GetPlayerClass(client));
 			primary = GiveItemToPlayer(client, itemClassname, m_iWeaponPrimary[client], 1, 6);
 			
-			switch(m_iWeaponPrimary[client])
+			switch (m_iWeaponPrimary[client])
 			{
 				case 730:	TF2Attrib_SetByName(primary, "auto fires when full", 1.0); //Beggar's Bazooka: prevent overloading
 				case 996:	TF2Attrib_SetByName(primary, "grenade launcher mortar mode", 0.0); //Loose Cannon: prevent charging
@@ -166,6 +166,9 @@ public Action Timer_GiveCustomLoadout(Handle timer, int client)
 		{
 			TF2Econ_TranslateWeaponEntForClass(itemClassname, sizeof(itemClassname), TF2_GetPlayerClass(client));
 			secondary = GiveItemToPlayer(client, itemClassname, m_iWeaponSecondary[client], 1, 6);
+			
+			if (StrEqual(itemClassname, "tf_weapon_pipebomblauncher"))
+				TF2Attrib_SetByName(secondary, "stickybomb charge rate", 0.1); //Instant fire stickies
 		}
 		else
 		{

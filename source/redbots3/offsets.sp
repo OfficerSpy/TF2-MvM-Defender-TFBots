@@ -9,12 +9,14 @@ void InitOffsets(GameData hGamedata)
 	SetOffset(hGamedata, "CTFPlayer", "m_isLookingAroundForEnemies");
 	SetOffset(hGamedata, "CPopulationManager", "m_nStartingCurrency");
 	SetOffset(hGamedata, "CTFPlayer", "m_mission");
+	SetOffset(hGamedata, "CTFBuffItem", "m_bPlayingHorn");
 	
 #if defined TESTING_ONLY
 	//Dump offsets
 	LogMessage("InitOffsets: CTFBot->m_isLookingAroundForEnemies = %d", GetOffset("CTFPlayer", "m_isLookingAroundForEnemies"));
 	LogMessage("InitOffsets: CPopulationManager->m_nStartingCurrency = %d", GetOffset("CPopulationManager", "m_nStartingCurrency"));
 	LogMessage("InitOffsets: CTFBot->m_mission = %d", GetOffset("CTFPlayer", "m_mission"));
+	LogMessage("InitOffsets: CTFBuffItem->m_bPlayingHorn = %d", GetOffset("CTFBuffItem", "m_bPlayingHorn"));
 #endif
 }
 
@@ -81,4 +83,9 @@ int GetStartingCurrency(int populator)
 MissionType GetTFBotMission(int client)
 {
 	return view_as<MissionType>(GetEntData(client, GetOffset("CTFPlayer", "m_mission")));
+}
+
+bool IsPlayingHorn(int weapon)
+{
+	return view_as<bool>(GetEntData(weapon, GetOffset("CTFBuffItem", "m_bPlayingHorn"), 1));
 }

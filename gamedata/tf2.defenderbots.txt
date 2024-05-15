@@ -25,6 +25,11 @@
 				"windows"	"m_vecOrigin"
 				"linux"		"m_vecOrigin"
 			}
+			"CTFBuffItem_BaseOffset"
+			{
+				"windows"	"m_nInspectStage"
+				"linux"		"m_nInspectStage"
+			}
 		}
 		"Signatures"
 		{
@@ -131,6 +136,11 @@
 				"windows"	"63"
 				"linux"		"64"
 			}
+			"CTFWeaponBase::Clip1"
+			{
+				"windows"	"344"
+				"linux"		"350"
+			}
 			//NOTE: variable offsets are calculated based on these values with the base netprop offset in the Keys section
 			"CTFPlayer::m_isLookingAroundForEnemies" //Property on class CTFBot
 			{
@@ -146,6 +156,11 @@
 			{
 				"windows"	"664" //build 8835751: 10388
 				"linux"		"656" //build 8835751: 10384
+			}
+			"CTFBuffItem::m_bPlayingHorn"
+			{
+				"windows"	"40" //build 8835751: 2080
+				"linux"		"40" //build 8835751: 2092
 			}
 		}
 		"Functions"
