@@ -33,6 +33,7 @@ enum
 bool g_bAreBotsEnabled;
 float g_flNextReadyTime;
 int g_iDetonatingPlayer = -1;
+ArrayList g_adtChosenBotClasses;
 
 bool g_bIsDefenderBot[MAXPLAYERS + 1];
 bool g_bIsBeingRevived[MAXPLAYERS + 1];
@@ -93,7 +94,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.0.7",
+	version = "1.0.8",
 	url = ""
 };
 
@@ -127,6 +128,8 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_vb", Command_Votebots);
 	RegConsoleCmd("sm_botpref", Command_BotPreferences);
 	RegConsoleCmd("sm_botpreferences", Command_BotPreferences);
+	RegConsoleCmd("sm_viewbotchances", Command_ShowBotChances);
+	RegConsoleCmd("sm_botchances", Command_ShowBotChances);
 	
 #if defined TESTING_ONLY
 	RegConsoleCmd("sm_bots_start_now", Command_BotsReadyNow);
@@ -172,6 +175,7 @@ public void OnPluginStart()
 	LoadLoadoutFunctions();
 	LoadPreferencesData();
 	
+	g_adtChosenBotClasses = new ArrayList();
 	m_adtBotNames = new ArrayList(MAX_NAME_LENGTH);
 	
 	InitNextBotPathing();
@@ -407,7 +411,12 @@ public Action Command_Votebots(int client, int args)
 public Action Command_BotPreferences(int client, int args)
 {
 	DisplayMenu(g_hBotPreferenceMenu, client, MENU_TIME_FOREVER);
-	
+	return Plugin_Handled;
+}
+
+public Action Command_ShowBotChances(int client, int args)
+{
+	ShowCurrentBotClassChances(client);
 	return Plugin_Handled;
 }
 
@@ -424,20 +433,7 @@ public Action Command_BotsReadyNow(int client, int args)
 
 public Action Command_AddBots(int client, int args)
 {
-	if (args < 1)
-	{
-		ReplyToCommand(client, "%s Specify an amount of bots to add", PLUGIN_PREFIX);
-		return Plugin_Handled;
-	}
-	
-	char arg1[3]; GetCmdArg(1, arg1, sizeof(arg1));
-	
-	int amount = StringToInt(arg1);
-	
-	AddBotsBasedOnPreferences(amount);
-	// CreateTimer(0.1, Timer_CheckBotImbalance, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
-	g_bAreBotsEnabled = true;
-	
+	CreateDisplayMenuAddDefenderBots(client);
 	return Plugin_Handled;
 }
 
@@ -752,6 +748,38 @@ void SetupSniperSpotHints()
 	{
 		DispatchKeyValue(ent, "team", "0");
 	}
+}
+
+void UpdateBotTeamComposition()
+{
+	g_adtChosenBotClasses.Clear();
+	
+	int newBotsToAdd = redbots_manager_defender_team_size.IntValue - GetTeamClientCount(view_as<int>(TFTeam_Red));
+	
+	if (newBotsToAdd < 1)
+		return;
+	
+	ArrayList adtClassPref = new ArrayList(TF2_CLASS_MAX_NAME_LENGTH);
+	
+	CollectPlayerBotClassPreferences(adtClassPref);
+	
+	if (adtClassPref.Length > 0)
+	{
+		//Choose the class lineup based on players' preferences
+		for (int i = 1; i <= newBotsToAdd; i++)
+		{
+			char class[TF2_CLASS_MAX_NAME_LENGTH]; adtClassPref.GetString(GetRandomInt(0, adtClassPref.Length - 1), class, sizeof(class));
+			
+			g_adtChosenBotClasses.PushString(class);
+		}
+	}
+	else
+	{
+		//No prefernces, the lineup is random
+		g_adtChosenBotClasses.PushString(g_sRawPlayerClassNames[GetRandomInt(1, 9)]);
+	}
+	
+	delete adtClassPref;
 }
 
 eMissionDifficulty GetMissionDifficulty()

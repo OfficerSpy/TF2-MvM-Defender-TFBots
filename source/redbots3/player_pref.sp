@@ -1,3 +1,5 @@
+#define TF2_CLASS_MAX_NAME_LENGTH	14
+
 enum
 {
 	PREF_FL_NONE = 0,
@@ -235,43 +237,10 @@ void AddBotsBasedOnPreferences(int amount)
 	if (amount <= 0)
 		return;
 	
-	ArrayList adtClassPref = new ArrayList(14);
+	ArrayList adtClassPref = new ArrayList(TF2_CLASS_MAX_NAME_LENGTH);
 	
 	//Get the players' class preferences
-	for (int i = 1; i <= MaxClients; i++)
-	{
-		if (IsClientInGame(i) && IsValidForBotPreferences(i))
-		{
-			int classFlags = GetClassPreferencesFlags(i);
-			
-			if (classFlags & PREF_FL_SCOUT)
-				adtClassPref.PushString("scout");
-			
-			if (classFlags & PREF_FL_SOLDIER)
-				adtClassPref.PushString("soldier");
-			
-			if (classFlags & PREF_FL_PYRO)
-				adtClassPref.PushString("pyro");
-			
-			if (classFlags & PREF_FL_DEMO)
-				adtClassPref.PushString("demoman");
-			
-			if (classFlags & PREF_FL_HEAVY)
-				adtClassPref.PushString("heavyweapons");
-			
-			if (classFlags & PREF_FL_ENGINEER)
-				adtClassPref.PushString("engineer");
-			
-			if (classFlags & PREF_FL_MEDIC)
-				adtClassPref.PushString("medic");
-			
-			if (classFlags & PREF_FL_SNIPER)
-				adtClassPref.PushString("sniper");
-			
-			if (classFlags & PREF_FL_SPY)
-				adtClassPref.PushString("spy");
-		}
-	}
+	CollectPlayerBotClassPreferences(adtClassPref);
 	
 	if (adtClassPref.Length > 0)
 	{
@@ -279,7 +248,7 @@ void AddBotsBasedOnPreferences(int amount)
 		{
 			//Now pick a random class from preferences
 			//This makes class choice proportional, rather than majority
-			char class[14];	adtClassPref.GetString(GetRandomInt(0, adtClassPref.Length - 1), class, sizeof(class));
+			char class[TF2_CLASS_MAX_NAME_LENGTH]; adtClassPref.GetString(GetRandomInt(0, adtClassPref.Length - 1), class, sizeof(class));
 			
 			AddDefenderTFBot(1, class, "red", "expert");
 		}
@@ -289,6 +258,46 @@ void AddBotsBasedOnPreferences(int amount)
 		//Nobody had preferences, just add random bots
 		AddRandomDefenderBots(amount);
 	}
+	
+	delete adtClassPref;
+}
+
+void CollectPlayerBotClassPreferences(ArrayList stringList)
+{
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsClientInGame(i) && IsValidForBotPreferences(i))
+		{
+			int classFlags = GetClassPreferencesFlags(i);
+			
+			if (classFlags & PREF_FL_SCOUT)
+				stringList.PushString("scout");
+			
+			if (classFlags & PREF_FL_SOLDIER)
+				stringList.PushString("soldier");
+			
+			if (classFlags & PREF_FL_PYRO)
+				stringList.PushString("pyro");
+			
+			if (classFlags & PREF_FL_DEMO)
+				stringList.PushString("demoman");
+			
+			if (classFlags & PREF_FL_HEAVY)
+				stringList.PushString("heavyweapons");
+			
+			if (classFlags & PREF_FL_ENGINEER)
+				stringList.PushString("engineer");
+			
+			if (classFlags & PREF_FL_MEDIC)
+				stringList.PushString("medic");
+			
+			if (classFlags & PREF_FL_SNIPER)
+				stringList.PushString("sniper");
+			
+			if (classFlags & PREF_FL_SPY)
+				stringList.PushString("spy");
+		}
+	}
 }
 
 //Determines if this player should have an influence on bot choices with their preferences
@@ -297,11 +306,14 @@ bool IsValidForBotPreferences(int client)
 	return !IsFakeClient(client) && TF2_GetClientTeam(client) == TFTeam_Red;
 }
 
-void ShowCurrentBotClassChances()
+void ShowCurrentBotClassChances(int client = -1)
 {
-	const int maxClassCount = 9;
+	const int maxClassCount = view_as<int>(TFClass_Engineer);
 	
-	float classChoiceCount[maxClassCount]; //Each index is for a class
+	//Each index is for a class, 0 = scout, 1 = soldier, etc.
+	//Defined as float for percentage calculation later down below
+	float classChoiceCount[maxClassCount];
+	
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (IsClientInGame(i) && IsValidForBotPreferences(i))
@@ -338,14 +350,35 @@ void ShowCurrentBotClassChances()
 	}
 	
 	float totalChoices;
+	
 	for (int i = 0; i < sizeof(classChoiceCount); i++)
 		totalChoices += classChoiceCount[i];
 	
+	if (totalChoices == 0.0)
+	{
+		if (client > 0)
+			PrintHintText(client, "Nobody has any preferences!");
+		else
+			PrintHintTextToAll("Nobody has any preferences!");
+		
+		return;
+	}
+	
+	//Like before, each index represents a class
 	float classPercents[maxClassCount];
+	
+	//Class percentage is amount of the class chosen divided by total of all class choices
 	for (int i = 0; i < sizeof(classPercents); i++)
 		classPercents[i] = (classChoiceCount[i] / totalChoices) * 100;
 	
-	//TODO: ignore classes that have no chance
-	PrintHintTextToAll("[Current Bot Chances]\nScout: %.0f\nSoldier: %.0f\nPyro: %.0f\nDemoman: %.0f\nHeavy: %.0f\nEngineer %.0f\nMedic: %.0f\nSniper: %.0f\nSpy: %.0f",
-	classPercents[0], classPercents[1], classPercents[2], classPercents[3], classPercents[4], classPercents[5], classPercents[6], classPercents[7], classPercents[8]);
+	if (client > 0)
+	{
+		CreateDisplayPanelBotPercentages(client, classPercents);
+	}
+	else
+	{
+		for (int i = 1; i <= MaxClients; i++)
+			if (IsClientInGame(i))
+				CreateDisplayPanelBotPercentages(i, classPercents);
+	}
 }

@@ -245,9 +245,13 @@ int GetResistType(int client)
 
 int GetLastDamageType(int client)
 {
-	int m_LastDamageType = FindSendPropInfo("CTFPlayer", "m_flMvMLastDamageTime") + 20;
+	static int offset = -1;
 	
-	return ReadInt(GetEntityAddress(client) + view_as<Address>(m_LastDamageType));
+	if (offset == -1)
+		offset = FindSendPropInfo("CTFPlayer", "m_flMvMLastDamageTime") + 20; //m_LastDamageType
+	
+	// return ReadInt(GetEntityAddress(client) + view_as<Address>(offset));
+	return GetEntData(client, offset);
 }
 
 float[] WorldSpaceCenter(int entity)
@@ -685,14 +689,12 @@ stock bool DoesAnyPlayerUseThisName(const char[] name)
 	return false;
 }
 
-stock int ReadInt(Address pAddr)		
-{		
-    if (pAddr == Address_Null)		
-    {
-        return -1;		
-    }
-    		
-    return LoadFromAddress(pAddr, NumberType_Int32);		
+stock int ReadInt(Address pAddr)
+{
+	if (pAddr == Address_Null)
+		return -1;
+	
+	return LoadFromAddress(pAddr, NumberType_Int32);
 }
 
 //Somewhat borrowed from [L4D2] Survivor Bot AI Improver
