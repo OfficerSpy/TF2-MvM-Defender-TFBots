@@ -233,23 +233,14 @@ bool CreateDisplayPanelBotTeamComposition(int client, const int duration = 30)
 
 static int MenuHandler_BotVote(Menu menu, MenuAction action, int param1, int param2)
 {
-	switch(action)
+	switch (action)
 	{
 		case MenuAction_VoteEnd:
 		{
 			if (param1 == 0) //yes
-			{
-				int amount = redbots_manager_defender_team_size.IntValue - GetTeamClientCount(view_as<int>(TFTeam_Red));
-				
-				AddBotsBasedOnPreferences(amount);
-				CreateTimer(0.1, Timer_CheckBotImbalance, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
-				g_bAreBotsEnabled = true;
-				PrintToChatAll("%s Bots have been enabled.", PLUGIN_PREFIX);
-			}
+				ManageDefenderBots(true);
 			else if (param1 == 1)
-			{
 				PrintToChatAll("%s Bot vote was unsuccessful!", PLUGIN_PREFIX);
-			}
 		}
 	}
 	
@@ -258,11 +249,11 @@ static int MenuHandler_BotVote(Menu menu, MenuAction action, int param1, int par
 
 static int MenuHandler_BotPreferenceMain(Menu menu, MenuAction action, int param1, int param2)
 {
-	switch(action)
+	switch (action)
 	{
 		case MenuAction_Select:
 		{
-			switch(param2)
+			switch (param2)
 			{
 				case 0:	DisplayClassPreferenceMenu(param1);
 				case 1:
@@ -284,13 +275,13 @@ static int MenuHandler_BotPreferenceMain(Menu menu, MenuAction action, int param
 
 static int MenuHandler_ClassPreference(Menu menu, MenuAction action, int param1, int param2)
 {
-	switch(action)
+	switch (action)
 	{
 		case MenuAction_Select:
 		{
 			int flags = GetClassPreferencesFlags(param1);
 			
-			switch(param2)
+			switch (param2)
 			{
 				//This may look weird, but we do the opposite because this is them toggling the value
 				case 0:	SetClassPreferences(param1, "scout", flags & PREF_FL_SCOUT ? 0 : 1);
@@ -317,11 +308,11 @@ static int MenuHandler_ClassPreference(Menu menu, MenuAction action, int param1,
 
 static int MenuHandler_WeaponClassPreference(Menu menu, MenuAction action, int param1, int param2)
 {
-	switch(action)
+	switch (action)
 	{
 		case MenuAction_Select:
 		{
-			switch(param2)
+			switch (param2)
 			{
 				case 0:	DisplayWeaponPreferenceMenu(param1, "scout");
 				case 1:	DisplayWeaponPreferenceMenu(param1, "soldier");
@@ -344,11 +335,11 @@ static int MenuHandler_WeaponClassPreference(Menu menu, MenuAction action, int p
 
 static int MenuHandler_WeaponPreference(Menu menu, MenuAction action, int param1, int param2)
 {
-	switch(action)
+	switch (action)
 	{
 		case MenuAction_Select:
 		{
-			switch(param2)
+			switch (param2)
 			{
 				case 0:	SetRandomWeaponPreference(param1, m_sSelectedClass[param1], "primary");
 				case 1:	SetRandomWeaponPreference(param1, m_sSelectedClass[param1], "secondary");

@@ -130,6 +130,10 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_botpreferences", Command_BotPreferences);
 	RegConsoleCmd("sm_viewbotchances", Command_ShowBotChances);
 	RegConsoleCmd("sm_botchances", Command_ShowBotChances);
+	RegConsoleCmd("sm_viewbotlineup", Command_ShowNewBotTeamComposition);
+	RegConsoleCmd("sm_botlineup", Command_ShowNewBotTeamComposition);
+	RegConsoleCmd("sm_rerollbotclasses", Command_RerollNewBotTeamComposition);
+	RegConsoleCmd("sm_rerollbots", Command_RerollNewBotTeamComposition);
 	
 #if defined TESTING_ONLY
 	RegConsoleCmd("sm_bots_start_now", Command_BotsReadyNow);
@@ -175,7 +179,7 @@ public void OnPluginStart()
 	LoadLoadoutFunctions();
 	LoadPreferencesData();
 	
-	g_adtChosenBotClasses = new ArrayList();
+	g_adtChosenBotClasses = new ArrayList(TF2_CLASS_MAX_NAME_LENGTH);
 	m_adtBotNames = new ArrayList(MAX_NAME_LENGTH);
 	
 	InitNextBotPathing();
@@ -420,6 +424,28 @@ public Action Command_ShowBotChances(int client, int args)
 	return Plugin_Handled;
 }
 
+public Action Command_ShowNewBotTeamComposition(int client, int args)
+{
+	if (CreateDisplayPanelBotTeamComposition(client))
+		PrintToChat(client, "Use command !rerollbotclasses to reshuffle the bot class lineup.");
+	
+	return Plugin_Handled;
+}
+
+public Action Command_RerollNewBotTeamComposition(int client, int args)
+{
+#if !defined TESTING_ONLY
+	if (TF2_GetClientTeam(client) != TFTeam_Red)
+	{
+		PrintToChat(client, "Your team is not allowed to use this.");
+		return Plugin_Handled;
+	}
+#endif
+	
+	UpdateChosenBotTeamComposition();
+	return Plugin_Handled;
+}
+
 #if defined TESTING_ONLY
 public Action Command_BotsReadyNow(int client, int args)
 {
@@ -551,8 +577,7 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 				}
 				else
 				{
-					CreateTimer(0.1, Timer_CheckBotImbalance, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
-					g_bAreBotsEnabled = true;
+					ManageDefenderBots(true);
 					
 					return Plugin_Handled;
 				}
@@ -659,8 +684,6 @@ void RemoveAllDefenderBots(char[] reason = "", bool bFinalWave = false)
 			KickClient(i, reason);
 		}
 	}
-	
-	g_bAreBotsEnabled = false;
 }
 
 static int m_iFindNameTries[MAXPLAYERS + 1];
@@ -706,9 +729,29 @@ void MakePlayerDance(int client)
 	}
 }
 
+void ManageDefenderBots(bool bManage, bool bAddBots = true)
+{
+	if (bManage)
+	{
+		if (bAddBots)
+			AddBotsFromChosenTeamComposition();
+		
+		CreateTimer(0.1, Timer_CheckBotImbalance, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
+		g_bAreBotsEnabled = true;
+		
+		PrintToChatAll("%s Bots have been enabled.", PLUGIN_PREFIX);
+	}
+	else
+	{
+		g_bAreBotsEnabled = false;
+	}
+}
+
 void AddDefenderTFBot(int count, char[] class, char[] team, char[] difficulty, bool quotaManaged = false)
 {
-	ServerCommand("tf_bot_add %d %s %s %s %s %s", count, class, team, difficulty, quotaManaged ? "" : "noquota", TFBOT_IDENTITY_NAME);
+	//Send command as many times as needed because custom names aren't supported when adding multiple
+	for (int i = 0; i < count; i++)
+		ServerCommand("tf_bot_add %d %s %s %s %s %s", 1, class, team, difficulty, quotaManaged ? "" : "noquota", TFBOT_IDENTITY_NAME);
 }
 
 void AddRandomDefenderBots(int amount)
@@ -750,7 +793,7 @@ void SetupSniperSpotHints()
 	}
 }
 
-void UpdateBotTeamComposition()
+void UpdateChosenBotTeamComposition()
 {
 	g_adtChosenBotClasses.Clear();
 	
@@ -780,6 +823,21 @@ void UpdateBotTeamComposition()
 	}
 	
 	delete adtClassPref;
+	
+#if defined TESTING_ONLY
+	PrintToChatAll("[UpdateChosenBotTeamComposition] Bot lineup changed");
+#endif
+}
+
+void AddBotsFromChosenTeamComposition()
+{
+	char class[TF2_CLASS_MAX_NAME_LENGTH];
+	
+	for (int i = 0; i < g_adtChosenBotClasses.Length; i++)
+	{
+		g_adtChosenBotClasses.GetString(i, class, sizeof(class));
+		AddDefenderTFBot(1, class, "red", "expert");
+	}
 }
 
 eMissionDifficulty GetMissionDifficulty()

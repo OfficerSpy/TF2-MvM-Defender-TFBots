@@ -5,6 +5,7 @@ void InitGameEventHooks()
 	HookEvent("mvm_wave_complete", Event_MvmWaveComplete);
 	HookEvent("revive_player_notify", Event_RevivePlayerNotify);
 	HookEvent("mvm_begin_wave", Event_MvmWaveBegin);
+	HookEvent("player_team", Event_PlayerTeam);
 }
 
 static void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
@@ -21,7 +22,12 @@ static void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 static void Event_MvmWaveFailed(Event event, const char[] name, bool dontBroadcast)
 {
 	if (redbots_manager_kick_bots.BoolValue)
+	{
 		RemoveAllDefenderBots("BotManager3: Wave failed!");
+		ManageDefenderBots(false);
+		UpdateChosenBotTeamComposition();
+		PrintToChatAll("%s Use command !viewbotlineup to view the next bot team composition", PLUGIN_PREFIX);
+	}
 	
 	SetupSniperSpotHints();
 	
@@ -42,7 +48,12 @@ static void Event_MvmWaveFailed(Event event, const char[] name, bool dontBroadca
 public void Event_MvmWaveComplete(Event event, const char[] name, bool dontBroadcast)
 {
 	if (redbots_manager_kick_bots.BoolValue)
+	{
 		RemoveAllDefenderBots("BotManager3: Wave complete!", IsFinalWave());
+		ManageDefenderBots(false);
+		UpdateChosenBotTeamComposition();
+		PrintToChatAll("%s Use command !viewbotlineup to view the next bot team composition", PLUGIN_PREFIX);
+	}
 	
 #if defined MOD_REQUEST_CREDITS
 	bool bRequestCredits = redbots_manager_bot_request_credits.BoolValue;
@@ -83,9 +94,24 @@ public void Event_MvmWaveBegin(Event event, const char[] name, bool dontBroadcas
 	}
 	
 	if (redbots_manager_mode.IntValue == MANAGER_MODE_AUTO_BOTS)
+		ManageDefenderBots(true);
+}
+
+public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	TFTeam team = view_as<TFTeam>(event.GetInt("team"));
+	TFTeam oldTeam = view_as<TFTeam>(event.GetInt("oldteam"));
+	bool isDisconnect = event.GetBool("disconnect");
+	
+	if (!IsFakeClient(client))
 	{
-		CreateTimer(0.1, Timer_CheckBotImbalance, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
-		g_bAreBotsEnabled = true;
+		/* When changing teams, update bot team composition for
+		- red player disconnected
+		- player joined red
+		- player left red */
+		if ((isDisconnect && oldTeam == TFTeam_Red) || team == TFTeam_Red || oldTeam == TFTeam_Red)
+			UpdateChosenBotTeamComposition();
 	}
 }
 
@@ -134,11 +160,14 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 		//Let medic bots use their shields
 		VS_AddBotAttribute(data, CTFBot_PROJECTILE_SHIELD);
 		
-		//Set the credits we should have at this time
+		//Bots don't get their credits set when joining red because CTFGameRules::GetTeamAssignmentOverride ignores bot players
+		//Set their credits manually to what they should have like human players
 		TF2_SetCurrency(data, GetStartingCurrency(g_iPopulationManager) + GetAcquiredCreditsOfAllWaves());
 		
-		if (IsPluginMvMCreditsLoaded())
+#if defined MOD_REQUEST_CREDITS
+		if (redbots_manager_bot_request_credits.BoolValue)
 			FakeClientCommand(data, "sm_requestcredits");
+#endif
 	}
 	
 	return Plugin_Stop;
