@@ -30,7 +30,7 @@ enum
 	MANAGER_MODE_AUTO_BOTS
 };
 
-bool g_bAreBotsEnabled;
+bool g_bBotsEnabled;
 float g_flNextReadyTime;
 int g_iDetonatingPlayer = -1;
 ArrayList g_adtChosenBotClasses;
@@ -187,7 +187,7 @@ public void OnPluginStart()
 
 public void OnMapStart()
 {
-	g_bAreBotsEnabled = false;
+	g_bBotsEnabled = false;
 	g_flNextReadyTime = 0.0;
 	
 	Config_LoadBotNames();
@@ -356,7 +356,7 @@ public Action Command_Votebots(int client, int args)
 		return Plugin_Handled;
 	}
 	
-	if (g_bAreBotsEnabled)
+	if (g_bBotsEnabled)
 	{
 		PrintToChat(client, "%s Bots are already enabled for this round.", PLUGIN_PREFIX);
 		return Plugin_Handled;
@@ -394,7 +394,7 @@ public Action Command_Votebots(int client, int args)
 			if (GetTeamClientCount(view_as<int>(TFTeam_Red)) <= 0)
 			{
 				AddRandomDefenderBots(redbots_manager_defender_team_size.IntValue); //TODO: replace me with a smarter team comp
-				g_bAreBotsEnabled = true;
+				g_bBotsEnabled = true;
 				PrintToChatAll("%s You will play a game with bots.", PLUGIN_PREFIX);
 				return Plugin_Handled;
 			}
@@ -558,7 +558,12 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 		}
 		case MANAGER_MODE_READY_BOTS:
 		{
-			if (!g_bAreBotsEnabled)
+			if (g_bBotsEnabled)
+			{
+				//Bots already going, okay to pass
+				return Plugin_Continue;
+			}
+			else
 			{
 				if (g_flNextReadyTime > GetGameTime())
 				{
@@ -578,7 +583,6 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 				else
 				{
 					ManageDefenderBots(true);
-					
 					return Plugin_Handled;
 				}
 			}
@@ -590,7 +594,7 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 
 public Action Timer_CheckBotImbalance(Handle timer)
 {
-	if (!g_bAreBotsEnabled)
+	if (!g_bBotsEnabled)
 		return Plugin_Stop;
 	
 	switch (redbots_manager_mode.IntValue)
@@ -737,13 +741,13 @@ void ManageDefenderBots(bool bManage, bool bAddBots = true)
 			AddBotsFromChosenTeamComposition();
 		
 		CreateTimer(0.1, Timer_CheckBotImbalance, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
-		g_bAreBotsEnabled = true;
+		g_bBotsEnabled = true;
 		
 		PrintToChatAll("%s Bots have been enabled.", PLUGIN_PREFIX);
 	}
 	else
 	{
-		g_bAreBotsEnabled = false;
+		g_bBotsEnabled = false;
 	}
 }
 
