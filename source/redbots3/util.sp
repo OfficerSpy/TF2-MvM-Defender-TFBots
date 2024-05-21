@@ -391,6 +391,9 @@ int FindBotNearestToBombNearestToHatch(int client)
 		if (TF2_GetClientTeam(i) != GetEnemyTeamOfPlayer(client))
 			continue;
 		
+		if (TF2Util_IsPointInRespawnRoom(WorldSpaceCenter(i)))
+			continue;
+		
 		if (IsSentryBusterRobot(i))
 			continue;
 		
@@ -478,9 +481,7 @@ int SelectRandomReachableEnemy(int actor)
 	}
 	
 	if (playercount > 0)
-	{
 		return playerarray[GetRandomInt(0, playercount-1)];
-	}
 	
 	return -1;
 }
@@ -771,4 +772,9 @@ stock void UseActionSlotItem(int client)
 	KeyValues kv = new KeyValues("use_action_slot_item_server");
 	FakeClientCommandKeyValues(client, kv);
 	delete kv;
+}
+
+stock void PlayerBuyback(int client)
+{
+	FakeClientCommand(client, "td_buyback");
 }

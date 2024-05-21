@@ -33,21 +33,21 @@ public const int WEAPONS_SPY_PDA2[] = {212, 59, 60, 297, 947};
 bool g_bHasCustomLoadout[MAXPLAYERS + 1];
 bool g_bHasBoughtUpgrades[MAXPLAYERS + 1];
 
-//Each cell is a weapon item def index
-int m_iWeaponPrimary[MAXPLAYERS + 1] = {ITEMDEF_DEFAULT, ...};
-int m_iWeaponSecondary[MAXPLAYERS + 1] = {ITEMDEF_DEFAULT, ...};
-int m_iWeaponMelee[MAXPLAYERS + 1] = {ITEMDEF_DEFAULT, ...};
-int m_iWeaponPDA2[MAXPLAYERS + 1] = {ITEMDEF_DEFAULT, ...};
+//Each cell is a weapon item definiton index
+static int m_iWeaponPrimary[MAXPLAYERS + 1] = {ITEMDEF_DEFAULT, ...};
+static int m_iWeaponSecondary[MAXPLAYERS + 1] = {ITEMDEF_DEFAULT, ...};
+static int m_iWeaponMelee[MAXPLAYERS + 1] = {ITEMDEF_DEFAULT, ...};
+static int m_iWeaponPDA2[MAXPLAYERS + 1] = {ITEMDEF_DEFAULT, ...};
 
 //Each cell is an attribute index
-int m_iAttribPrimary[MAXPLAYERS + 1][MAX_RUNTIME_ATTRIBUTES];
-int m_iAttribSecondary[MAXPLAYERS + 1][MAX_RUNTIME_ATTRIBUTES];
-int m_iAttribMelee[MAXPLAYERS + 1][MAX_RUNTIME_ATTRIBUTES];
+static int m_iAttribPrimary[MAXPLAYERS + 1][MAX_RUNTIME_ATTRIBUTES];
+static int m_iAttribSecondary[MAXPLAYERS + 1][MAX_RUNTIME_ATTRIBUTES];
+static int m_iAttribMelee[MAXPLAYERS + 1][MAX_RUNTIME_ATTRIBUTES];
 
 //Each cell is an attribute value
-float m_flAttrValPrimary[MAXPLAYERS + 1][MAX_RUNTIME_ATTRIBUTES];
-float m_flAttrValSecondary[MAXPLAYERS + 1][MAX_RUNTIME_ATTRIBUTES];
-float m_flAttrValMelee[MAXPLAYERS + 1][MAX_RUNTIME_ATTRIBUTES];
+static float m_flAttrValPrimary[MAXPLAYERS + 1][MAX_RUNTIME_ATTRIBUTES];
+static float m_flAttrValSecondary[MAXPLAYERS + 1][MAX_RUNTIME_ATTRIBUTES];
+static float m_flAttrValMelee[MAXPLAYERS + 1][MAX_RUNTIME_ATTRIBUTES];
 
 void LoadLoadoutFunctions()
 {
@@ -58,12 +58,7 @@ public Action Command_BoughtUpgrades(int client, int args)
 {
 	//Only need to remember upgrades if using custom loadouts
 	if (!redbots_manager_use_custom_loadouts.BoolValue)
-	{
-		//Necessary for MANAGER_MODE_AUTO_BOTS
-		g_bHasBoughtUpgrades[client] = true;
-		
 		return Plugin_Handled;
-	}
 	
 	//Only our bots should execute this command
 	if (!IsFakeClient(client))
@@ -118,7 +113,7 @@ public Action Command_BoughtUpgrades(int client, int args)
 	}
 	
 #if defined TESTING_ONLY
-	PrintToChatAll("[DEBUG] SAVED WEAPON STATS FOR %N", client);
+	PrintToChatAll("[Command_BoughtUpgrades] SAVED WEAPON STATS FOR %N", client);
 #endif
 	
 	g_bHasBoughtUpgrades[client] = true;
@@ -139,17 +134,20 @@ public Action Timer_GiveCustomLoadout(Handle timer, int client)
 	
 	TF2_RemoveWeaponSlot(client, TFWeaponSlot_Primary);
 	
-	if (m_iWeaponPrimary[client] >= 0)
+	if (m_iWeaponPrimary[client] > ITEMDEF_DEFAULT)
 	{
 		if (TF2Econ_GetItemClassName(m_iWeaponPrimary[client], itemClassname, sizeof(itemClassname)))
 		{
 			TF2Econ_TranslateWeaponEntForClass(itemClassname, sizeof(itemClassname), TF2_GetPlayerClass(client));
 			primary = GiveItemToPlayer(client, itemClassname, m_iWeaponPrimary[client], 1, 6);
 			
-			switch (m_iWeaponPrimary[client])
+			if (g_bHasBoughtUpgrades[client] == false)
 			{
-				case 730:	TF2Attrib_SetByName(primary, "auto fires when full", 1.0); //Beggar's Bazooka: prevent overloading
-				case 996:	TF2Attrib_SetByName(primary, "grenade launcher mortar mode", 0.0); //Loose Cannon: prevent charging
+				switch (m_iWeaponPrimary[client])
+				{
+					case 730:	TF2Attrib_SetByName(primary, "auto fires when full", 1.0); //Beggar's Bazooka: prevent overloading
+					case 996:	TF2Attrib_SetByName(primary, "grenade launcher mortar mode", 0.0); //Loose Cannon: prevent charging
+				}
 			}
 		}
 		else
@@ -160,14 +158,14 @@ public Action Timer_GiveCustomLoadout(Handle timer, int client)
 	
 	TF2_RemoveWeaponSlot(client, TFWeaponSlot_Secondary);
 	
-	if (m_iWeaponSecondary[client] >= 0 && !TF2_IsShieldEquipped(client))
+	if (m_iWeaponSecondary[client] > ITEMDEF_DEFAULT && !TF2_IsShieldEquipped(client))
 	{
 		if (TF2Econ_GetItemClassName(m_iWeaponSecondary[client], itemClassname, sizeof(itemClassname)))
 		{
 			TF2Econ_TranslateWeaponEntForClass(itemClassname, sizeof(itemClassname), TF2_GetPlayerClass(client));
 			secondary = GiveItemToPlayer(client, itemClassname, m_iWeaponSecondary[client], 1, 6);
 			
-			if (StrEqual(itemClassname, "tf_weapon_pipebomblauncher"))
+			if (g_bHasBoughtUpgrades[client] == false && StrEqual(itemClassname, "tf_weapon_pipebomblauncher"))
 				TF2Attrib_SetByName(secondary, "stickybomb charge rate", 0.1); //Instant fire stickies
 		}
 		else
@@ -178,14 +176,14 @@ public Action Timer_GiveCustomLoadout(Handle timer, int client)
 	
 	TF2_RemoveWeaponSlot(client, TFWeaponSlot_Melee);
 	
-	if (m_iWeaponMelee[client] >= 0)
+	if (m_iWeaponMelee[client] > ITEMDEF_DEFAULT)
 	{
 		if (TF2Econ_GetItemClassName(m_iWeaponMelee[client], itemClassname, sizeof(itemClassname)))
 		{
 			TF2Econ_TranslateWeaponEntForClass(itemClassname, sizeof(itemClassname), TF2_GetPlayerClass(client));
 			melee = GiveItemToPlayer(client, itemClassname, m_iWeaponMelee[client], 1, 6);
 			
-			switch(m_iWeaponMelee[client])
+			switch (m_iWeaponMelee[client])
 			{
 				case 1071:
 				{
@@ -201,7 +199,7 @@ public Action Timer_GiveCustomLoadout(Handle timer, int client)
 		}
 	}
 	
-	if (m_iWeaponPDA2[client] >= 0)
+	if (m_iWeaponPDA2[client] > ITEMDEF_DEFAULT)
 	{
 		if (TF2Econ_GetItemClassName(m_iWeaponPDA2[client], itemClassname, sizeof(itemClassname)))
 			GiveItemToPlayer(client, itemClassname, m_iWeaponPDA2[client], 1, 6);
@@ -212,7 +210,7 @@ public Action Timer_GiveCustomLoadout(Handle timer, int client)
 	if (g_bHasBoughtUpgrades[client])
 		ReapplyItemUpgrades(client, primary, secondary, melee);
 	
-	PostInventoryApplication(client); //Fixes bodygroup shit
+	PostInventoryApplication(client);
 	
 	//TODO: set proper health and ammo here because weapon or upgrades may change them
 	
@@ -221,25 +219,15 @@ public Action Timer_GiveCustomLoadout(Handle timer, int client)
 
 void ClearSavedAttributes(int client)
 {
-	int i;
-	for (i = 0; i < MAX_RUNTIME_ATTRIBUTES; i++)
+	for (int i = 0; i < MAX_RUNTIME_ATTRIBUTES; i++)
+	{
 		m_iAttribPrimary[client][i] = 0;
-	
-	for (i = 0; i < MAX_RUNTIME_ATTRIBUTES; i++)
 		m_iAttribSecondary[client][i] = 0;
-	
-	for (i = 0; i < MAX_RUNTIME_ATTRIBUTES; i++)
 		m_iAttribMelee[client][i] = 0;
-	
-	for (i = 0; i < MAX_RUNTIME_ATTRIBUTES; i++)
 		m_flAttrValPrimary[client][i] = 0.0;
-	
-	for (i = 0; i < MAX_RUNTIME_ATTRIBUTES; i++)
 		m_flAttrValSecondary[client][i] = 0.0;
-	
-	for (i = 0; i < MAX_RUNTIME_ATTRIBUTES; i++)
 		m_flAttrValMelee[client][i] = 0.0;
-		
+	}
 }
 
 void PrepareCustomLoadout(int client)
@@ -320,10 +308,10 @@ void PrepareCustomLoadout(int client)
 void ResetLoadouts(int client)
 {
 	g_bHasCustomLoadout[client] = false;
-	m_iWeaponPrimary[client] = -1;
-	m_iWeaponSecondary[client] = -1;
-	m_iWeaponMelee[client] = -1;
-	m_iWeaponPDA2[client] = -1;
+	m_iWeaponPrimary[client] = ITEMDEF_DEFAULT;
+	m_iWeaponSecondary[client] = ITEMDEF_DEFAULT;
+	m_iWeaponMelee[client] = ITEMDEF_DEFAULT;
+	m_iWeaponPDA2[client] = ITEMDEF_DEFAULT;
 }
 
 void ReapplyItemUpgrades(int client, int primary, int secondary, int melee)

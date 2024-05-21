@@ -37,10 +37,13 @@ ArrayList g_adtChosenBotClasses;
 
 bool g_bIsDefenderBot[MAXPLAYERS + 1];
 bool g_bIsBeingRevived[MAXPLAYERS + 1];
+bool g_bHasUpgraded[MAXPLAYERS + 1];
 int g_iAdditionalButtons[MAXPLAYERS + 1];
 int g_iSubtractiveButtons[MAXPLAYERS + 1];
-float g_flNextSnipeFireTime[MAXPLAYERS + 1];
+static float m_flNextSnipeFireTime[MAXPLAYERS + 1];
 float g_flBlockInputTime[MAXPLAYERS + 1];
+static float m_flDeadRethinkTime[MAXPLAYERS + 1];
+int g_iBuyBackNumber[MAXPLAYERS + 1];
 
 static float m_flNextCommand[MAXPLAYERS + 1];
 static float m_flLastReadyInputTime[MAXPLAYERS + 1];
@@ -61,6 +64,7 @@ ConVar redbots_manager_defender_team_size;
 ConVar redbots_manager_ready_cooldown;
 ConVar redbots_manager_bot_upgrade_interval;
 ConVar redbots_manager_bot_use_upgrades;
+ConVar redbots_manager_bot_buyback_chance;
 
 #if defined MOD_REQUEST_CREDITS
 ConVar redbots_manager_bot_request_credits;
@@ -94,7 +98,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.0.8",
+	version = "1.0.9",
 	url = ""
 };
 
@@ -117,6 +121,7 @@ public void OnPluginStart()
 	redbots_manager_ready_cooldown = CreateConVar("sm_redbots_manager_ready_cooldown", "30.0", _, FCVAR_NOTIFY, true, 0.0);
 	redbots_manager_bot_upgrade_interval = CreateConVar("sm_redbots_manager_bot_upgrade_interval", "-1", _, FCVAR_NOTIFY);
 	redbots_manager_bot_use_upgrades = CreateConVar("sm_redbots_manager_bot_use_upgrades", "1", "Enable bots to buy upgrades.", FCVAR_NOTIFY);
+	redbots_manager_bot_buyback_chance = CreateConVar("sm_redbots_manager_bot_buyback_chance", "1", "Chance for bots to buyback into the game.", FCVAR_NOTIFY);
 	
 #if defined MOD_REQUEST_CREDITS
 	redbots_manager_bot_request_credits = CreateConVar("sm_redbots_manager_bot_request_credits", "1", _, FCVAR_NOTIFY);
@@ -203,10 +208,13 @@ public void OnClientDisconnect(int client)
 
 public void OnClientPutInServer(int client)
 {
+	g_bHasUpgraded[client] = false;
 	g_iAdditionalButtons[client] = 0;
 	g_iSubtractiveButtons[client] = 0;
-	// g_flNextSnipeFireTime[client] = 0.0;
+	// m_flNextSnipeFireTime[client] = 0.0;
 	g_flBlockInputTime[client] = 0.0;
+	m_flDeadRethinkTime[client] = 0.0;
+	g_iBuyBackNumber[client] = 0;
 	m_flNextCommand[client] = GetGameTime();
 	m_flLastReadyInputTime[client] = 0.0;
 	
@@ -315,7 +323,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 							float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
 							SnapViewToPosition(client, aimPos);
 							
-							if (g_flNextSnipeFireTime[client] <= GetGameTime())
+							if (m_flNextSnipeFireTime[client] <= GetGameTime())
 								VS_PressFireButton(client);
 						}
 					}
@@ -323,10 +331,25 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				else
 				{
 					//Delay before we fire again
-					g_flNextSnipeFireTime[client] = GetGameTime() + 1.0;
+					m_flNextSnipeFireTime[client] = GetGameTime() + 1.0;
 				}
 			}
 		}
+	}
+	else
+	{
+		if (m_flDeadRethinkTime[client] <= GetGameTime())
+		{
+			//Think every second while we're dead
+			m_flDeadRethinkTime[client] = GetGameTime() + 1.0;
+			
+			if (ShouldBuybackIntoGame(client))
+				PlayerBuyback(client);
+			else
+				g_iBuyBackNumber[client] = GetRandomInt(1, 100);
+		}
+		
+		
 	}
 	
 	return Plugin_Continue;
