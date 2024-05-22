@@ -1,6 +1,13 @@
 #if defined METHOD_MVM_UPGRADES
 
 #define MAX_UPGRADES 59	//FAKE NEWS
+#define MAX_ATTRIBUTE_DESCRIPTION_LENGTH	128 //I think also matches with m_szIcon
+
+enum //CEconItemAttributeDefinition
+{
+	m_pKVAttribute = 0,
+	m_nDefIndex = 4
+};
 
 methodmap CEconItemAttributeDefinition
 {
@@ -11,10 +18,10 @@ methodmap CEconItemAttributeDefinition
 
 	public int GetIndex()
 	{
-		int iAttribIndex = LoadFromAddress(this.Address + view_as<Address>(4), NumberType_Int32);
+		int iAttribIndex = LoadFromAddress(this.Address + view_as<Address>(m_nDefIndex), NumberType_Int32);
 		
 		if (iAttribIndex > 3018 || iAttribIndex < 0)
-			iAttribIndex = LoadFromAddress(this.Address - view_as<Address>(4), NumberType_Int32); 
+			iAttribIndex = LoadFromAddress(this.Address - view_as<Address>(m_nDefIndex), NumberType_Int32); 
 	
 		return iAttribIndex;
 	}
@@ -63,7 +70,7 @@ methodmap CMannVsMachineUpgrades
 	
 	public char[] m_szAttribute()
 	{
-		char attribute[128];
+		char attribute[MAX_ATTRIBUTE_DESCRIPTION_LENGTH];
 		
 		for (int i = 0; i < sizeof(attribute); i++)
 			attribute[i] = (LoadFromAddress(this.Address + view_as<Address>(i), NumberType_Int32));

@@ -37,22 +37,7 @@ static void Event_MvmWaveFailed(Event event, const char[] name, bool dontBroadca
 		g_flNextReadyTime = GetGameTime() + redbots_manager_ready_cooldown.FloatValue;
 	}
 	
-	for (int i = 1; i <= MaxClients; i++)
-	{
-		if (IsClientInGame(i) && g_bIsDefenderBot[i])
-		{
-			/* NOTE: this isn't actually necessary, but the reason why I'm doing this is so we
-			or the population manager forgets about the bots' upgrades so they can 
-			just go and buy upgrades again in their upgrade behavior, though this is really 
-			just for the bots that failed a wave but were not kicked */
-			if (g_bHasUpgraded[i])
-			{
-				g_bHasBoughtUpgrades[i] = false;
-				RefundPlayerUpgrades(i);
-				g_bHasUpgraded[i] = false;
-			}
-		}
-	}
+	CreateTimer(0.1, Timer_WaveFailure, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
 public void Event_MvmWaveComplete(Event event, const char[] name, bool dontBroadcast)
@@ -132,14 +117,14 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 	
 	if (g_bIsDefenderBot[data])
 	{
-		if (redbots_manager_debug.BoolValue)
-			PrintToChatAll("Timer_PlayerSpawn: Currency for %d is %d", data, TF2_GetCurrency(data));
-		
 #if defined MOD_REQUEST_CREDITS
 		//Mainly for wave failures, try to request credits again
 		if (redbots_manager_bot_request_credits.BoolValue && GameRules_GetRoundState() == RoundState_BetweenRounds)
 			FakeClientCommand(data, "sm_requestcredits");
 #endif
+
+		if (redbots_manager_debug.BoolValue)
+			PrintToChatAll("[Timer_PlayerSpawn] Currency for %d is %d", data, TF2_GetCurrency(data));
 		
 		//We already made this guy into our bot, so do nothing
 		return Plugin_Stop;
@@ -184,6 +169,31 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 		if (redbots_manager_bot_request_credits.BoolValue)
 			FakeClientCommand(data, "sm_requestcredits");
 #endif
+	}
+	
+	return Plugin_Stop;
+}
+
+public Action Timer_WaveFailure(Handle timer)
+{
+	if (GameRules_GetRoundState() != RoundState_BetweenRounds)
+		return Plugin_Stop;
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (IsClientInGame(i) && g_bIsDefenderBot[i])
+		{
+			/* NOTE: this isn't actually necessary, but the reason why I'm doing this is so we
+			or the population manager forgets about the bots' upgrades so they can 
+			just go and buy upgrades again in their upgrade behavior, though this is really 
+			just for the bots that failed a wave but were not kicked */
+			if (g_bHasUpgraded[i])
+			{
+				g_bHasBoughtUpgrades[i] = false;
+				RefundPlayerUpgrades(i);
+				g_bHasUpgraded[i] = false;
+			}
+		}
 	}
 	
 	return Plugin_Stop;

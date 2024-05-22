@@ -43,7 +43,7 @@ int g_iSubtractiveButtons[MAXPLAYERS + 1];
 static float m_flNextSnipeFireTime[MAXPLAYERS + 1];
 float g_flBlockInputTime[MAXPLAYERS + 1];
 static float m_flDeadRethinkTime[MAXPLAYERS + 1];
-int g_iBuyBackNumber[MAXPLAYERS + 1];
+int g_iBuybackNumber[MAXPLAYERS + 1];
 
 static float m_flNextCommand[MAXPLAYERS + 1];
 static float m_flLastReadyInputTime[MAXPLAYERS + 1];
@@ -161,7 +161,9 @@ public void OnPluginStart()
 #if defined METHOD_MVM_UPGRADES
 		g_pMannVsMachineUpgrades = GameConfGetAddress(hGamedata, "MannVsMachineUpgrades");
 		
-		if (g_pMannVsMachineUpgrades)
+		if (!g_pMannVsMachineUpgrades)
+			LogError("OnPluginStart: Failed to find Address to g_MannVsMachineUpgrades!");
+		else
 			LogMessage("OnPluginStart: Found \"g_MannVsMachineUpgrades\" @ 0x%X", g_pMannVsMachineUpgrades);
 #endif
 		
@@ -214,7 +216,7 @@ public void OnClientPutInServer(int client)
 	// m_flNextSnipeFireTime[client] = 0.0;
 	g_flBlockInputTime[client] = 0.0;
 	m_flDeadRethinkTime[client] = 0.0;
-	g_iBuyBackNumber[client] = 0;
+	g_iBuybackNumber[client] = 0;
 	m_flNextCommand[client] = GetGameTime();
 	m_flLastReadyInputTime[client] = 0.0;
 	
@@ -343,10 +345,13 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			//Think every second while we're dead
 			m_flDeadRethinkTime[client] = GetGameTime() + 1.0;
 			
+			g_iBuybackNumber[client] = GetRandomInt(1, 100);
+			
 			if (ShouldBuybackIntoGame(client))
 				PlayerBuyback(client);
-			else
-				g_iBuyBackNumber[client] = GetRandomInt(1, 100);
+			
+			if (redbots_manager_debug.BoolValue)
+				PrintToChatAll("[OnPlayerRunCmd] g_iBuybackNumber[%d] = %d", client, g_iBuybackNumber[client]);
 		}
 		
 		

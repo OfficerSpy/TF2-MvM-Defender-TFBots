@@ -108,6 +108,17 @@ char g_sRawPlayerClassNames[][] =
 	"random"
 };
 
+void RefundPlayerUpgrades(int client)
+{
+	KeyValues kv = new KeyValues("MVM_Respec");
+	
+	TF2_SetInUpgradeZone(client, true);
+	FakeClientCommandKeyValues(client, kv);
+	TF2_SetInUpgradeZone(client, false);
+	
+	delete kv;
+}
+
 bool IsTFBotPlayer(int client)
 {
 	//TODO: change this, as it's not entirely reliable
@@ -666,17 +677,6 @@ int GetPowerupBottle(int client)
 	}
 	
 	return ent;
-}
-
-stock void RefundPlayerUpgrades(int client)
-{
-	KeyValues kv = new KeyValues("MVM_Respec");
-	
-	SetEntProp(client, Prop_Send, "m_bInUpgradeZone", 1);	
-	FakeClientCommandKeyValues(client, kv);
-	SetEntProp(client, Prop_Send, "m_bInUpgradeZone", 0);
-	
-	delete kv;
 }
 
 stock bool DoesAnyPlayerUseThisName(const char[] name)

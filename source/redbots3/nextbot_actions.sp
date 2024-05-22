@@ -4184,7 +4184,7 @@ bool ShouldBuybackIntoGame(int client)
 	if (IsFailureImminent(client))
 		return true;
 	
-	return g_iBuyBackNumber[client] <= redbots_manager_bot_buyback_chance.IntValue;
+	return g_iBuybackNumber[client] <= redbots_manager_bot_buyback_chance.IntValue;
 }
 
 /* float TransientlyConsistentRandomValue(int client, float period = 10.0, int seedValue = 0)
@@ -4223,5 +4223,5 @@ bool IsFailureImminent(int client)
 	float threatOrigin[3]; GetClientAbsOrigin(closestToHatch, threatOrigin);
 	
 	//Robot about to pick up a bomb very close to the hatch, we're in danger!
-	return GetVectorDistance(threatOrigin, bombPosition) <= 1000.0;
+	return GetVectorDistance(threatOrigin, bombPosition) <= 500.0;
 }
