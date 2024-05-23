@@ -98,7 +98,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.0.9",
+	version = "1.1.0",
 	url = ""
 };
 
@@ -163,8 +163,10 @@ public void OnPluginStart()
 		
 		if (!g_pMannVsMachineUpgrades)
 			LogError("OnPluginStart: Failed to find Address to g_MannVsMachineUpgrades!");
+#if defined TESTING_ONLY
 		else
 			LogMessage("OnPluginStart: Found \"g_MannVsMachineUpgrades\" @ 0x%X", g_pMannVsMachineUpgrades);
+#endif
 #endif
 		
 		if (!InitSDKCalls(hGamedata))

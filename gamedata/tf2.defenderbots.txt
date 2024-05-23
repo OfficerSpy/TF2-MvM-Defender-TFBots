@@ -13,7 +13,7 @@
 				}
 				"linux"
 				{
-					"signature" "g_MannVsMachineUpgrades"
+					"signature"	"g_MannVsMachineUpgrades"
 				}
 			}
 		}

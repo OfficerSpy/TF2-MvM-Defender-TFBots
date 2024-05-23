@@ -82,7 +82,10 @@ static MRESReturn DHookCallback_LoadUpgradesFile_Post(Address pThis)
 	if (!g_pMannVsMachineUpgrades)
 	{
 		g_pMannVsMachineUpgrades = pThis;
+		
+#if defined TESTING_ONLY
 		LogMessage("DHookCallback_LoadUpgradesFile_Post: Found \"g_MannVsMachineUpgrades\" @ 0x%X", g_pMannVsMachineUpgrades);
+#endif
 	}
 	
 	return MRES_Ignored;
