@@ -778,3 +778,14 @@ stock void PlayerBuyback(int client)
 {
 	FakeClientCommand(client, "td_buyback");
 }
+
+stock int GetTeamHumanClientCount(int team)
+{
+	int count = 0;
+	
+	for (int i = 1; i <= MaxClients; i++)
+		if (IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == team)
+			count++;
+	
+	return count;
+}

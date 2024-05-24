@@ -45,7 +45,7 @@ float g_flBlockInputTime[MAXPLAYERS + 1];
 static float m_flDeadRethinkTime[MAXPLAYERS + 1];
 int g_iBuybackNumber[MAXPLAYERS + 1];
 
-static float m_flNextCommand[MAXPLAYERS + 1];
+static float m_flLastCommandTime[MAXPLAYERS + 1];
 static float m_flLastReadyInputTime[MAXPLAYERS + 1];
 
 //Config
@@ -219,7 +219,7 @@ public void OnClientPutInServer(int client)
 	g_flBlockInputTime[client] = 0.0;
 	m_flDeadRethinkTime[client] = 0.0;
 	g_iBuybackNumber[client] = 0;
-	m_flNextCommand[client] = GetGameTime();
+	m_flLastCommandTime[client] = GetGameTime();
 	m_flLastReadyInputTime[client] = 0.0;
 	
 	g_bHasBoughtUpgrades[client] = false;
@@ -588,6 +588,9 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 		}
 		case MANAGER_MODE_READY_BOTS:
 		{
+			if (!ShouldProcessCommand(client))
+				return Plugin_Handled;
+			
 			if (g_bBotsEnabled)
 			{
 				//Bots already going, okay to pass
@@ -692,13 +695,24 @@ public void DefenderBot_TouchPost(int entity, int other)
 
 bool FakeClientCommandThrottled(int client, const char[] command)
 {
-	if (m_flNextCommand[client] > GetGameTime())
+	if (m_flLastCommandTime[client] > GetGameTime())
 		return false;
 	
 	FakeClientCommand(client, command);
 	
-	m_flNextCommand[client] = GetGameTime() + 0.4;
+	m_flLastCommandTime[client] = GetGameTime() + 0.4;
 	
+	return true;
+}
+
+//Used to check players last command input
+//Usually for preventing palyers from sending a command multiple times in a single frame
+bool ShouldProcessCommand(int client)
+{
+	if (m_flLastCommandTime[client] > GetGameTime())
+		return false;
+	
+	m_flLastCommandTime[client] = GetGameTime() + COMMAND_MAX_RATE;
 	return true;
 }
 

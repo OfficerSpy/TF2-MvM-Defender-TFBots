@@ -329,8 +329,22 @@ public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, flo
 		
 		if (low_health && CTFBotGetHealth_IsPossible(actor))
 			return action.SuspendFor(CTFBotGetHealth(), "Getting health");
-		else if (IsAmmoLow(actor) && CTFBotGetAmmo_IsPossible(actor))
-			return action.SuspendFor(CTFBotGetAmmo(), "Getting ammo");
+		else
+		{
+			int primary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Primary);
+			
+			if (primary != -1 && TF2Util_GetWeaponID(primary) == TF_WEAPON_FLAMETHROWER && TF2_IsCritBoosted(actor))
+			{
+				//Don't bother going for ammo while using crits unless our weapon has completely run out
+				if (!HasAmmo(primary))
+					return action.SuspendFor(CTFBotGetAmmo(), "Get ammo for crit");
+			}
+			else if (IsAmmoLow(actor) && CTFBotGetAmmo_IsPossible(actor))
+			{
+				//Go for ammo when we're low and nearby packs are available
+				return action.SuspendFor(CTFBotGetAmmo(), "Getting ammo");
+			}
+		}
 	}
 	
 	return Plugin_Continue;
@@ -1021,6 +1035,7 @@ public Action CTFBotGetAmmo_OnStart(BehaviorAction action, int actor, BehaviorAc
 	if (m_iAmmoPack[actor] != -1)
 	{
 		// UpdateLookAroundForEnemies(actor, true);
+		BaseMultiplayerPlayer_SpeakConceptIfAllowed(actor, MP_CONCEPT_PLAYER_DISPENSERHERE);
 		return action.Continue();
 	}
 	
@@ -1248,7 +1263,10 @@ public Action CTFBotGetHealth_OnStart(BehaviorAction action, int actor, Behavior
 	delete ammo;
 	
 	if (m_iHealthPack[actor] != -1)
+	{
+		BaseMultiplayerPlayer_SpeakConceptIfAllowed(actor, MP_CONCEPT_PLAYER_MEDIC);
 		return action.Continue();
+	}
 	
 	return action.Done("Could not find health");
 }
@@ -2158,12 +2176,20 @@ float GetDesiredPathLookAheadRange(int client)
 bool CTFBotDefenderAttack_SelectTarget(int actor, bool bBombCarrierOnly = false)
 {
 	//Always go after the bot closest to the bomb, if possible
-	m_iAttackTarget[actor] = FindBotNearestToBombNearestToHatch(actor);
+	int target = FindBotNearestToBombNearestToHatch(actor);
 	
-	if (!bBombCarrierOnly && m_iAttackTarget[actor] == -1)
-		m_iAttackTarget[actor] = SelectRandomReachableEnemy(actor);
+	//No bomb in play, just find random target
+	if (!bBombCarrierOnly && target == -1)
+		target = SelectRandomReachableEnemy(actor);
 	
-	return m_iAttackTarget[actor] != -1;
+	//Found a valid target, update
+	if (target != -1)
+	{
+		m_iAttackTarget[actor] = target;
+		return true;
+	}
+	
+	return false;
 }
 
 int GetMarkForDeathWeapon(int player)
@@ -2665,7 +2691,7 @@ float GetUpgradeInterval()
 	if (GameRules_GetRoundState() == RoundState_RoundRunning)
 	{
 		//Since we're joining in the middle of a round, we want to upgrade fast
-		return GetRandomFloat(0.3, 0.75);
+		return GetRandomFloat(0.1, 0.75);
 	}
 	
 	const float interval = 1.25;
@@ -3364,6 +3390,10 @@ bool OpportunisticallyUsePowerupBottle(int client, int activeWeapon, INextBot bo
 			if (TF2_GetPlayerClass(client) == TFClass_Medic)
 				return false;
 			
+			//Already have crits
+			if (TF2_IsCritBoosted(client))
+				return false;
+			
 			int iThreat = threat.GetEntity();
 			
 			if (!TF2_IsLineOfFireClear4(client, iThreat))
@@ -3382,9 +3412,17 @@ bool OpportunisticallyUsePowerupBottle(int client, int activeWeapon, INextBot bo
 			
 			if (BaseEntity_IsPlayer(iThreat))
 			{
-				//TODO
+				/* So basically here we determine based on a few factors
+				if our threat is giant and has a lot of health, they're probably a boss
+				if we're close to failing and they have a lot of health left, we want to kill them fast
+				i really want this to be done better, but we probably need people that actually know what the optimal use of this canteen is */
+				if ((TF2_IsMiniBoss(iThreat) && GetClientHealth(iThreat) > 5000) || (IsFailureImminent(client) && GetClientHealth(iThreat) > 900))
+				{
+					UseActionSlotItem(client);
+					return true;
+				}
 			}
-			else if (IsBaseBoss(iThreat))
+			else if (IsBaseBoss(iThreat) && BaseEntity_GetHealth(iThreat) > 1000)
 			{
 				//Crit against the tank
 				UseActionSlotItem(client);
@@ -3416,7 +3454,21 @@ bool OpportunisticallyUsePowerupBottle(int client, int activeWeapon, INextBot bo
 		}
 		case POWERUP_BOTTLE_RECALL:
 		{
-			//TODO
+			//TODO: medic can't share this, but he could use it for himself in an attempt to defend the hatch
+			if (TF2_GetPlayerClass(client) == TFClass_Medic)
+				return false;
+			
+			//TODO: redo this
+			
+			//We're already close enough to the hatch
+			if (bot.IsRangeLessThanEx(GetBombHatchPosition(), 1200.0))
+				return false;
+			
+			if (IsFailureImminent(client))
+			{
+				UseActionSlotItem(client);
+				return true;
+			}
 		}
 		case POWERUP_BOTTLE_REFILL_AMMO:
 		{
@@ -4223,5 +4275,5 @@ bool IsFailureImminent(int client)
 	float threatOrigin[3]; GetClientAbsOrigin(closestToHatch, threatOrigin);
 	
 	//Robot about to pick up a bomb very close to the hatch, we're in danger!
-	return GetVectorDistance(threatOrigin, bombPosition) <= 500.0;
+	return GetVectorDistance(threatOrigin, bombPosition) <= 800.0;
 }
