@@ -336,7 +336,7 @@ public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, flo
 			if (primary != -1 && TF2Util_GetWeaponID(primary) == TF_WEAPON_FLAMETHROWER && TF2_IsCritBoosted(actor))
 			{
 				//Don't bother going for ammo while using crits unless our weapon has completely run out
-				if (!HasAmmo(primary))
+				if (!HasAmmo(primary) && CTFBotGetAmmo_IsPossible(actor))
 					return action.SuspendFor(CTFBotGetAmmo(), "Get ammo for crit");
 			}
 			else if (IsAmmoLow(actor) && CTFBotGetAmmo_IsPossible(actor))
@@ -3349,7 +3349,7 @@ bool OpportunisticallyUseWeaponAbilities(int client, int activeWeapon, INextBot 
 	}
 	
 	//Phlogistinator
-	if (weaponID == TF_WEAPON_FLAMETHROWER && bot.IsRangeLessThan(threat.GetEntity(), 750.0))
+	if (weaponID == TF_WEAPON_FLAMETHROWER && bot.IsRangeLessThan(threat.GetEntity(), 750.0) && !TF2_IsCritBoosted(client))
 	{
 		if (TF2_GetRageMeter(client) >= 100.0 && !TF2_IsRageDraining(client))
 		{
