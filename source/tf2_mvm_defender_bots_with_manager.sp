@@ -98,7 +98,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.1.0",
+	version = "1.1.1",
 	url = ""
 };
 
@@ -507,87 +507,90 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 	{
 		case MANAGER_MODE_MANUAL_BOTS:
 		{
-			if (TF2_GetClientTeam(client) == TFTeam_Red)
+			if (TF2_GetClientTeam(client) != TFTeam_Red)
+				return Plugin_Continue;
+			
+			char arg1[2]; GetCmdArg(1, arg1, sizeof(arg1));
+			int value = StringToInt(arg1);
+			
+			//0 means we unready, let it pass
+			if (value < 1)
+				return Plugin_Continue;
+			
+			//Allow players that are ready to unready
+			if (IsPlayerReady(client))
+				return Plugin_Continue;
+			
+			if (redbots_manager_min_players.IntValue != -1)
 			{
-				char arg1[2]; GetCmdArg(1, arg1, sizeof(arg1));
-				int value = StringToInt(arg1);
+				eMissionDifficulty difficulty = GetMissionDifficulty();
+				int defenderTeamSize = redbots_manager_defender_team_size.IntValue;
+				int minPlayers = redbots_manager_min_players.IntValue;
+				int trueMinPlayers;
 				
-				//0 means we unready, let it pass
-				if (value < 1)
-					return Plugin_Continue;
-				
-				//Allow players that are ready to unready
-				if (IsPlayerReady(client))
-					return Plugin_Continue;
-				
-				if (redbots_manager_min_players.IntValue != -1)
+				switch (difficulty)
 				{
-					eMissionDifficulty difficulty = GetMissionDifficulty();
-					int defenderTeamSize = redbots_manager_defender_team_size.IntValue;
-					int minPlayers = redbots_manager_min_players.IntValue;
-					int trueMinPlayers;
-					
-					switch (difficulty)
+					case MISSION_NORMAL:
 					{
-						case MISSION_NORMAL:
+						//Don't go over the max amount of red players
+						trueMinPlayers = minPlayers > defenderTeamSize ? defenderTeamSize : minPlayers;
+						
+						//Block ready status if we don't have enough players
+						if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
 						{
-							//Don't go over the max amount of red players
-							trueMinPlayers = minPlayers > defenderTeamSize ? defenderTeamSize : minPlayers;
-							
-							//Block ready status if we don't have enough players
-							if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
-							{
-								PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
-								return Plugin_Handled;
-							}
+							PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
+							return Plugin_Handled;
 						}
-						case MISSION_INTERMEDIATE:
-						{
-							trueMinPlayers = minPlayers + 1 > defenderTeamSize ? defenderTeamSize : minPlayers + 1;
-							
-							if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
-							{
-								PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
-								return Plugin_Handled;
-							}
-						}
-						case MISSION_ADVANCED:
-						{
-							trueMinPlayers = minPlayers + 2 > defenderTeamSize ? defenderTeamSize : minPlayers + 2;
-							
-							if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
-							{
-								PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
-								return Plugin_Handled;
-							}
-						}
-						case MISSION_EXPERT:
-						{
-							trueMinPlayers = minPlayers + 3 > defenderTeamSize ? defenderTeamSize : minPlayers + 3;
-							
-							if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
-							{
-								PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
-								return Plugin_Handled;
-							}
-						}
-						case MISSION_NIGHTMARE:
-						{
-							trueMinPlayers = minPlayers + 4 > defenderTeamSize ? defenderTeamSize : minPlayers + 4;
-							
-							if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
-							{
-								PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
-								return Plugin_Handled;
-							}
-						}
-						default:	LogError("Listener_Readystate: Unknown difficulty returned!");
 					}
+					case MISSION_INTERMEDIATE:
+					{
+						trueMinPlayers = minPlayers + 1 > defenderTeamSize ? defenderTeamSize : minPlayers + 1;
+						
+						if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
+						{
+							PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
+							return Plugin_Handled;
+						}
+					}
+					case MISSION_ADVANCED:
+					{
+						trueMinPlayers = minPlayers + 2 > defenderTeamSize ? defenderTeamSize : minPlayers + 2;
+						
+						if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
+						{
+							PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
+							return Plugin_Handled;
+						}
+					}
+					case MISSION_EXPERT:
+					{
+						trueMinPlayers = minPlayers + 3 > defenderTeamSize ? defenderTeamSize : minPlayers + 3;
+						
+						if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
+						{
+							PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
+							return Plugin_Handled;
+						}
+					}
+					case MISSION_NIGHTMARE:
+					{
+						trueMinPlayers = minPlayers + 4 > defenderTeamSize ? defenderTeamSize : minPlayers + 4;
+						
+						if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
+						{
+							PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
+							return Plugin_Handled;
+						}
+					}
+					default:	LogError("Listener_Readystate: Unknown difficulty returned!");
 				}
 			}
 		}
 		case MANAGER_MODE_READY_BOTS:
 		{
+			if (TF2_GetClientTeam(client) != TFTeam_Red)
+				return Plugin_Continue;
+			
 			if (!ShouldProcessCommand(client))
 				return Plugin_Handled;
 			

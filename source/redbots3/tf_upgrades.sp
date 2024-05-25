@@ -1,7 +1,11 @@
 #if defined METHOD_MVM_UPGRADES
 
-#define MAX_UPGRADES 59	//FAKE NEWS
-#define MAX_ATTRIBUTE_DESCRIPTION_LENGTH	128 //I think also matches with m_szIcon
+//Amount of upgrades parsed in mvm_upgrades.txt
+#define MAX_UPGRADES	62
+
+//Size of attribute string
+//I think this matches with m_szIcon
+#define MAX_ATTRIBUTE_DESCRIPTION_LENGTH	128
 
 enum //CEconItemAttributeDefinition
 {
@@ -73,7 +77,7 @@ methodmap CMannVsMachineUpgrades
 		char attribute[MAX_ATTRIBUTE_DESCRIPTION_LENGTH];
 		
 		for (int i = 0; i < sizeof(attribute); i++)
-			attribute[i] = (LoadFromAddress(this.Address + view_as<Address>(i), NumberType_Int32));
+			attribute[i] = LoadFromAddress(this.Address + view_as<Address>(i), NumberType_Int32);
 		
 		return attribute;
 	}
@@ -85,7 +89,7 @@ methodmap CMannVsMachineUpgrades
 	
 	public int m_iUIGroup()
 	{
-		return (LoadFromAddress(this.Address + view_as<Address>(m_iUIGroup), NumberType_Int32));
+		return LoadFromAddress(this.Address + view_as<Address>(m_iUIGroup), NumberType_Int32);
 	}
 }
 
@@ -98,7 +102,7 @@ methodmap CMannVsMachineUpgradeManager < CMannVsMachineUpgrades
 	
 	public CMannVsMachineUpgrades GetUpgradeByIndex(int index)
 	{
-		Address Upgrades = ((this.Address) + view_as<Address>(m_Upgrades));
+		Address Upgrades = this.Address + view_as<Address>(m_Upgrades);
 		Address pUpgrades = view_as<Address>(LoadFromAddress(Upgrades, NumberType_Int32));
 		
 		return view_as<CMannVsMachineUpgrades>(pUpgrades + view_as<Address>(index * CMannVsMachineUpgrades_Size));
