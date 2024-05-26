@@ -41,26 +41,23 @@ public CEconItemAttributeDefinition CEIAD_GetAttributeDefinitionByName(const cha
 	return view_as<CEconItemAttributeDefinition>(GetAttributeDefinitionByName(CEconItemSchema, szAttribute));
 }
 
+//CMannVsMachineUpgrades
+static int offset_szAttribute;
+static int offset_szIcon;
+static int offset_flIncrement;
+static int offset_flCap;
+static int offset_nCost;
+static int offset_nUIGroup;
+static int offset_nQuality;
+static int offset_nTier;
+static int CMannVsMachineUpgrades_Size;
+
 enum //CMannVsMachineUpgradeManager
 {
 	m_Upgrades = 12, //0x000C
 	
 	CMannVsMachineUpgradeManager_Size = 28
 }; //Size=0x001C
-
-enum //CMannVsMachineUpgrades
-{
-	m_szAttribute = 0,   //0x0000
-	m_szIcon = 128,      //0x0080
-	m_flIncrement = 388, //0x0184
-	m_flCap = 392,       //0x0188
-	m_nCost = 396,       //0x018C
-	m_iUIGroup = 400,    //0x0190
-	m_iQuality = 404,    //0x0194
-	m_iTier = 408,       //0x0198
-	
-	CMannVsMachineUpgrades_Size = 412
-}; //Size=0x019C
 
 methodmap CMannVsMachineUpgrades
 {
@@ -84,12 +81,12 @@ methodmap CMannVsMachineUpgrades
 	
 	public float m_flCap()
 	{
-		return float(LoadFromAddress(this.Address + view_as<Address>(m_flCap), NumberType_Int32));
+		return float(LoadFromAddress(this.Address + view_as<Address>(offset_flCap), NumberType_Int32));
 	}
 	
 	public int m_iUIGroup()
 	{
-		return LoadFromAddress(this.Address + view_as<Address>(m_iUIGroup), NumberType_Int32);
+		return LoadFromAddress(this.Address + view_as<Address>(offset_nUIGroup), NumberType_Int32);
 	}
 }
 
@@ -107,5 +104,20 @@ methodmap CMannVsMachineUpgradeManager < CMannVsMachineUpgrades
 		
 		return view_as<CMannVsMachineUpgrades>(pUpgrades + view_as<Address>(index * CMannVsMachineUpgrades_Size));
 	}
+}
+
+bool InitMvMUpgrades(GameData hGamedata)
+{
+	offset_szAttribute = hGamedata.GetOffset("CMannVsMachineUpgrades::szAttrib");
+	offset_szIcon = hGamedata.GetOffset("CMannVsMachineUpgrades::szIcon");
+	offset_flIncrement = hGamedata.GetOffset("CMannVsMachineUpgrades::flIncrement");
+	offset_flCap = hGamedata.GetOffset("CMannVsMachineUpgrades::flCap");
+	offset_nCost = hGamedata.GetOffset("CMannVsMachineUpgrades::nCost");
+	offset_nUIGroup = hGamedata.GetOffset("CMannVsMachineUpgrades::nUIGroup");
+	offset_nQuality = hGamedata.GetOffset("CMannVsMachineUpgrades::nQuality");
+	offset_nTier = hGamedata.GetOffset("CMannVsMachineUpgrades::nTier");
+	CMannVsMachineUpgrades_Size = offset_nTier + 4;
+	
+	return true;
 }
 #endif

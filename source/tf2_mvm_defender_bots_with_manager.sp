@@ -98,7 +98,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.1.1",
+	version = "1.1.2",
 	url = ""
 };
 
@@ -159,6 +159,12 @@ public void OnPluginStart()
 		bool bFailed = false;
 		
 #if defined METHOD_MVM_UPGRADES
+		if (!InitMvMUpgrades(hGamedata))
+		{
+			LogError("OnPluginStart: InitMvMUpgrades gamedata failed!");
+			bFailed = true;
+		}
+		
 		g_pMannVsMachineUpgrades = GameConfGetAddress(hGamedata, "MannVsMachineUpgrades");
 		
 		if (!g_pMannVsMachineUpgrades)

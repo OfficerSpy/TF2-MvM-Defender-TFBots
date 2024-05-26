@@ -169,6 +169,46 @@
 				"windows"	"40" //build 8835751: 2080
 				"linux"		"40" //build 8835751: 2092
 			}
+			"CMannVsMachineUpgrades::szAttrib"
+			{
+				"windows"	"0"
+				"linux"		"0"
+			}
+			"CMannVsMachineUpgrades::szIcon"
+			{
+				"windows"	"128"
+				"linux"		"64"
+			}
+			"CMannVsMachineUpgrades::flIncrement"
+			{
+				"windows"	"388"
+				"linux"		"324"
+			}
+			"CMannVsMachineUpgrades::flCap"
+			{
+				"windows"	"392"
+				"linux"		"328"
+			}
+			"CMannVsMachineUpgrades::nCost"
+			{
+				"windows"	"396"
+				"linux"		"332"
+			}
+			"CMannVsMachineUpgrades::nUIGroup"
+			{
+				"windows"	"400"
+				"linux"		"336"
+			}
+			"CMannVsMachineUpgrades::nQuality"
+			{
+				"windows"	"404"
+				"linux"		"340"
+			}
+			"CMannVsMachineUpgrades::nTier"
+			{
+				"windows"	"408"
+				"linux"		"344"
+			}
 		}
 		"Functions"
 		{

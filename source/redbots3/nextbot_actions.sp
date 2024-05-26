@@ -2720,7 +2720,7 @@ JSONObject CTFBotPurchaseUpgrades_ChooseUpgrade(int actor)
 			return null;
 		}
 		
-		char attrib[128]; attrib = upgrades.m_szAttribute();
+		char attrib[MAX_ATTRIBUTE_DESCRIPTION_LENGTH]; attrib = upgrades.m_szAttribute();
 		CEconItemAttributeDefinition attr = CEIAD_GetAttributeDefinitionByName(attrib);
 		if (attr.Address == Address_Null)
 			continue;
