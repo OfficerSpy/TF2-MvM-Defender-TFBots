@@ -19,7 +19,7 @@
 		}
 		"Keys"
 		{
-			"CTFPlayer_BaseOffset"
+			"CTFBot_BaseOffset"
 			{
 				"windows"	"m_iPlayerSkinOverride"
 				"linux"		"m_iPlayerSkinOverride"
@@ -108,6 +108,7 @@
 		}
 		"Offsets"
 		{
+			//These are virtual function offsets
 			"CBaseCombatWeapon::HasAmmo"
 			{
 				"windows"	"239"
@@ -148,8 +149,9 @@
 				"windows"	"344"
 				"linux"		"350"
 			}
-			//NOTE: variable offsets are calculated based on these values with the base netprop offset in the Keys section
-			"CTFPlayer::m_isLookingAroundForEnemies" //Property on class CTFBot
+			//These numbers are used to calculate the actual offset based on the base netprop offset in the Keys section
+			//The calculation formula is base offset + this number
+			"CTFBot::m_isLookingAroundForEnemies"
 			{
 				"windows"	"612" //build 8835751: 10336
 				"linux"		"604" //build 8835751: 10332
@@ -159,7 +161,7 @@
 				"windows"	"628" //build 8835751: 1460
 				"linux"		"628" //build 8835751: 1484
 			}
-			"CTFPlayer::m_mission" //Property on class CTFBot
+			"CTFBot::m_mission"
 			{
 				"windows"	"664" //build 8835751: 10388
 				"linux"		"656" //build 8835751: 10384
@@ -169,6 +171,7 @@
 				"windows"	"40" //build 8835751: 2080
 				"linux"		"40" //build 8835751: 2092
 			}
+			//These numbers are raw offsets and are not used for any calculations
 			"CMannVsMachineUpgrades::szAttrib"
 			{
 				"windows"	"0"

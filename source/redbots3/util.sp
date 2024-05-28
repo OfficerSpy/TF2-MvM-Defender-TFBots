@@ -617,7 +617,7 @@ int GetNearestReviveMarker(int client, const float max_distance)
 	SetEntProp(bottle, Prop_Send, "m_bActive", false);
 } */
 
-PowerupBottleType_t PowerupBottle_GetType(int bottle)
+int PowerupBottle_GetType(int bottle)
 {
 	if (TF2Attrib_HookValueInt(0, "critboost", bottle))
 		return POWERUP_BOTTLE_CRITBOOST;
@@ -649,10 +649,10 @@ int PowerupBottle_GetNumCharges(int bottle)
 	return GetEntProp(bottle, Prop_Send, "m_usNumCharges");
 }
 
-/* int PowerupBottle_GetMaxNumCharges(int bottle)
+int PowerupBottle_GetMaxNumCharges(int bottle)
 {
 	return TF2Attrib_HookValueInt(0, "powerup_max_charges", bottle);
-} */
+}
 
 /* int GetCostOfCanteenType(PowerupBottleType_t type)
 {

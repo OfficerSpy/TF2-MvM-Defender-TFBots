@@ -6,16 +6,16 @@ void InitOffsets(GameData hGamedata)
 {
 	m_adtOffsets = new StringMap();
 	
-	SetOffset(hGamedata, "CTFPlayer", "m_isLookingAroundForEnemies");
+	SetOffset(hGamedata, "CTFBot", "m_isLookingAroundForEnemies");
 	SetOffset(hGamedata, "CPopulationManager", "m_nStartingCurrency");
-	SetOffset(hGamedata, "CTFPlayer", "m_mission");
+	SetOffset(hGamedata, "CTFBot", "m_mission");
 	SetOffset(hGamedata, "CTFBuffItem", "m_bPlayingHorn");
 	
 #if defined TESTING_ONLY
 	//Dump offsets
-	LogMessage("InitOffsets: CTFBot->m_isLookingAroundForEnemies = %d", GetOffset("CTFPlayer", "m_isLookingAroundForEnemies"));
+	LogMessage("InitOffsets: CTFBot->m_isLookingAroundForEnemies = %d", GetOffset("CTFBot", "m_isLookingAroundForEnemies"));
 	LogMessage("InitOffsets: CPopulationManager->m_nStartingCurrency = %d", GetOffset("CPopulationManager", "m_nStartingCurrency"));
-	LogMessage("InitOffsets: CTFBot->m_mission = %d", GetOffset("CTFPlayer", "m_mission"));
+	LogMessage("InitOffsets: CTFBot->m_mission = %d", GetOffset("CTFBot", "m_mission"));
 	LogMessage("InitOffsets: CTFBuffItem->m_bPlayingHorn = %d", GetOffset("CTFBuffItem", "m_bPlayingHorn"));
 #endif
 }
@@ -30,10 +30,16 @@ static void SetOffset(GameData hGamedata, const char[] cls, const char[] prop)
 	if (hGamedata.GetKeyValue(base_key, base_prop, sizeof(base_prop)))
 	{
 		int base_offset = FindSendPropInfo(cls, base_prop);
+		
+		//For CTFBot, lookup on CTFPlayer
+		if (StrEqual(cls, "CTFBot"))
+			base_offset = FindSendPropInfo("CTFPlayer", base_prop);
+		
 		if (base_offset == -1)
 		{
 			// If we found nothing, search on CBaseEntity instead
 			base_offset = FindSendPropInfo("CBaseEntity", base_prop);
+			
 			if (base_offset == -1)
 			{
 				ThrowError("Base offset '%s::%s' could not be found", cls, base_prop);
@@ -46,6 +52,7 @@ static void SetOffset(GameData hGamedata, const char[] cls, const char[] prop)
 	else
 	{
 		int offset = hGamedata.GetOffset(key);
+		
 		if (offset == -1)
 		{
 			ThrowError("Offset '%s' could not be found", key);
@@ -71,7 +78,7 @@ static any GetOffset(const char[] cls, const char[] prop)
 
 void SetLookingAroundForEnemies(int client, bool shouldLook)
 {
-	SetEntData(client, GetOffset("CTFPlayer", "m_isLookingAroundForEnemies"), shouldLook, 1);
+	SetEntData(client, GetOffset("CTFBot", "m_isLookingAroundForEnemies"), shouldLook, 1);
 }
 
 int GetStartingCurrency(int populator)
@@ -82,7 +89,7 @@ int GetStartingCurrency(int populator)
 
 MissionType GetTFBotMission(int client)
 {
-	return view_as<MissionType>(GetEntData(client, GetOffset("CTFPlayer", "m_mission")));
+	return view_as<MissionType>(GetEntData(client, GetOffset("CTFBot", "m_mission")));
 }
 
 bool IsPlayingHorn(int weapon)

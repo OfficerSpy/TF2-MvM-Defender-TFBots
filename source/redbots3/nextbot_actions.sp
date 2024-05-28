@@ -3,7 +3,8 @@
 #define TANK_ATTACK_RANGE_DEFAULT	100.0
 #define BOMB_HATCH_RANGE_OKAY	5000.0
 #define BOMB_HATCH_RANGE_CRITICAL	1000.0
-#define PURCHASE_UPGRADES_MAX_TIME	30.0
+#define BUY_UPGRADES_MAX_TIME	30.0
+#define BUY_UPGRADES_FAST_MAX_TIME	3.0
 #define MEDIC_REVIVE_RANGE	500.0
 #define SENTRY_WATCH_BOMB_RANGE	400.0
 #define FLAMETHROWER_REACH_RANGE	350.0
@@ -25,7 +26,7 @@ PathFollower m_pPath[MAXPLAYERS + 1];
 // ChasePath m_chasePath[MAXPLAYERS + 1];
 static float m_flRepathTime[MAXPLAYERS + 1];
 
-static PowerupBottleType_t m_nCurrentPowerupBottle[MAXPLAYERS + 1];
+static int m_nCurrentPowerupBottle[MAXPLAYERS + 1];
 static float m_flNextBottleUseTime[MAXPLAYERS + 1];
 
 static int m_iAttackTarget[MAXPLAYERS + 1];
@@ -89,19 +90,6 @@ void ResetNextBot(int client)
 	pb_vecPathGoal[client] = NULL_VECTOR;
 	pb_iPathGoalEntity[client] = -1;
 #endif
-}
-
-bool UpdatePowerupBottleType(int client)
-{
-	int bottle = GetPowerupBottle(client);
-	
-	if (bottle != -1)
-	{
-		m_nCurrentPowerupBottle[client] = PowerupBottle_GetType(bottle);
-		return true;
-	}
-	
-	return false;
 }
 
 #if defined EXTRA_PLUGINBOT
@@ -859,7 +847,7 @@ public Action CTFBotUpgrade_OnStart(BehaviorAction action, int actor, BehaviorAc
 	m_flNextUpgrade[actor] = GetGameTime() + GetUpgradeInterval();
 	
 	//How long should it take us to buy upgrades?
-	m_flUpgradingTime[actor] = GetGameTime() + PURCHASE_UPGRADES_MAX_TIME;
+	m_flUpgradingTime[actor] = GameRules_GetRoundState() == RoundState_RoundRunning ? GetGameTime() + BUY_UPGRADES_FAST_MAX_TIME : GetGameTime() + BUY_UPGRADES_MAX_TIME;
 	
 	// UpdateLookAroundForEnemies(actor, false);
 	
@@ -883,8 +871,7 @@ public Action CTFBotUpgrade_Update(BehaviorAction action, int actor, float inter
 		if (redbots_manager_debug_actions.BoolValue)
 			PrintToChatAll("%N upgrade for long with %d credits left!", actor, TF2_GetCurrency(actor));
 		
-		PurchaseRandomAffordableCanteens(actor);
-		UpdatePowerupBottleType(actor);
+		PurchaseAffordableCanteens(actor);
 		
 		return GetUpgradePostAction(actor, action);
 	}
@@ -2478,7 +2465,7 @@ void CollectUpgrades(int client)
 		{
 			CMannVsMachineUpgrades upgrades = CMannVsMachineUpgradeManager().GetUpgradeByIndex(index);
 			
-			if (upgrades.m_iUIGroup() == 1 && slot != -1) 
+			if (upgrades.m_iUIGroup() == UIGROUP_UPGRADE_ATTACHED_TO_PLAYER && slot != -1) 
 				continue;
 			
 			CEconItemAttributeDefinition attr = CEIAD_GetAttributeDefinitionByName(upgrades.m_szAttribute());
@@ -3431,7 +3418,12 @@ bool OpportunisticallyUsePowerupBottle(int client, int activeWeapon, INextBot bo
 		}
 		case POWERUP_BOTTLE_UBERCHARGE:
 		{
+			//I'm invincible already
 			if (TF2_IsInvulnerable(client))
+				return false;
+			
+			//Only when there's a threat nearby, otherwise we could just go heal ourselves
+			if (!threat || !threat.IsVisibleRecently())
 				return false;
 			
 			float healthRatio = view_as<float>(GetClientHealth(client)) / view_as<float>(TF2Util_GetEntityMaxHealth(client));
@@ -3458,17 +3450,48 @@ bool OpportunisticallyUsePowerupBottle(int client, int activeWeapon, INextBot bo
 			if (TF2_GetPlayerClass(client) == TFClass_Medic)
 				return false;
 			
-			//TODO: redo this
+			float myPosition[3]; myPosition = WorldSpaceCenter(client);
 			
-			//We're already close enough to the hatch
-			if (bot.IsRangeLessThanEx(GetBombHatchPosition(), 1200.0))
+			//I'm already in my spawn room
+			if (TF2Util_IsPointInRespawnRoom(myPosition, client, true))
 				return false;
 			
-			if (IsFailureImminent(client))
-			{
-				UseActionSlotItem(client);
-				return true;
-			}
+			float hatchPosition[3]; hatchPosition = GetBombHatchPosition();
+			
+			//We're already close enough to the hatch
+			if (GetVectorDistance(myPosition, hatchPosition) <= 1000.0)
+				return false;
+			
+			int flag = FindBombNearestToHatch();
+			
+			//No bomb active
+			if (flag == -1)
+				return false;
+			
+			float bombPosition[3]; bombPosition = WorldSpaceCenter(flag);
+			
+			//Bomb is far and not a threat
+			if (GetVectorDistance(bombPosition, hatchPosition) > BOMB_HATCH_RANGE_CRITICAL)
+				return false;
+			
+			int closestToHatch = FindBotNearestToBombNearestToHatch(client);
+			
+			//No robot near the bomb close to the hatch
+			if (closestToHatch == -1)
+				return false;
+			
+			float threatPosition[3]; GetClientAbsOrigin(closestToHatch, threatPosition);
+			
+			//Nearest robot isn't that close to the bomb
+			if (GetVectorDistance(threatPosition, bombPosition) > 800.0)
+				return false;
+			
+			//We are already close enough to deal with it
+			if (GetVectorDistance(myPosition, threatPosition) <= 500.0)
+				return false;
+			
+			UseActionSlotItem(client);
+			return true;
 		}
 		case POWERUP_BOTTLE_REFILL_AMMO:
 		{
@@ -4146,22 +4169,73 @@ bool CTFBotEvadeBuster_IsPossible(int client)
 	return true;
 }
 
-void PurchaseRandomAffordableCanteens(int client, int count = 3)
+void PurchaseAffordableCanteens(int client, int count = 3)
 {
+	int bottle = GetPowerupBottle(client);
+	
+	if (bottle == -1)
+	{
+		LogError("%N (%d) tried to upgrade canteen, but they don't have a powerup bottle!", client, client);
+		return;
+	}
+	
+	int currentCharges = PowerupBottle_GetNumCharges(bottle);
+	int desiredType = POWERUP_BOTTLE_NONE;
+	
+	if (currentCharges > 0)
+	{
+		//We buy less if we already have charges on it
+		//We also only want to buy more of that canteen type
+		count -= PowerupBottle_GetMaxNumCharges(bottle);
+		desiredType = PowerupBottle_GetType(bottle);
+		
+		if (redbots_manager_debug.BoolValue)
+			PrintToChatAll("PurchaseAffordableCanteens: %N desires %d more charges of canteen type %d", client, count, desiredType);
+	}
+	
 	int currency = TF2_GetCurrency(client);
 	const int slot = TF_LOADOUT_SLOT_ACTION;
 	int iClass = view_as<int>(TF2_GetPlayerClass(client));
-	ArrayList adtAffordableGroups = new ArrayList();
+	ArrayList adtAffordableCanteens = new ArrayList();
 	
-	for (int index = 0; index < MAX_UPGRADES; index++)
+	for (int i = 0; i < MAX_UPGRADES; i++)
 	{
-		CMannVsMachineUpgrades upgrades = CMannVsMachineUpgradeManager().GetUpgradeByIndex(index);
+		CMannVsMachineUpgrades upgrades = CMannVsMachineUpgradeManager().GetUpgradeByIndex(i);
 		
-		//Powerup bottle is ui_group 2
-		if (upgrades.m_iUIGroup() != 2) 
+		if (upgrades.m_iUIGroup() != UIGROUP_POWERUPBOTTLE) 
 			continue;
 		
-		char attributeName[PLATFORM_MAX_PATH]; attributeName = upgrades.m_szAttribute();
+		char attributeName[MAX_ATTRIBUTE_DESCRIPTION_LENGTH]; attributeName = upgrades.m_szAttribute();
+		
+		//We desire a specific type of canteen if we currently have a charge on it
+		switch (desiredType)
+		{
+			case POWERUP_BOTTLE_CRITBOOST:
+			{
+				if (!StrEqual(attributeName, "critboost"))
+					continue;
+			}
+			case POWERUP_BOTTLE_UBERCHARGE:
+			{
+				if (!StrEqual(attributeName, "ubercharge"))
+					continue;
+			}
+			case POWERUP_BOTTLE_RECALL:
+			{
+				if (!StrEqual(attributeName, "recall"))
+					continue;
+			}
+			case POWERUP_BOTTLE_REFILL_AMMO:
+			{
+				if (!StrEqual(attributeName, "refill_ammo"))
+					continue;
+			}
+			case POWERUP_BOTTLE_BUILDINGS_INSTANT_UPGRADE:
+			{
+				if (!StrEqual(attributeName, "building instant upgrade"))
+					continue;
+			}
+		}
 		
 		CEconItemAttributeDefinition attr = CEIAD_GetAttributeDefinitionByName(attributeName);
 		
@@ -4175,31 +4249,47 @@ void PurchaseRandomAffordableCanteens(int client, int count = 3)
 		if (!CanUpgradeWithAttrib(client, slot, attribDefinitionIndex, upgrades.Address))
 			continue;
 		
-		int cost = GetCostForUpgrade(upgrades.Address, slot, iClass, client) * count;
+		int cost = GetCostForUpgrade(upgrades.Address, slot, iClass, client);
 		
-		//I can;t afford this group
+		//I can;t afford this upgrade
 		if (cost > currency)
 			continue;
 		
-		adtAffordableGroups.Push(index);
+		adtAffordableCanteens.Push(i);
 	}
 	
-	if (adtAffordableGroups.Length == 0)
+	if (adtAffordableCanteens.Length == 0)
 	{
-		//Not this time
-		delete adtAffordableGroups;
+		//We could not afford anything at this time
+		delete adtAffordableCanteens;
 		return;
 	}
 	
-	//Purchase a random trio of canteens
-	int selectedIndex = adtAffordableGroups.Get(GetRandomInt(0, adtAffordableGroups.Length - 1));
+	//Randomly pick an affordable charge type
+	int selectedUpgradeIndex = adtAffordableCanteens.Get(GetRandomInt(0, adtAffordableCanteens.Length - 1));
+	delete adtAffordableCanteens;
 	
-	delete adtAffordableGroups;
+	CMannVsMachineUpgrades selectedUpgrade = CMannVsMachineUpgradeManager().GetUpgradeByIndex(selectedUpgradeIndex);
+	int selectedCost = GetCostForUpgrade(selectedUpgrade.Address, slot, iClass, client);
+	int purchaseAmount = 0;
 	
-	KV_MVM_Upgrade(client, count, slot, selectedIndex);
+	//Now how many charges can we actually afford of the selected type?
+	for (int i = 0; i < count; i++)
+	{
+		if (currency < selectedCost)
+			break;
+		
+		currency -= selectedCost;
+		purchaseAmount++;
+	}
+	
+	KV_MVM_Upgrade(client, purchaseAmount, slot, selectedUpgradeIndex);
+	
+	//Update our current bottle type so we're aware of what we have
+	m_nCurrentPowerupBottle[client] = PowerupBottle_GetType(bottle);
 	
 	if (redbots_manager_debug.BoolValue)
-		PrintToChatAll("PurchaseRandomAffordableCanteens: %N purchased %d canteens (upgrade %d)", client, count, selectedIndex);
+		PrintToChatAll("PurchaseAffordableCanteens: %N purchased %d charges (upgrade %d) and wanted %d charges", client, purchaseAmount, selectedUpgradeIndex, count);
 }
 
 void UpgradeMidRoundPostActivity(int client)

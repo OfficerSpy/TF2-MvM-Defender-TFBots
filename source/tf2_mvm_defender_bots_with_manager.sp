@@ -159,11 +159,7 @@ public void OnPluginStart()
 		bool bFailed = false;
 		
 #if defined METHOD_MVM_UPGRADES
-		if (!InitMvMUpgrades(hGamedata))
-		{
-			LogError("OnPluginStart: InitMvMUpgrades gamedata failed!");
-			bFailed = true;
-		}
+		InitMvMUpgrades(hGamedata);
 		
 		g_pMannVsMachineUpgrades = GameConfGetAddress(hGamedata, "MannVsMachineUpgrades");
 		
