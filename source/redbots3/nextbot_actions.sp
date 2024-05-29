@@ -321,7 +321,7 @@ public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, flo
 		{
 			int primary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Primary);
 			
-			if (primary != -1 && TF2Util_GetWeaponID(primary) == TF_WEAPON_FLAMETHROWER && TF2_IsCritBoosted(actor))
+			if (primary != -1 && TF2Util_GetWeaponID(primary) == TF_WEAPON_FLAMETHROWER && (TF2_IsCritBoosted(actor) || TF2_IsPlayerInCondition(actor, TFCond_CritMmmph)))
 			{
 				//Don't bother going for ammo while using crits unless our weapon has completely run out
 				if (!HasAmmo(primary) && CTFBotGetAmmo_IsPossible(actor))
@@ -756,15 +756,13 @@ public Action CTFBotGotoUpgrade_OnStart(BehaviorAction action, int actor, Behavi
 		// return action.Done("No upgrade station");
 	}
 	
-	if (redbots_manager_mode.IntValue == MANAGER_MODE_AUTO_BOTS)
+	if (GameRules_GetRoundState() == RoundState_RoundRunning)
 	{
 		float myOrigin[3]; GetClientAbsOrigin(actor, myOrigin);
 		
+		//The closest station is so far away, pretend we're in it
 		if (GetVectorDistance(myOrigin, WorldSpaceCenter(m_iStation[actor])) >= 1000.0)
-		{
-			//The closest station is soo far away
 			TF2_SetInUpgradeZone(actor, true);
-		}
 	}
 	
 	// UpdateLookAroundForEnemies(actor, false);
@@ -846,8 +844,19 @@ public Action CTFBotUpgrade_OnStart(BehaviorAction action, int actor, BehaviorAc
 	
 	m_flNextUpgrade[actor] = GetGameTime() + GetUpgradeInterval();
 	
+	bool isRoundActive = GameRules_GetRoundState() == RoundState_RoundRunning;
+	
 	//How long should it take us to buy upgrades?
-	m_flUpgradingTime[actor] = GameRules_GetRoundState() == RoundState_RoundRunning ? GetGameTime() + BUY_UPGRADES_FAST_MAX_TIME : GetGameTime() + BUY_UPGRADES_MAX_TIME;
+	if (g_bHasUpgraded[actor] == false && isRoundActive)
+	{
+		//We probably just joined during an active game
+		m_flUpgradingTime[actor] = GetGameTime() + 15.0;
+	}
+	else
+	{
+		//spend less time upgrading during the round, normal otherwise
+		m_flUpgradingTime[actor] = isRoundActive ? GetGameTime() + BUY_UPGRADES_FAST_MAX_TIME : GetGameTime() + BUY_UPGRADES_MAX_TIME;
+	}
 	
 	// UpdateLookAroundForEnemies(actor, false);
 	
@@ -870,8 +879,6 @@ public Action CTFBotUpgrade_Update(BehaviorAction action, int actor, float inter
 		
 		if (redbots_manager_debug_actions.BoolValue)
 			PrintToChatAll("%N upgrade for long with %d credits left!", actor, TF2_GetCurrency(actor));
-		
-		PurchaseAffordableCanteens(actor);
 		
 		return GetUpgradePostAction(actor, action);
 	}
@@ -928,6 +935,9 @@ public Action CTFBotUpgrade_Update(BehaviorAction action, int actor, float inter
 
 public void CTFBotUpgrade_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
+	//Lastly, try to purchase any canteens we can afford
+	PurchaseAffordableCanteens(actor);
+	
 	KV_MvM_UpgradesDone(actor);
 	
 	TF2_DetonateObjectsOfType(actor, TFObject_Sentry);
@@ -949,6 +959,7 @@ public void CTFBotUpgrade_OnEnd(BehaviorAction action, int actor, BehaviorAction
 			UpgradeMidRoundPostActivity(actor);
 		
 		g_bHasUpgraded[actor] = true;
+		g_iBuyUpgradesNumber[actor] = 0;
 		
 		TF2_SetInUpgradeZone(actor, false);
 	}
@@ -2041,9 +2052,11 @@ Action GetDesiredBotAction(int client, BehaviorAction action)
 	}
 	else if (state == RoundState_RoundRunning)
 	{
-		if (redbots_manager_bot_use_upgrades.BoolValue && g_bHasUpgraded[client] == false && !TF2_IsInUpgradeZone(client))
+		if (redbots_manager_bot_use_upgrades.BoolValue && (g_bHasUpgraded[client] == false || ShouldUpgradeMidRound(client)) && !TF2_IsInUpgradeZone(client))
 		{
-			//We joined during an active round, so we must upgrade now
+			//We probably just joined in the middle of an active game, or we want to buy upgrades again right now
+			g_iBuyUpgradesNumber[client] = 0;
+			
 			return action.SuspendFor(CTFBotGotoUpgrade(), "Buy upgrades now");
 		}
 		
@@ -2675,11 +2688,9 @@ float GetUpgradeInterval()
 	if (customInterval >= 0.0)
 		return customInterval;
 	
+	//Upgrading during an active round, buy upgrades fast
 	if (GameRules_GetRoundState() == RoundState_RoundRunning)
-	{
-		//Since we're joining in the middle of a round, we want to upgrade fast
 		return GetRandomFloat(0.1, 0.75);
-	}
 	
 	const float interval = 1.25;
 	const float variance = 0.3;
@@ -3378,7 +3389,7 @@ bool OpportunisticallyUsePowerupBottle(int client, int activeWeapon, INextBot bo
 				return false;
 			
 			//Already have crits
-			if (TF2_IsCritBoosted(client))
+			if (TF2_IsCritBoosted(client) || TF2_IsPlayerInCondition(client, TFCond_CritMmmph))
 				return false;
 			
 			int iThreat = threat.GetEntity();
@@ -4175,7 +4186,7 @@ void PurchaseAffordableCanteens(int client, int count = 3)
 	
 	if (bottle == -1)
 	{
-		LogError("%N (%d) tried to upgrade canteen, but they don't have a powerup bottle!", client, client);
+		LogError("PurchaseAffordableCanteens: %N (%d) tried to upgrade canteen, but he don't have a powerup bottle!", client, client);
 		return;
 	}
 	
@@ -4186,11 +4197,11 @@ void PurchaseAffordableCanteens(int client, int count = 3)
 	{
 		//We buy less if we already have charges on it
 		//We also only want to buy more of that canteen type
-		count -= PowerupBottle_GetMaxNumCharges(bottle);
+		count = PowerupBottle_GetMaxNumCharges(bottle) - currentCharges;
 		desiredType = PowerupBottle_GetType(bottle);
 		
 		if (redbots_manager_debug.BoolValue)
-			PrintToChatAll("PurchaseAffordableCanteens: %N desires %d more charges of canteen type %d", client, count, desiredType);
+			PrintToChatAll("[PurchaseAffordableCanteens] %N desires %d more charges of canteen type %d", client, count, desiredType);
 	}
 	
 	int currency = TF2_GetCurrency(client);
@@ -4251,7 +4262,7 @@ void PurchaseAffordableCanteens(int client, int count = 3)
 		
 		int cost = GetCostForUpgrade(upgrades.Address, slot, iClass, client);
 		
-		//I can;t afford this upgrade
+		//I can't afford this upgrade
 		if (cost > currency)
 			continue;
 		
@@ -4327,6 +4338,11 @@ bool ShouldBuybackIntoGame(int client)
 		return true;
 	
 	return g_iBuybackNumber[client] <= redbots_manager_bot_buyback_chance.IntValue;
+}
+
+bool ShouldUpgradeMidRound(int client)
+{
+	return g_iBuyUpgradesNumber[client] > 0 && g_iBuyUpgradesNumber[client] <= redbots_manager_bot_buy_upgrades_chance.IntValue;
 }
 
 /* float TransientlyConsistentRandomValue(int client, float period = 10.0, int seedValue = 0)

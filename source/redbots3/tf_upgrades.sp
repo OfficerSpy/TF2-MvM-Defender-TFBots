@@ -121,12 +121,12 @@ void InitMvMUpgrades(GameData hGamedata)
 	// LogMessage("CMannVsMachineUpgrades->szAttrib = %d", offset_szAttribute);
 	// LogMessage("CMannVsMachineUpgrades->szIcon = %d", offset_szIcon);
 	// LogMessage("CMannVsMachineUpgrades->flIncrement = %d", offset_flIncrement);
-	LogMessage("CMannVsMachineUpgrades->flCap = %d", offset_flCap);
+	LogMessage("InitMvMUpgrades: CMannVsMachineUpgrades->flCap = %d", offset_flCap);
 	// LogMessage("CMannVsMachineUpgrades->nCost = %d", offset_nCost);
-	LogMessage("CMannVsMachineUpgrades->nUIGroup = %d", offset_nUIGroup);
+	LogMessage("InitMvMUpgrades: CMannVsMachineUpgrades->nUIGroup = %d", offset_nUIGroup);
 	// LogMessage("CMannVsMachineUpgrades->nQuality = %d", offset_nQuality);
-	LogMessage("CMannVsMachineUpgrades->nTier = %d", offset_nTier);
-	LogMessage("Size of CMannVsMachineUpgrades = %d", CMannVsMachineUpgrades_Size);
+	LogMessage("InitMvMUpgrades: CMannVsMachineUpgrades->nTier = %d", offset_nTier);
+	LogMessage("InitMvMUpgrades: Size of CMannVsMachineUpgrades = %d", CMannVsMachineUpgrades_Size);
 #endif
 }
 #endif

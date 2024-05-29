@@ -15,6 +15,7 @@
 // #define TESTING_ONLY
 
 #define MOD_REQUEST_CREDITS
+#define MOD_CUSTOM_ATTRIBUTES
 
 #define METHOD_MVM_UPGRADES
 
@@ -44,6 +45,7 @@ static float m_flNextSnipeFireTime[MAXPLAYERS + 1];
 float g_flBlockInputTime[MAXPLAYERS + 1];
 static float m_flDeadRethinkTime[MAXPLAYERS + 1];
 int g_iBuybackNumber[MAXPLAYERS + 1];
+int g_iBuyUpgradesNumber[MAXPLAYERS + 1];
 
 static float m_flLastCommandTime[MAXPLAYERS + 1];
 static float m_flLastReadyInputTime[MAXPLAYERS + 1];
@@ -65,6 +67,7 @@ ConVar redbots_manager_ready_cooldown;
 ConVar redbots_manager_bot_upgrade_interval;
 ConVar redbots_manager_bot_use_upgrades;
 ConVar redbots_manager_bot_buyback_chance;
+ConVar redbots_manager_bot_buy_upgrades_chance;
 
 #if defined MOD_REQUEST_CREDITS
 ConVar redbots_manager_bot_request_credits;
@@ -98,7 +101,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.1.2",
+	version = "1.1.3",
 	url = ""
 };
 
@@ -122,6 +125,7 @@ public void OnPluginStart()
 	redbots_manager_bot_upgrade_interval = CreateConVar("sm_redbots_manager_bot_upgrade_interval", "-1", _, FCVAR_NOTIFY);
 	redbots_manager_bot_use_upgrades = CreateConVar("sm_redbots_manager_bot_use_upgrades", "1", "Enable bots to buy upgrades.", FCVAR_NOTIFY);
 	redbots_manager_bot_buyback_chance = CreateConVar("sm_redbots_manager_bot_buyback_chance", "1", "Chance for bots to buyback into the game.", FCVAR_NOTIFY);
+	redbots_manager_bot_buy_upgrades_chance = CreateConVar("sm_redbots_manager_bot_buy_upgrades_chance", "50", "Chance for bots to buy upgrades in the middle of a game.", FCVAR_NOTIFY);
 	
 #if defined MOD_REQUEST_CREDITS
 	redbots_manager_bot_request_credits = CreateConVar("sm_redbots_manager_bot_request_credits", "1", _, FCVAR_NOTIFY);
@@ -221,6 +225,7 @@ public void OnClientPutInServer(int client)
 	g_flBlockInputTime[client] = 0.0;
 	m_flDeadRethinkTime[client] = 0.0;
 	g_iBuybackNumber[client] = 0;
+	g_iBuyUpgradesNumber[client] = 0;
 	m_flLastCommandTime[client] = GetGameTime();
 	m_flLastReadyInputTime[client] = 0.0;
 	

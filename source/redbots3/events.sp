@@ -12,11 +12,17 @@ static void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	
-	//We're not being revived if we spawned in
-	g_bIsBeingRevived[client] = false;
-	
 	if (TF2_GetClientTeam(client) == TFTeam_Red && IsTFBotPlayer(client))
 		CreateTimer(0.2, Timer_PlayerSpawn, client, TIMER_FLAG_NO_MAPCHANGE);
+	
+	if (g_bIsDefenderBot[client])
+	{
+		g_bIsBeingRevived[client] = false;
+		g_iBuyUpgradesNumber[client] = IsFailureImminent(client) ? 0 : GetRandomInt(1, 100);
+		
+		if (redbots_manager_debug.BoolValue)
+			PrintToChatAll("[Event_PlayerSpawn] g_iBuyUpgradesNumber[%d] = %d", client, g_iBuyUpgradesNumber[client]);
+	}
 }
 
 static void Event_MvmWaveFailed(Event event, const char[] name, bool dontBroadcast)
@@ -122,9 +128,9 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 		if (redbots_manager_bot_request_credits.BoolValue && GameRules_GetRoundState() == RoundState_BetweenRounds)
 			FakeClientCommand(data, "sm_requestcredits");
 #endif
-
+		
 		if (redbots_manager_debug.BoolValue)
-			PrintToChatAll("[Timer_PlayerSpawn] Currency for %d is %d", data, TF2_GetCurrency(data));
+			PrintToChatAll("[Timer_PlayerSpawn] %N's currency: %d", data, TF2_GetCurrency(data));
 		
 		//We already made this guy into our bot, so do nothing
 		return Plugin_Stop;
@@ -168,6 +174,10 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 #if defined MOD_REQUEST_CREDITS
 		if (redbots_manager_bot_request_credits.BoolValue)
 			FakeClientCommand(data, "sm_requestcredits");
+#endif
+		
+#if defined MOD_CUSTOM_ATTRIBUTES
+		TF2Attrib_SetByName(data, "cannot be sapped", 1.0);
 #endif
 	}
 	
