@@ -143,6 +143,7 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_botlineup", Command_ShowNewBotTeamComposition);
 	RegConsoleCmd("sm_rerollbotclasses", Command_RerollNewBotTeamComposition);
 	RegConsoleCmd("sm_rerollbots", Command_RerollNewBotTeamComposition);
+	RegConsoleCmd("sm_playwithbots", Command_JoinBluePlayWithBots);
 	
 #if defined TESTING_ONLY
 	RegConsoleCmd("sm_bots_start_now", Command_BotsReadyNow);
@@ -316,7 +317,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			OpportunisticallyUseWeaponAbilities(client, myWeapon, myBot, threat);
 			OpportunisticallyUsePowerupBottle(client, myWeapon, myBot, threat);
 			
-			if (weaponID == TF_WEAPON_FLAMETHROWER || weaponID == TF_WEAPON_FLAME_BALL)
+			if (weaponID == TF_WEAPON_FLAMETHROWER || weaponID == TF_WEAPON_FLAME_BALL && CanWeaponAirblast(myWeapon))
 				UtilizeCompressionBlast(client, myBot, threat);
 			
 			if (weaponID == TF_WEAPON_SNIPERRIFLE || weaponID == TF_WEAPON_SNIPERRIFLE_DECAP || weaponID == TF_WEAPON_SNIPERRIFLE_CLASSIC)
@@ -383,7 +384,7 @@ public Action Command_Votebots(int client, int args)
 {
 	if (redbots_manager_mode.IntValue != MANAGER_MODE_MANUAL_BOTS)
 	{
-		PrintToChat(client, "%s This is not allowed in this mode.", PLUGIN_PREFIX);
+		PrintToChat(client, "%s This is only allowed in MANAGER_MODE_MANUAL_BOTS.", PLUGIN_PREFIX);
 		return Plugin_Handled;
 	}
 	
@@ -411,7 +412,7 @@ public Action Command_Votebots(int client, int args)
 		return Plugin_Handled;
 	}
 	
-	switch(TF2_GetClientTeam(client))
+	switch (TF2_GetClientTeam(client))
 	{
 		case TFTeam_Red:
 		{
@@ -423,21 +424,6 @@ public Action Command_Votebots(int client, int args)
 			else
 			{
 				PrintToChat(client, "%s RED team is full.", PLUGIN_PREFIX);
-				return Plugin_Handled;
-			}
-		}
-		case TFTeam_Blue:
-		{
-			if (GetTeamClientCount(view_as<int>(TFTeam_Red)) <= 0)
-			{
-				AddRandomDefenderBots(redbots_manager_defender_team_size.IntValue); //TODO: replace me with a smarter team comp
-				g_bBotsEnabled = true;
-				PrintToChatAll("%s You will play a game with bots.", PLUGIN_PREFIX);
-				return Plugin_Handled;
-			}
-			else
-			{
-				PrintToChat(client, "%s You cannot use this with players on RED team.", PLUGIN_PREFIX);
 				return Plugin_Handled;
 			}
 		}
@@ -474,12 +460,41 @@ public Action Command_RerollNewBotTeamComposition(int client, int args)
 #if !defined TESTING_ONLY
 	if (TF2_GetClientTeam(client) != TFTeam_Red)
 	{
-		PrintToChat(client, "Your team is not allowed to use this.");
+		PrintToChat(client, "%s Your team is not allowed to use this.", PLUGIN_PREFIX);
 		return Plugin_Handled;
 	}
 #endif
 	
 	UpdateChosenBotTeamComposition();
+	CreateDisplayPanelBotTeamComposition(client);
+	
+	return Plugin_Handled;
+}
+
+public Action Command_JoinBluePlayWithBots(int client, int args)
+{
+	if (g_bBotsEnabled)
+	{
+		PrintToChat(client, "%s Bots are already enabled for this round.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	if (TF2_GetClientTeam(client) != TFTeam_Blue)
+	{
+		PrintToChat(client, "%s Your team is not allowed to use this.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	if (GetTeamClientCount(view_as<int>(TFTeam_Red)) > 0)
+	{
+		PrintToChat(client, "%s You cannot use this with players on RED team.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	AddRandomDefenderBots(redbots_manager_defender_team_size.IntValue); //TODO: replace me with a smarter team comp
+	g_bBotsEnabled = true;
+	PrintToChatAll("%s You will play a game with bots.", PLUGIN_PREFIX);
+	
 	return Plugin_Handled;
 }
 

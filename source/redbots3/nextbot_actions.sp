@@ -4325,17 +4325,17 @@ bool ShouldBuybackIntoGame(int client)
 	if (TF2_GetPlayerClass(client) == TFClass_Scout)
 		return false;
 	
-	//We're being revived
-	if (g_bIsBeingRevived[client])
-		return false;
-	
 	//Can't afford a buyback
-	// if (TF2_GetCurrency(client) < MVM_BUYBACK_COST_PER_SEC)
-		// return false;
+	if (TF2_GetCurrency(client) < MVM_BUYBACK_COST_PER_SEC)
+		return false;
 	
 	//Not opportunistic if we're about to fail
 	if (IsFailureImminent(client))
 		return true;
+	
+	//We're being revived
+	if (g_bIsBeingRevived[client])
+		return false;
 	
 	return g_iBuybackNumber[client] <= redbots_manager_bot_buyback_chance.IntValue;
 }
@@ -4343,6 +4343,17 @@ bool ShouldBuybackIntoGame(int client)
 bool ShouldUpgradeMidRound(int client)
 {
 	return g_iBuyUpgradesNumber[client] > 0 && g_iBuyUpgradesNumber[client] <= redbots_manager_bot_buy_upgrades_chance.IntValue;
+}
+
+bool CanBuyUpgradesNow(int client)
+{
+	if (TF2_GetCurrency(client) < 25)
+		return false;
+	
+	if (IsFailureImminent(client))
+		return false;
+	
+	return true;
 }
 
 /* float TransientlyConsistentRandomValue(int client, float period = 10.0, int seedValue = 0)

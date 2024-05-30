@@ -679,6 +679,11 @@ int GetPowerupBottle(int client)
 	return ent;
 }
 
+bool CanWeaponAirblast(int weapon)
+{
+	return TF2Attrib_HookValueInt(0, "airblast_disabled", weapon) == 0;
+}
+
 stock bool DoesAnyPlayerUseThisName(const char[] name)
 {
 	char playerName[MAX_NAME_LENGTH];

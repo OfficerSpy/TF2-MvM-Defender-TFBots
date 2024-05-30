@@ -18,7 +18,7 @@ static void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	if (g_bIsDefenderBot[client])
 	{
 		g_bIsBeingRevived[client] = false;
-		g_iBuyUpgradesNumber[client] = IsFailureImminent(client) ? 0 : GetRandomInt(1, 100);
+		g_iBuyUpgradesNumber[client] = CanBuyUpgradesNow(client) ? GetRandomInt(1, 100) : 0;
 		
 		if (redbots_manager_debug.BoolValue)
 			PrintToChatAll("[Event_PlayerSpawn] g_iBuyUpgradesNumber[%d] = %d", client, g_iBuyUpgradesNumber[client]);
