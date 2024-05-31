@@ -5,15 +5,15 @@ static int m_iSuccesses;
 static int m_iFailures;
 static int m_iTanksSpawned;
 
-void DBTM_Initialize()
-{
-	m_adtBotLineup = new ArrayList(TF2_CLASS_MAX_NAME_LENGTH);
-}
-
-void DBTM_OnEntityCreated(int entity, const char[] classname)
+public void DBTM_OnEntityCreated(int entity, const char[] classname)
 {
 	if (StrEqual(classname, "tank_boss"))
 		m_iTanksSpawned++;
+}
+
+void DBTM_Initialize()
+{
+	m_adtBotLineup = new ArrayList(TF2_CLASS_MAX_NAME_LENGTH);
 }
 
 void DBTM_UpdateBotLineup()

@@ -993,7 +993,7 @@ void Config_LoadBotNames()
 }
 
 eMissionDifficulty Config_GetMissionDifficultyFromName(char[] missionName)
-{	
+{
 	char filePath[PLATFORM_MAX_PATH];
 	
 	for (eMissionDifficulty i = MISSION_NORMAL; i < MISSION_MAX_COUNT; i++)
@@ -1005,7 +1005,7 @@ eMissionDifficulty Config_GetMissionDifficultyFromName(char[] missionName)
 		if (hOpenedFile == null)
 		{
 			if (redbots_manager_debug.BoolValue)
-				LogMessage("Config_GetMissionDifficultyFromName: Could not locate file %s. Skipping...", g_sMissionDifficultyFilePaths[i]);
+				LogMessage("Config_GetMissionDifficultyFromName: Could not locate file %s. Skipping...", filePath);
 			
 			continue;
 		}
