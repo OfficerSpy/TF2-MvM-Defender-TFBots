@@ -101,7 +101,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.1.3",
+	version = "1.1.4",
 	url = ""
 };
 
@@ -892,7 +892,8 @@ void UpdateChosenBotTeamComposition()
 	else
 	{
 		//No prefernces, the lineup is random
-		g_adtChosenBotClasses.PushString(g_sRawPlayerClassNames[GetRandomInt(1, 9)]);
+		for (int i = 1; i <= newBotsToAdd; i++)
+			g_adtChosenBotClasses.PushString(g_sRawPlayerClassNames[GetRandomInt(1, 9)]);
 	}
 	
 	delete adtClassPref;
