@@ -101,7 +101,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.1.4",
+	version = "1.1.5",
 	url = ""
 };
 
@@ -700,22 +700,11 @@ public Action Timer_ForgetDetonatingPlayer(Handle timer, any data)
 
 public Action DefenderBot_Touch(int entity, int other)
 {
-	if (BaseEntity_IsPlayer(other) && CBaseNPC_GetNextBotOfEntity(entity).IsEnemy(other))
-	{
-		//Use default behavior to realize they are a spy on contact
-		GameRules_SetProp("m_bPlayingMannVsMachine", false);
-	}
+	//Call out enemy spies upon contact
+	if (BaseEntity_IsPlayer(other) && CBaseNPC_GetNextBotOfEntity(entity).IsEnemy(other) && TF2_IsPlayerInCondition(other, TFCond_Disguised))
+		RealizeSpy(entity, other);
 	
 	return Plugin_Continue;
-}
-
-public void DefenderBot_TouchPost(int entity, int other)
-{
-	if (BaseEntity_IsPlayer(other) && CBaseNPC_GetNextBotOfEntity(entity).IsEnemy(other))
-	{
-		//Revert cause we are still playing mvm
-		GameRules_SetProp("m_bPlayingMannVsMachine", true);
-	}
 }
 
 bool FakeClientCommandThrottled(int client, const char[] command)

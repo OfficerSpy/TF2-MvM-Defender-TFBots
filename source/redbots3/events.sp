@@ -148,7 +148,6 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 		g_bHasBoughtUpgrades[data] = false;
 		
 		SDKHook(data, SDKHook_Touch, DefenderBot_Touch);
-		SDKHook(data, SDKHook_TouchPost, DefenderBot_TouchPost);
 		
 		DHooks_DefenderBot(data);
 		

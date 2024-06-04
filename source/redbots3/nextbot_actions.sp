@@ -4106,16 +4106,8 @@ int GetBotBombCampCount()
 	int count = 0;
 	
 	for (int i = 1; i <= MaxClients; i++)
-	{
-		if (!IsClientInGame(i))
-			continue;
-		
-		if (!g_bIsDefenderBot[i])
-			continue;
-		
-		if (ActionsManager.GetAction(i, "DefenderCampBomb") != INVALID_ACTION)
+		if (IsClientInGame(i) && g_bIsDefenderBot[i] && ActionsManager.GetAction(i, "DefenderCampBomb") != INVALID_ACTION)
 			count++;
-	}
 	
 	return count;
 }

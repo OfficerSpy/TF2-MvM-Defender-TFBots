@@ -4,6 +4,7 @@ static Handle m_hHasAmmo;
 static Handle m_hGetMaxAmmo;
 static Handle m_hGetAmmoCount;
 static Handle m_hGetNextThink;
+static Handle m_hRealizeSpy;
 static Handle m_hClip1;
 
 #if defined METHOD_MVM_UPGRADES
@@ -75,6 +76,15 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hGetNextThink = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CBaseEntity::GetNextThink!");
+		failCount++;
+	}
+	
+	StartPrepSDKCall(SDKCall_Player);
+	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Signature, "CTFBot::RealizeSpy");
+	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
+	if ((m_hRealizeSpy = EndPrepSDKCall()) == null)
+	{
+		LogError("Failed to create SDKCall for CTFBot::RealizeSpy!");
 		failCount++;
 	}
 	
@@ -193,6 +203,11 @@ int GetAmmoCount(int client, int iAmmoIndex)
 float GetNextThink(int entity, const char[] szContext = "")
 {
 	return SDKCall(m_hGetNextThink, entity, szContext);
+}
+
+void RealizeSpy(int client, int pPlayer)
+{
+	SDKCall(m_hRealizeSpy, client, pPlayer);
 }
 
 int Clip1(int weapon)
