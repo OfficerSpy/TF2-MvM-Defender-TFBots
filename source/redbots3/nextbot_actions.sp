@@ -23,7 +23,7 @@ static int MAX_INT = 99999999;
 static int MIN_INT = -99999999;
 
 PathFollower m_pPath[MAXPLAYERS + 1];
-// ChasePath m_chasePath[MAXPLAYERS + 1];
+ChasePath m_pChasePath[MAXPLAYERS + 1];
 static float m_flRepathTime[MAXPLAYERS + 1];
 
 static int m_nCurrentPowerupBottle[MAXPLAYERS + 1];
@@ -58,7 +58,7 @@ void InitNextBotPathing()
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		m_pPath[i] = PathFollower(_, Path_FilterIgnoreActors, Path_FilterOnlyActors);
-		// m_chasePath[i] = ChasePath(_, _, Path_FilterIgnoreActors, Path_FilterOnlyActors);
+		m_pChasePath[i] = ChasePath(LEAD_SUBJECT, _, Path_FilterIgnoreActors, Path_FilterOnlyActors);
 	}
 }
 
@@ -143,8 +143,6 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 		else if (StrEqual(name, "ScenarioMonitor"))
 		{
 			action.Update = CTFBotScenarioMonitor_Update;
-			action.InitialContainedAction = CTFBotScenarioMonitor_InitialContainedAction;
-			action.InitialContainedActionPost = CTFBotScenarioMonitor_InitialContainedActionPost;
 		}
 		else if (StrEqual(name, "Heal"))
 		{
@@ -162,9 +160,9 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 		{
 			action.SelectMoreDangerousThreat = CTFBotSniperLurk_SelectMoreDangerousThreat;
 		}
-		else if (StrEqual(name, "SpyAttack"))
+		else if (StrEqual(name, "SpyLeaveSpawnRoom"))
 		{
-			action.SelectMoreDangerousThreat = CTFBotSpyAttack_SelectMoreDangerousThreat;
+			action.OnStart = CTFBotSpyLeaveSpawnRoom_OnStart;
 		}
 	}
 }
@@ -348,28 +346,6 @@ public Action CTFBotScenarioMonitor_Update(BehaviorAction action, int actor, flo
 	return GetDesiredBotAction(actor, action);
 }
 
-public Action CTFBotScenarioMonitor_InitialContainedAction(BehaviorAction action, int actor, BehaviorAction& child)
-{
-	if (g_bIsDefenderBot[actor] && TF2_GetPlayerClass(actor) == TFClass_Spy)
-	{
-		//Force CTFBotSpyInfiltrate
-		GameRules_SetProp("m_bPlayingMannVsMachine", false);
-	}
-	
-	return Plugin_Continue;
-}
-
-public Action CTFBotScenarioMonitor_InitialContainedActionPost(BehaviorAction action, int actor, BehaviorAction& child)
-{
-	if (g_bIsDefenderBot[actor] && TF2_GetPlayerClass(actor) == TFClass_Spy)
-	{
-		//We still play mvm
-		GameRules_SetProp("m_bPlayingMannVsMachine", true);
-	}
-	
-	return Plugin_Continue;
-}
-
 public Action CTFBotMedicHeal_UpdatePost(BehaviorAction action, int actor, float interval, ActionResult result)
 {
 	if (g_bIsDefenderBot[actor] == false)
@@ -443,29 +419,12 @@ public Action CTFBotSniperLurk_SelectMoreDangerousThreat(BehaviorAction action, 
 	return Plugin_Changed;
 }
 
-public Action CTFBotSpyAttack_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
+public Action CTFBotSpyLeaveSpawnRoom_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-	int iThreat1 = view_as<CKnownEntity>(threat1).GetEntity();
+	if (g_bIsDefenderBot[actor] == false)
+		return Plugin_Continue;
 	
-	if (BaseEntity_IsPlayer(iThreat1) && TF2_IsMiniBoss(iThreat1))
-	{
-		//Giants are high priority, and consequently their medics are too
-		knownEntity = view_as<Address>(GetHealerOfThreat(view_as<INextBot>(nextbot), view_as<CKnownEntity>(threat1)));
-		
-		return Plugin_Changed;
-	}
-	
-	int iThreat2 = view_as<CKnownEntity>(threat2).GetEntity();
-	
-	if (BaseEntity_IsPlayer(iThreat2) && TF2_IsMiniBoss(iThreat2))
-	{
-		knownEntity = view_as<Address>(GetHealerOfThreat(view_as<INextBot>(nextbot), view_as<CKnownEntity>(threat2)));
-		
-		return Plugin_Changed;
-	}
-	
-	//Use default targeting, which prioritizes closer threats first
-	return Plugin_Continue;
+	return action.Done();
 }
 
 BehaviorAction CTFBotDefenderAttack()
@@ -1800,29 +1759,154 @@ BehaviorAction CTFBotSpyLurkMvM()
 	action.OnStart = CTFBotSpyLurkMvM_OnStart;
 	action.Update = CTFBotSpyLurkMvM_Update;
 	action.OnEnd = CTFBotSpyLurkMvM_OnEnd;
+	action.ShouldAttack = CTFBotSpyLurkMvM_ShouldAttack;
+	action.IsHindrance = CTFBotSpyLurkMvM_IsHindrance;
+	// action.SelectMoreDangerousThreat = CTFBotSpyLurkMvM_SelectMoreDangerousThreat;
 	
 	return action;
 }
 
 public Action CTFBotSpyLurkMvM_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-	/* if (!TF2_IsStealthed(actor))
-		VS_PressAltFireButton(actor); */
+	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
+	
+	UpdateLookAroundForEnemies(actor, false);
 	
 	return action.Continue();
 }
 
 public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
-	//TODO: make a good spy ai
+	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
+	int target = GetBestTargetForSpy(actor, 1000.0);
+	
+	if (target != -1)
+	{
+		if (TF2_IsStealthed(actor))
+			VS_PressAltFireButton(actor);
+		
+		int melee = GetPlayerWeaponSlot(actor, TFWeaponSlot_Melee);
+		
+		if (melee != -1)
+			TF2Util_SetPlayerActiveWeapon(actor, melee);
+		
+		float playerThreatForward[3]; BasePlayer_EyeVectors(target, playerThreatForward);
+		float toPlayerThreat[3]; GetClientAbsOrigin(target, toPlayerThreat);
+		float myOrigin[3]; GetClientAbsOrigin(actor, myOrigin);
+		
+		SubtractVectors(toPlayerThreat, myOrigin, toPlayerThreat);
+		
+		float threatRange = NormalizeVector(toPlayerThreat, toPlayerThreat);
+		
+		const float behindTolerance = 0.0;
+		
+		bool isBehindVictim = GetVectorDotProduct(playerThreatForward, toPlayerThreat) > behindTolerance;
+		
+		if (TF2_IsLineOfFireClear4(actor, target))
+		{
+			const float circleStrafeRange = 250.0;
+			
+			if (threatRange < circleStrafeRange)
+			{
+				SnapViewToPosition(actor, WorldSpaceCenter(target));
+				
+				if (!isBehindVictim)
+				{
+					//Try to circle around the enemy
+					float myForward[3]; BasePlayer_EyeVectors(actor, myForward);
+					float cross[3]; GetVectorCrossProduct(playerThreatForward, myForward, cross);
+					
+					if (cross[2] < 0.0)
+						g_iAdditionalButtons[actor] |= IN_MOVERIGHT;
+					else
+						g_iAdditionalButtons[actor] |= IN_MOVELEFT;
+				}
+			}
+			
+			if (threatRange < GetDesiredAttackRange(actor))
+			{
+				if (TF2_IsPlayerInCondition(actor, TFCond_Disguised))
+				{
+					if (isBehindVictim)
+						VS_PressFireButton(actor);
+				}
+				else
+				{
+					VS_PressFireButton(actor);
+				}
+			}
+		}
+		
+		m_pChasePath[actor].Update(myBot, target);
+	}
+	else
+	{
+		//Can't find anyone near me, just wander around the bomb
+		int flag = FindBombNearestToHatch();
+		
+		if (flag != -1)
+		{
+			float bombPosition[3]; bombPosition = GetAbsOrigin(flag);
+			
+			if (myBot.IsRangeGreaterThanEx(bombPosition, 200.0))
+			{
+				if (m_flRepathTime[actor] <= GetGameTime())
+				{
+					m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.9, 1.0);
+					m_pPath[actor].ComputeToPos(myBot, bombPosition);
+				}
+				
+				m_pPath[actor].Update(myBot);
+			}
+		}
+	}
 	
 	return action.Continue();
 }
 
 public void CTFBotSpyLurkMvM_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-	m_iAttackTarget[actor] = -1;
+	
 }
+
+public Action CTFBotSpyLurkMvM_ShouldAttack(BehaviorAction action, Address nextbot, Address knownEntity, QueryResultType& result)
+{
+	//Don't as we will just make ourselves look stupid
+	result = ANSWER_NO;
+	return Plugin_Changed;
+}
+
+public Action CTFBotSpyLurkMvM_IsHindrance(BehaviorAction action, Address nextbot, int entity, QueryResultType& result)
+{
+	//Avoid no one
+	result = ANSWER_NO;
+	return Plugin_Changed;
+}
+
+/* public Action CTFBotSpyLurkMvM_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
+{
+	int iThreat1 = view_as<CKnownEntity>(threat1).GetEntity();
+	
+	if (BaseEntity_IsPlayer(iThreat1) && TF2_IsMiniBoss(iThreat1))
+	{
+		//Giants are high priority, and consequently their medics are too
+		knownEntity = view_as<Address>(GetHealerOfThreat(view_as<INextBot>(nextbot), view_as<CKnownEntity>(threat1)));
+		
+		return Plugin_Changed;
+	}
+	
+	int iThreat2 = view_as<CKnownEntity>(threat2).GetEntity();
+	
+	if (BaseEntity_IsPlayer(iThreat2) && TF2_IsMiniBoss(iThreat2))
+	{
+		knownEntity = view_as<Address>(GetHealerOfThreat(view_as<INextBot>(nextbot), view_as<CKnownEntity>(threat2)));
+		
+		return Plugin_Changed;
+	}
+	
+	//Use default targeting, which prioritizes closer threats first
+	return Plugin_Continue;
+} */
 
 BehaviorAction CTFBotMedicRevive()
 {
@@ -2060,7 +2144,7 @@ Action GetDesiredBotAction(int client, BehaviorAction action)
 			return action.SuspendFor(CTFBotGotoUpgrade(), "Buy upgrades now");
 		}
 		
-		//Health and ammo is moved to CTFBotTacticalMonitor_Update as it takes precedence over ScenarioMonitor
+		//NOTE: Health and ammo is moved to CTFBotTacticalMonitor_Update as it takes precedence over ScenarioMonitor
 		
 		switch (TF2_GetPlayerClass(client))
 		{
@@ -2089,17 +2173,16 @@ Action GetDesiredBotAction(int client, BehaviorAction action)
 				}
 				else
 				{
-					return action.SuspendFor(CTFBotDefenderAttack(), "Sniper: Attacking robots");
+					return action.SuspendFor(CTFBotDefenderAttack(), "Sniper Attacking robots");
 				}
 			}
 			case TFClass_Engineer:
 			{
-				return action.SuspendFor(CTFBotEngineerIdle(), "Engineer: Start building");
+				return action.SuspendFor(CTFBotEngineerIdle(), "Engineer Start building");
 			}
 			case TFClass_Spy:
 			{
-				//InitialContainedAction is overriden to assign CTFBotSpyInfiltrate
-				return Plugin_Continue;
+				return action.SuspendFor(CTFBotSpyLurkMvM(), "Spy do be lurking");
 			}
 			case TFClass_Heavy:
 			{
@@ -2134,7 +2217,7 @@ Action GetUpgradePostAction(int client, BehaviorAction action)
 		else if (TF2_GetPlayerClass(client) == TFClass_Medic)
 			return action.Done("Start heal mission");
 		else if (TF2_GetPlayerClass(client) == TFClass_Spy)
-			return action.Done("Start spy lurking");
+			return action.ChangeTo(CTFBotSpyLurkMvM(), "Start spy lurking");
 		else if (HasSniperRifle(client))
 			return action.Done("Start lurking");
 		else
@@ -3100,8 +3183,9 @@ bool CTFBotGetHealth_IsPossible(int actor)
 		return true;
 	}
 
-//	PrintToServer("ratio %f max_range %f", ratio, max_range);
-
+	if (redbots_manager_debug_actions.BoolValue)
+		PrintToServer("ratio %f max_range %f", ratio, max_range);
+	
 	JSONArray ammo = new JSONArray();
 	ComputeHealthAndAmmoVectors(actor, ammo, max_range);
 	
@@ -4092,11 +4176,9 @@ bool CTFBotCampBomb_IsPossible(int client)
 		}
 	}
 	
+	//There;s too many of us doing this behavior
 	if (GetBotBombCampCount() > 0)
-	{
-		//There;s too many of us doing this behavior
 		return false;
-	}
 	
 	return true;
 }

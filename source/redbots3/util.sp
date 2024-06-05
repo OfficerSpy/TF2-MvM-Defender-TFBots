@@ -684,6 +684,74 @@ bool CanWeaponAirblast(int weapon)
 	return TF2Attrib_HookValueInt(0, "airblast_disabled", weapon) == 0;
 }
 
+int FindBotNearestToMe(int client, float max_distance, bool bGiantsOnly = false)
+{
+	float origin[3]; origin = WorldSpaceCenter(client);
+	
+	float bestDistance = 999999.0;
+	int bestEntity = -1;
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (i == client)
+			continue;
+		
+		if (!IsClientInGame(i))
+			continue;
+		
+		if (!IsPlayerAlive(i))
+			continue;
+		
+		if (TF2_GetClientTeam(i) != GetEnemyTeamOfPlayer(client))
+			continue;
+		
+		if (IsSentryBusterRobot(i))
+			continue;
+		
+		if (bGiantsOnly && !TF2_IsMiniBoss(i))
+			continue;
+		
+		float distance = GetVectorDistance(WorldSpaceCenter(i), origin);
+		
+		if (distance <= bestDistance && distance <= max_distance)
+		{
+			bestDistance = distance;
+			bestEntity = i;
+		}
+	}
+	
+	return bestEntity;
+}
+
+int GetBestTargetForSpy(int client, float max_distance)
+{
+	//Find the closest giant near us
+	int target = FindBotNearestToMe(client, max_distance, true);
+	
+	//No giant, just target the one near us then
+	if (target == -1)
+		target = FindBotNearestToMe(client, max_distance);
+	
+	//Target their healer first, if they have one
+	if (target != -1)
+	{
+		int myTeam = GetClientTeam(client);
+		
+		for (int i = 0; i < TF2_GetNumHealers(target); i++)
+		{
+			int healer = TF2_GetHealerByIndex(target, i);
+			
+			if (healer != -1 && BaseEntity_IsPlayer(healer) && GetClientTeam(healer) != myTeam)
+			{
+				target = healer;
+				break;
+			}
+		}
+	}
+	
+	return target;
+}
+
 stock bool DoesAnyPlayerUseThisName(const char[] name)
 {
 	char playerName[MAX_NAME_LENGTH];
