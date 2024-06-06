@@ -501,9 +501,13 @@ public Action Command_JoinBluePlayWithBots(int client, int args)
 #if defined TESTING_ONLY
 public Action Command_BotsReadyNow(int client, int args)
 {
-	for (int i = 1; i <= MaxClients; i++)
+	/* for (int i = 1; i <= MaxClients; i++)
 		if (g_bIsDefenderBot[i] && !IsPlayerReady(i))
-			FakeClientCommand(i, "tournament_player_readystate 1");
+			FakeClientCommand(i, "tournament_player_readystate 1"); */
+	
+	int target = GetClientAimTarget(client);
+	
+	SpawnSapper(client, target);
 	
 	return Plugin_Handled;
 }

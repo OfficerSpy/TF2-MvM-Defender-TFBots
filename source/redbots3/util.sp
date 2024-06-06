@@ -752,6 +752,48 @@ int GetBestTargetForSpy(int client, float max_distance)
 	return target;
 }
 
+/* To trigger the robo sapper, you need to do several things
+- set a builder
+- set the object mode to MODE_SAPPER_ANTI_ROBOT or MODE_SAPPER_ANTI_ROBOT_RADIUS
+- parent the sapper to some entity
+- set the entity the sapper is being built on
+- then fire input Enable to call CObjectSapper::OnGoActive */
+int SpawnSapper(int owner, int entity, int weapon = -1)
+{
+	int sapper = CreateEntityByName("obj_attachment_sapper");
+	
+	if (sapper != -1)
+	{
+		AcceptEntityInput(sapper, "SetBuilder", owner);
+		
+		if (weapon > 0)
+			TF2_SetObjectMode(sapper, TF2Attrib_HookValueInt(0, "robo_sapper", weapon) ? MODE_SAPPER_ANTI_ROBOT_RADIUS : MODE_SAPPER_ANTI_ROBOT);
+		
+		DispatchSpawn(sapper);
+		ParentEntity(entity, sapper, BaseEntity_IsPlayer(entity) ? "head" : "weapon_bone");
+		SetEntPropEnt(sapper, Prop_Send, "m_hBuiltOnEntity", entity);
+		RemoveEffects(sapper, EF_NODRAW);
+		
+		// SetEntProp(sapper, Prop_Send, "m_bDisabled", 1);
+		// AcceptEntityInput(sapper, "Enable");
+		
+		//Finish construction to properly have the sapper run its think function
+		FinishedBuilding(sapper);
+	}
+	
+	return sapper;
+}
+
+void RemoveEffects(int entity, int nEffects)
+{
+	SetEntProp(entity, Prop_Send, "m_fEffects", GetEntProp(entity, Prop_Send, "m_fEffects") & ~nEffects);
+	
+	if (nEffects & EF_NODRAW)
+	{
+		CBaseEntity(entity).DispatchUpdateTransmitState();
+	}
+}
+
 stock bool DoesAnyPlayerUseThisName(const char[] name)
 {
 	char playerName[MAX_NAME_LENGTH];
@@ -861,4 +903,18 @@ stock int GetTeamHumanClientCount(int team)
 			count++;
 	
 	return count;
+}
+
+//From stocksoup/entity_tools.inc
+stock bool ParentEntity(int parent, int attachment, const char[] attachPoint = "",
+		bool maintainOffset = false) {
+	SetVariantString("!activator");
+	AcceptEntityInput(attachment, "SetParent", parent, attachment, 0);
+	
+	if (strlen(attachPoint) > 0) {
+		SetVariantString(attachPoint);
+		AcceptEntityInput(attachment,
+				maintainOffset? "SetParentAttachmentMaintainOffset" : "SetParentAttachment",
+				parent, parent);
+	}
 }

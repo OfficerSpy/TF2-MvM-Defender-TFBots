@@ -124,6 +124,16 @@
 				"windows"	"265"		
 				"linux"		"266"
 			}
+			"CTFWeaponBase::Clip1"
+			{
+				"windows"	"344"
+				"linux"		"350"
+			}
+			"CBaseObject::FinishedBuilding"
+			{
+				"windows"	"343"
+				"linux"		"345"
+			}
 			"CItem::MyTouch"
 			{
 				"windows"	"228"
@@ -148,11 +158,6 @@
 			{
 				"windows"	"63"
 				"linux"		"64"
-			}
-			"CTFWeaponBase::Clip1"
-			{
-				"windows"	"344"
-				"linux"		"350"
 			}
 			//These numbers are used to calculate the actual offset based on the base netprop offset in the Keys section
 			//The calculation formula is base offset + this number
