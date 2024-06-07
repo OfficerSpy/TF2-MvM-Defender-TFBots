@@ -101,7 +101,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.1.6",
+	version = "1.1.7",
 	url = ""
 };
 
@@ -506,7 +506,6 @@ public Action Command_BotsReadyNow(int client, int args)
 			FakeClientCommand(i, "tournament_player_readystate 1"); */
 	
 	int target = GetClientAimTarget(client);
-	
 	SpawnSapper(client, target);
 	
 	return Plugin_Handled;

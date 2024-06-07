@@ -129,11 +129,6 @@
 				"windows"	"344"
 				"linux"		"350"
 			}
-			"CBaseObject::FinishedBuilding"
-			{
-				"windows"	"343"
-				"linux"		"345"
-			}
 			"CItem::MyTouch"
 			{
 				"windows"	"228"

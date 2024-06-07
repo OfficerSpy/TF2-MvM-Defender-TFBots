@@ -6,7 +6,6 @@ static Handle m_hRealizeSpy;
 static Handle m_hHasAmmo;
 static Handle m_hGetAmmoCount;
 static Handle m_hClip1;
-static Handle m_hFinishedBuilding;
 
 #if defined METHOD_MVM_UPGRADES
 static Handle m_hGEconItemSchema;
@@ -95,14 +94,6 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hClip1 = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFWeaponBase::Clip1!");
-		failCount++;
-	}
-	
-	StartPrepSDKCall(SDKCall_Entity);
-	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Virtual, "CBaseObject::FinishedBuilding");
-	if ((m_hFinishedBuilding = EndPrepSDKCall()) == null)
-	{
-		LogError("Failed to create SDKCall for CBaseObject::FinishedBuilding!");
 		failCount++;
 	}
 	
@@ -222,11 +213,6 @@ int GetAmmoCount(int client, int iAmmoIndex)
 int Clip1(int weapon)
 {
 	return SDKCall(m_hClip1, weapon);
-}
-
-void FinishedBuilding(int baseObject)
-{
-	SDKCall(m_hFinishedBuilding, baseObject);
 }
 
 #if defined METHOD_MVM_UPGRADES

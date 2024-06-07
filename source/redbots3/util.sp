@@ -5,6 +5,8 @@
 #include <stocklib_officerspy/tf/stocklib_extra_vscript>
 #include <stocklib_officerspy/econ_item_view>
 
+#define SENTRY_MAX_RANGE 1100.0
+
 //WeaponData > Range in file tf_weapon_medigun.txt
 #define WEAPON_MEDIGUN_RANGE	450.0
 
@@ -767,18 +769,13 @@ int SpawnSapper(int owner, int entity, int weapon = -1)
 		AcceptEntityInput(sapper, "SetBuilder", owner);
 		
 		if (weapon > 0)
-			TF2_SetObjectMode(sapper, TF2Attrib_HookValueInt(0, "robo_sapper", weapon) ? MODE_SAPPER_ANTI_ROBOT_RADIUS : MODE_SAPPER_ANTI_ROBOT);
+			TF2_SetObjectMode(sapper, GetEntProp(weapon, Prop_Send, "m_iObjectMode"));
 		
-		DispatchSpawn(sapper);
 		ParentEntity(entity, sapper, BaseEntity_IsPlayer(entity) ? "head" : "weapon_bone");
 		SetEntPropEnt(sapper, Prop_Send, "m_hBuiltOnEntity", entity);
+		SetEntProp(sapper, Prop_Send, "m_bBuilding", 1);
+		DispatchSpawn(sapper);
 		RemoveEffects(sapper, EF_NODRAW);
-		
-		// SetEntProp(sapper, Prop_Send, "m_bDisabled", 1);
-		// AcceptEntityInput(sapper, "Enable");
-		
-		//Finish construction to properly have the sapper run its think function
-		FinishedBuilding(sapper);
 	}
 	
 	return sapper;
@@ -789,9 +786,80 @@ void RemoveEffects(int entity, int nEffects)
 	SetEntProp(entity, Prop_Send, "m_fEffects", GetEntProp(entity, Prop_Send, "m_fEffects") & ~nEffects);
 	
 	if (nEffects & EF_NODRAW)
-	{
 		CBaseEntity(entity).DispatchUpdateTransmitState();
+}
+
+int GetNearestSappableObject(int client, float max_distance = 1000.0)
+{
+	float origin[3]; GetClientAbsOrigin(client, origin);
+	int myTeam = GetClientTeam(client);
+	
+	float bestDistance = 999999.0;
+	int bestEnt = -1;
+	
+	int ent = -1;
+	while ((ent = FindEntityByClassname(ent, "obj_*")) != -1)
+	{
+		if (TF2_GetObjectType(ent) == TFObject_Sapper)
+			continue;
+		
+		if (BaseEntity_GetTeamNumber(ent) == myTeam)
+			continue;
+		
+		if (TF2_IsPlacing(ent))
+			continue;
+		
+		if (TF2_IsCarried(ent))
+			continue;
+		
+		if (TF2_HasSapper(ent))
+			continue;
+		
+		float distance = GetVectorDistance(origin, GetAbsOrigin(ent));
+		
+		if (distance <= bestDistance && distance <= max_distance)
+		{
+			bestDistance = distance;
+			bestEnt = ent;
+		}
 	}
+	
+	return bestEnt;
+}
+
+int GetNearestEnemyTeleporter(int client, float max_distance = 999999.0)
+{
+	float origin[3]; GetClientAbsOrigin(client, origin);
+	int myTeam = GetClientTeam(client);
+	
+	float bestDistance = 999999.0;
+	int bestEnt = -1;
+	
+	int ent = -1;
+	while ((ent = FindEntityByClassname(ent, "obj_teleporter")) != -1)
+	{
+		if (BaseEntity_GetTeamNumber(ent) == myTeam)
+			continue;
+		
+		if (TF2_IsPlacing(ent))
+			continue;
+		
+		if (TF2_IsCarried(ent))
+			continue;
+		
+		if (TF2_HasSapper(ent))
+			continue;
+		
+		float distance = GetVectorDistance(origin, GetAbsOrigin(ent));
+		
+		if (distance <= bestDistance && distance <= max_distance)
+		{
+			bestDistance = distance;
+			bestEnt = ent;
+		}
+	}
+	
+	return bestEnt;
 }
 
 stock bool DoesAnyPlayerUseThisName(const char[] name)
