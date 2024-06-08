@@ -1946,12 +1946,14 @@ public Action CTFBotSpySap_Update(BehaviorAction action, int actor, float interv
 		
 		SnapViewToPosition(actor, WorldSpaceCenter(m_iSapTarget[actor]));
 		VS_PressFireButton(actor);
+		PrintToServer("SAP RANGE");
 	}
 	
 	if (m_flRepathTime[actor] <= GetGameTime())
 	{
 		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(2.0, 3.0);
 		m_pPath[actor].ComputeToTarget(myBot, m_iSapTarget[actor]);
+		PrintToServer("Actor %d, Nextbot %s", actor, myBot == NULL_NEXT_BOT ? "NULL" : "OKAY");
 	}
 	
 	m_pPath[actor].Update(myBot);
