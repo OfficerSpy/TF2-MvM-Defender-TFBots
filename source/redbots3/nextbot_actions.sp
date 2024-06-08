@@ -2010,8 +2010,8 @@ public Action CTFBotMedicRevive_OnStart(BehaviorAction action, int actor, Behavi
 	int secondary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Secondary);
 	
 	//Stop current healing
-	if (secondary != -1 && TF2Util_GetWeaponID(secondary) == TF_WEAPON_MEDIGUN && GetEntPropEnt(secondary, Prop_Send, "m_hHealingTarget") != -1)
-		SetEntPropEnt(secondary, Prop_Send, "m_hHealingTarget", -1);
+	// if (secondary != -1 && TF2Util_GetWeaponID(secondary) == TF_WEAPON_MEDIGUN && GetEntPropEnt(secondary, Prop_Send, "m_hHealingTarget") != -1)
+		// SetEntPropEnt(secondary, Prop_Send, "m_hHealingTarget", -1);
 	
 	return action.Continue();
 }
