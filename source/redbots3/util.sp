@@ -10,6 +10,9 @@
 //WeaponData > Range in file tf_weapon_medigun.txt
 #define WEAPON_MEDIGUN_RANGE	450.0
 
+//CTFWeaponBuilder::InternalGetEffectBarRechargeTime
+#define SAPPER_RECHARGE_TIME	15.0
+
 enum //medigun_resist_types_t
 {
 	MEDIGUN_BULLET_RESIST = 0,
@@ -556,7 +559,7 @@ int GetAcquiredCreditsOfAllWaves(bool withBonus = true)
 	return total;
 }
 
-int GerNearestTeammate(int client, float max_distance)
+int GerNearestTeammate(int client, const float max_distance)
 {
 	float origin[3]; origin = WorldSpaceCenter(client);
 	
@@ -686,7 +689,7 @@ bool CanWeaponAirblast(int weapon)
 	return TF2Attrib_HookValueInt(0, "airblast_disabled", weapon) == 0;
 }
 
-int FindBotNearestToMe(int client, float max_distance, bool bGiantsOnly = false)
+int FindBotNearestToMe(int client, const float max_distance, bool bGiantsOnly = false)
 {
 	float origin[3]; origin = WorldSpaceCenter(client);
 	
@@ -725,7 +728,7 @@ int FindBotNearestToMe(int client, float max_distance, bool bGiantsOnly = false)
 	return bestEntity;
 }
 
-int GetBestTargetForSpy(int client, float max_distance)
+int GetBestTargetForSpy(int client, const float max_distance)
 {
 	//Find the closest giant near us
 	int target = FindBotNearestToMe(client, max_distance, true);
@@ -789,7 +792,7 @@ void RemoveEffects(int entity, int nEffects)
 		CBaseEntity(entity).DispatchUpdateTransmitState();
 }
 
-int GetNearestSappableObject(int client, float max_distance = 1000.0)
+int GetNearestSappableObject(int client, const float max_distance = 1000.0)
 {
 	float origin[3]; GetClientAbsOrigin(client, origin);
 	int myTeam = GetClientTeam(client);
@@ -827,7 +830,7 @@ int GetNearestSappableObject(int client, float max_distance = 1000.0)
 	return bestEnt;
 }
 
-int GetNearestEnemyTeleporter(int client, float max_distance = 999999.0)
+int GetNearestEnemyTeleporter(int client, const float max_distance = 999999.0)
 {
 	float origin[3]; GetClientAbsOrigin(client, origin);
 	int myTeam = GetClientTeam(client);
@@ -860,6 +863,38 @@ int GetNearestEnemyTeleporter(int client, float max_distance = 999999.0)
 	}
 	
 	return bestEnt;
+}
+
+int GetNearestEnemyCount(int client, const float max_distance)
+{
+	float origin[3]; GetClientAbsOrigin(client, origin);
+	
+	int myTeam = GetClientTeam(client);
+	int count = 0;
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (i == client)
+			continue;
+		
+		if (!IsClientInGame(i))
+			continue;
+		
+		if (!IsPlayerAlive(i))
+			continue;
+		
+		if (GetClientTeam(i) == myTeam)
+			continue;
+		
+		//Usually not a threat
+		if (IsSentryBusterRobot(i))
+			continue;
+		
+		if (GetVectorDistance(WorldSpaceCenter(i), origin) <= max_distance)
+			count++;
+	}
+	
+	return count;
 }
 
 stock bool DoesAnyPlayerUseThisName(const char[] name)

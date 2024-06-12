@@ -5,9 +5,12 @@
 #include <tf_econ_data>
 #include <tf2utils>
 #include <cbasenpc>
-#include <inc_mod_compatibility/actions&cbasenpc>
 #include <cbasenpc/tf/nav>
 #include <ripext>
+
+#define _disable_actions_query_result_type
+#define _disable_actions_event_result_priority_type
+#include <actions>
 
 #pragma semicolon 1
 #pragma newdecls required
@@ -101,7 +104,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.1.7",
+	version = "1.1.8",
 	url = ""
 };
 
@@ -701,13 +704,11 @@ public Action Timer_ForgetDetonatingPlayer(Handle timer, any data)
 	return Plugin_Stop;
 }
 
-public Action DefenderBot_Touch(int entity, int other)
+public void DefenderBot_TouchPost(int entity, int other)
 {
 	//Call out enemy spies upon contact
-	if (BaseEntity_IsPlayer(other) && CBaseNPC_GetNextBotOfEntity(entity).IsEnemy(other) && TF2_IsPlayerInCondition(other, TFCond_Disguised))
+	if (BaseEntity_IsPlayer(other) && GetClientTeam(other) != GetClientTeam(entity) && TF2_IsPlayerInCondition(other, TFCond_Disguised))
 		RealizeSpy(entity, other);
-	
-	return Plugin_Continue;
 }
 
 bool FakeClientCommandThrottled(int client, const char[] command)

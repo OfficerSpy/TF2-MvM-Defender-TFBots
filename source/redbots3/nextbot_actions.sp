@@ -171,30 +171,27 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 	}
 }
 
-public Action CTFBotMainAction_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
+public Action CTFBotMainAction_SelectMoreDangerousThreat(BehaviorAction action, INextBot nextbot, int entity, CKnownEntity threat1, CKnownEntity threat2, CKnownEntity& knownEntity)
 {
 	int me = action.Actor;
 	
 	if (g_bIsDefenderBot[me] == false)
 		return Plugin_Continue;
 	
-	CKnownEntity knownThreat1 = view_as<CKnownEntity>(threat1);
-	CKnownEntity knownThreat2 = view_as<CKnownEntity>(threat2);
-	
 	// if (!knownThreat1.IsVisibleRecently() && !knownThreat2.IsVisibleRecently())
 		// return Plugin_Continue;
 	
-	CKnownEntity closeThreat = SelectCloserThreat(view_as<INextBot>(nextbot), knownThreat1, knownThreat2);
+	CKnownEntity closeThreat = SelectCloserThreat(nextbot, threat1, threat1);
 	
 	if (BaseEntity_IsPlayer(closeThreat.GetEntity()))
 	{
 		//For players, target their healer first if they have one
-		knownEntity = view_as<Address>(GetHealerOfThreat(view_as<INextBot>(nextbot), closeThreat));
+		knownEntity = GetHealerOfThreat(nextbot, closeThreat);
 	}
 	else
 	{
 		//We target the closest threat to us
-		knownEntity = view_as<Address>(closeThreat);
+		knownEntity = closeThreat;
 	}
 	
 	// PrintToChatAll("CTFBotMainAction_SelectMoreDangerousThreat");
@@ -410,7 +407,7 @@ public Action CTFBotMvMEngineerIdle_OnStart(BehaviorAction action, int actor, Be
 	return action.Done();
 }
 
-public Action CTFBotSniperLurk_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
+public Action CTFBotSniperLurk_SelectMoreDangerousThreat(BehaviorAction action, INextBot nextbot, int entity, CKnownEntity threat1, CKnownEntity threat2, CKnownEntity& knownEntity)
 {
 	int me = action.Actor;
 	
@@ -418,7 +415,7 @@ public Action CTFBotSniperLurk_SelectMoreDangerousThreat(BehaviorAction action, 
 		return Plugin_Continue;
 	
 	//Return NULL so the normal threat targetting happens
-	knownEntity = Address_Null;
+	knownEntity = NULL_KNOWN_ENTITY;
 	
 	return Plugin_Changed;
 }
@@ -934,6 +931,14 @@ public Action CTFBotUpgrade_OnSuspend(BehaviorAction action, int actor, Behavior
 	return action.Continue();
 }
 
+public Action CTFBotUpgrade_OnResume(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+{
+	if (IsPlayerAlive(actor) && GetEntityMoveType(actor) == MOVETYPE_WALK)
+		SetEntityMoveType(actor, MOVETYPE_NONE);
+	
+	return action.Continue();
+}
+
 BehaviorAction CTFBotGetAmmo()
 {
 	BehaviorAction action = ActionsManager.Create("DefenderGetAmmo");
@@ -992,7 +997,9 @@ public Action CTFBotGetAmmo_OnStart(BehaviorAction action, int actor, BehaviorAc
 	
 	if (m_iAmmoPack[actor] != -1)
 	{
-		// UpdateLookAroundForEnemies(actor, true);
+		if (TF2_GetPlayerClass(actor) == TFClass_Engineer)
+			UpdateLookAroundForEnemies(actor, true);
+		
 		BaseMultiplayerPlayer_SpeakConceptIfAllowed(actor, MP_CONCEPT_PLAYER_DISPENSERHERE);
 		return action.Continue();
 	}
@@ -1027,16 +1034,16 @@ public Action CTFBotGetAmmo_Update(BehaviorAction action, int actor, float inter
 	return action.Continue();
 }
 
-public Action CTFBotGetAmmo_ShouldHurry(BehaviorAction action, Address nextbot, QueryResultType& result)
+public void CTFBotGetAmmo_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+{
+	m_iAmmoPack[actor] = -1;
+}
+
+public Action CTFBotGetAmmo_ShouldHurry(BehaviorAction action, INextBot nextbot, QueryResultType& result)
 {
 	//Disables dodging and we won't spin the minigun after recently seeing threats
 	result = ANSWER_YES;
 	return Plugin_Handled;
-}
-
-public void CTFBotGetAmmo_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
-{
-	m_iAmmoPack[actor] = -1;
 }
 
 BehaviorAction CTFBotMoveToFront()
@@ -1222,6 +1229,9 @@ public Action CTFBotGetHealth_OnStart(BehaviorAction action, int actor, Behavior
 	
 	if (m_iHealthPack[actor] != -1)
 	{
+		if (TF2_GetPlayerClass(actor) == TFClass_Engineer)
+			UpdateLookAroundForEnemies(actor, true);
+		
 		BaseMultiplayerPlayer_SpeakConceptIfAllowed(actor, MP_CONCEPT_PLAYER_MEDIC);
 		return action.Continue();
 	}
@@ -1269,7 +1279,7 @@ public void CTFBotGetHealth_OnEnd(BehaviorAction action, int actor, BehaviorActi
 	m_iHealthPack[actor] = -1;
 }
 
-public Action CTFBotGetHealth_ShouldHurry(BehaviorAction action, Address nextbot, QueryResultType& result)
+public Action CTFBotGetHealth_ShouldHurry(BehaviorAction action, INextBot nextbot, QueryResultType& result)
 {
 	result = ANSWER_YES;
 	return Plugin_Changed;
@@ -1691,11 +1701,10 @@ public Action CTFBotAttackTank_Update(BehaviorAction action, int actor, float in
 	return action.Continue();
 }
 
-public Action CTFBotAttackTank_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
+public Action CTFBotAttackTank_SelectMoreDangerousThreat(BehaviorAction action, INextBot nextbot, int entity, CKnownEntity threat1, CKnownEntity threat2, CKnownEntity& knownEntity)
 {
-	int iThreat1 = view_as<CKnownEntity>(threat1).GetEntity();
-	int iThreat2 = view_as<CKnownEntity>(threat2).GetEntity();
-	INextBot myBot = view_as<INextBot>(nextbot);
+	int iThreat1 = threat1.GetEntity();
+	int iThreat2 = threat2.GetEntity();
 	
 	int me = action.Actor;
 	int myWeapon = BaseCombatCharacter_GetActiveWeapon(me);
@@ -1703,7 +1712,7 @@ public Action CTFBotAttackTank_SelectMoreDangerousThreat(BehaviorAction action, 
 	if (myWeapon != -1 && (TF2Util_GetWeaponID(myWeapon) == TF_WEAPON_FLAMETHROWER || IsMeleeWeapon(myWeapon)))
 	{
 		//Close range weapons only target the closest threat
-		knownEntity = view_as<Address>(SelectCloserThreat(myBot, view_as<CKnownEntity>(threat1), view_as<CKnownEntity>(threat2)));
+		knownEntity = SelectCloserThreat(nextbot, threat1, threat2);
 		return Plugin_Changed;
 	}
 	
@@ -1712,7 +1721,7 @@ public Action CTFBotAttackTank_SelectMoreDangerousThreat(BehaviorAction action, 
 	
 	if (BaseEntity_IsPlayer(iThreat1))
 	{
-		if (myBot.IsRangeLessThan(iThreat1, notSafeRange))
+		if (nextbot.IsRangeLessThan(iThreat1, notSafeRange))
 		{
 			knownEntity = threat1;
 			return Plugin_Changed;
@@ -1721,7 +1730,7 @@ public Action CTFBotAttackTank_SelectMoreDangerousThreat(BehaviorAction action, 
 	
 	if (BaseEntity_IsPlayer(iThreat2))
 	{
-		if (myBot.IsRangeLessThan(iThreat2, notSafeRange))
+		if (nextbot.IsRangeLessThan(iThreat2, notSafeRange))
 		{
 			knownEntity = threat2;
 			return Plugin_Changed;
@@ -1742,7 +1751,7 @@ public Action CTFBotAttackTank_SelectMoreDangerousThreat(BehaviorAction action, 
 	}
 	
 	//We probably can't see it right now
-	knownEntity = Address_Null;
+	knownEntity = NULL_KNOWN_ENTITY;
 	
 	return Plugin_Changed;
 }
@@ -1770,13 +1779,11 @@ public Action CTFBotSpyLurkMvM_OnStart(BehaviorAction action, int actor, Behavio
 
 public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
-#if defined TESTING_ONLY
 	if (CTFBotSpySap_SelectTarget(actor))
 		return action.SuspendFor(CTFBotSpySap(), "Sapping");
-#endif
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
-	int target = GetBestTargetForSpy(actor, 1000.0);
+	int target = GetBestTargetForSpy(actor, 2000.0);
 	
 	if (target != -1)
 	{
@@ -1825,7 +1832,8 @@ public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 			{
 				if (TF2_IsPlayerInCondition(actor, TFCond_Disguised))
 				{
-					if (isBehindVictim)
+					//They are stabable
+					if (isBehindVictim || TF2_IsPlayerInCondition(target, TFCond_MVMBotRadiowave) || (TF2_IsPlayerInCondition(target, TFCond_Sapped) && !TF2_IsMiniBoss(target)))
 						VS_PressFireButton(actor);
 				}
 				else
@@ -1862,14 +1870,14 @@ public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 	return action.Continue();
 }
 
-public Action CTFBotSpyLurkMvM_ShouldAttack(BehaviorAction action, Address nextbot, Address knownEntity, QueryResultType& result)
+public Action CTFBotSpyLurkMvM_ShouldAttack(BehaviorAction action, INextBot nextbot, CKnownEntity knownEntity, QueryResultType& result)
 {
 	//Don't as we will just make ourselves look stupid
 	result = ANSWER_NO;
 	return Plugin_Changed;
 }
 
-public Action CTFBotSpyLurkMvM_IsHindrance(BehaviorAction action, Address nextbot, int entity, QueryResultType& result)
+public Action CTFBotSpyLurkMvM_IsHindrance(BehaviorAction action, INextBot nextbot, int entity, QueryResultType& result)
 {
 	//Avoid no one
 	result = ANSWER_NO;
@@ -1946,14 +1954,14 @@ public Action CTFBotSpySap_Update(BehaviorAction action, int actor, float interv
 		
 		SnapViewToPosition(actor, WorldSpaceCenter(m_iSapTarget[actor]));
 		VS_PressFireButton(actor);
-		PrintToServer("SAP RANGE");
 	}
 	
 	if (m_flRepathTime[actor] <= GetGameTime())
 	{
-		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(2.0, 3.0);
+		CBaseCombatCharacter(m_iSapTarget[actor]).UpdateLastKnownArea();
+		
+		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(1.0, 2.0);
 		m_pPath[actor].ComputeToTarget(myBot, m_iSapTarget[actor]);
-		PrintToServer("Actor %d, Nextbot %s", actor, myBot == NULL_NEXT_BOT ? "NULL" : "OKAY");
 	}
 	
 	m_pPath[actor].Update(myBot);
@@ -1980,13 +1988,13 @@ public Action CTFBotSpySap_OnResume(BehaviorAction action, int actor, BehaviorAc
 	return action.Continue();
 }
 
-public Action CTFBotSpySap_ShouldAttack(BehaviorAction action, Address nextbot, Address knownEntity, QueryResultType& result)
+public Action CTFBotSpySap_ShouldAttack(BehaviorAction action, INextBot nextbot, CKnownEntity knownEntity, QueryResultType& result)
 {
 	result = ANSWER_NO;
 	return Plugin_Changed;
 }
 
-public Action CTFBotSpySap_IsHindrance(BehaviorAction action, Address nextbot, int entity, QueryResultType& result)
+public Action CTFBotSpySap_IsHindrance(BehaviorAction action, INextBot nextbot, int entity, QueryResultType& result)
 {
 	result = ANSWER_NO;
 	return Plugin_Changed;
@@ -2075,6 +2083,8 @@ public Action CTFBotEvadeBuster_OnStart(BehaviorAction action, int actor, Behavi
 {
 	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	
+	BaseMultiplayerPlayer_SpeakConceptIfAllowed(actor, MP_CONCEPT_PLAYER_NO);
+	
 	return action.Continue();
 }
 
@@ -2148,6 +2158,8 @@ public Action CTFBotCampBomb_OnStart(BehaviorAction action, int actor, BehaviorA
 {
 	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	
+	BaseMultiplayerPlayer_SpeakConceptIfAllowed(actor, MP_CONCEPT_PLAYER_SENTRYHERE);
+	
 	return action.Continue();
 }
 
@@ -2209,6 +2221,8 @@ public Action CTFBotDestroyTeleporter_OnStart(BehaviorAction action, int actor, 
 {
 	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	
+	BaseMultiplayerPlayer_SpeakConceptIfAllowed(actor, MP_CONCEPT_PLAYER_JEERS);
+	
 	return action.Continue();
 }
 
@@ -2230,11 +2244,10 @@ public Action CTFBotDestroyTeleporter_Update(BehaviorAction action, int actor, f
 	return action.Continue();
 }
 
-public Action CTFBotDestroyTeleporter_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
+public Action CTFBotDestroyTeleporter_SelectMoreDangerousThreat(BehaviorAction action, INextBot nextbot, int entity, CKnownEntity threat1, CKnownEntity threat2, CKnownEntity& knownEntity)
 {
-	int iThreat1 = view_as<CKnownEntity>(threat1).GetEntity();
-	int iThreat2 = view_as<CKnownEntity>(threat2).GetEntity();
-	INextBot myBot = view_as<INextBot>(nextbot);
+	int iThreat1 = threat1.GetEntity();
+	int iThreat2 = threat2.GetEntity();
 	
 	int me = action.Actor;
 	int myWeapon = BaseCombatCharacter_GetActiveWeapon(me);
@@ -2242,18 +2255,18 @@ public Action CTFBotDestroyTeleporter_SelectMoreDangerousThreat(BehaviorAction a
 	if (myWeapon != -1 && (TF2Util_GetWeaponID(myWeapon) == TF_WEAPON_FLAMETHROWER || IsMeleeWeapon(myWeapon)))
 	{
 		//We can only get the nearest threat
-		knownEntity = view_as<Address>(SelectCloserThreat(myBot, view_as<CKnownEntity>(threat1), view_as<CKnownEntity>(threat2)));
+		knownEntity = SelectCloserThreat(nextbot, threat1, threat2);
 		return Plugin_Changed;
 	}
 	
 	//Any sentry nearby becomes a high priority threat because it can stop us from reaching our target
-	if (myBot.IsRangeLessThan(iThreat1, SENTRY_MAX_RANGE) && BaseEntity_IsBaseObject(iThreat1) && TF2_GetObjectType(iThreat1) == TFObject_Sentry)
+	if (nextbot.IsRangeLessThan(iThreat1, SENTRY_MAX_RANGE) && BaseEntity_IsBaseObject(iThreat1) && TF2_GetObjectType(iThreat1) == TFObject_Sentry)
 	{
 		knownEntity = threat1;
 		return Plugin_Changed;
 	}
 	
-	if (myBot.IsRangeLessThan(iThreat2, SENTRY_MAX_RANGE) && BaseEntity_IsBaseObject(iThreat2) && TF2_GetObjectType(iThreat2) == TFObject_Sentry)
+	if (nextbot.IsRangeLessThan(iThreat2, SENTRY_MAX_RANGE) && BaseEntity_IsBaseObject(iThreat2) && TF2_GetObjectType(iThreat2) == TFObject_Sentry)
 	{
 		knownEntity = threat2;
 		return Plugin_Changed;
@@ -2273,7 +2286,7 @@ public Action CTFBotDestroyTeleporter_SelectMoreDangerousThreat(BehaviorAction a
 	}
 	
 	//We probably can't see it right now
-	knownEntity = Address_Null;
+	knownEntity = NULL_KNOWN_ENTITY;
 	
 	return Plugin_Changed;
 }
@@ -4300,7 +4313,7 @@ void MonitorKnownEntities(int client, IVision vision)
 
 bool CTFBotSpySap_SelectTarget(int actor)
 {
-	m_iSapTarget[actor] = GetNearestSappableObject(actor);
+	m_iSapTarget[actor] = GetNearestSappableObject(actor, 2000.0);
 	
 	return m_iSapTarget[actor] != -1;
 }
