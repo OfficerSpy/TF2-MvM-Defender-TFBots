@@ -23,6 +23,9 @@ bool InitDHooks(GameData hGamedata)
 	if (!RegisterDetour(hGamedata, "CTFPlayer::ManageRegularWeapons", DHookCallback_ManageRegularWeapons_Pre, DHookCallback_ManageRegularWeapons_Post))
 		failCount++;
 	
+	if (!RegisterDetour(hGamedata, "CTFPlayer::ManageBuilderWeapons", DHookCallback_ManageBuilderWeapons_Pre))
+		failCount++;
+	
 	if (!RegisterHook(hGamedata, m_hMyTouch, "CItem::MyTouch"))
 		failCount++;
 	
@@ -129,6 +132,21 @@ static MRESReturn DHookCallback_ManageRegularWeapons_Post(int pThis)
 				PrepareCustomLoadout(pThis);
 				CreateTimer(0.1, Timer_GiveCustomLoadout, pThis, TIMER_FLAG_NO_MAPCHANGE);
 			}
+		}
+	}
+	
+	return MRES_Ignored;
+}
+
+static MRESReturn DHookCallback_ManageBuilderWeapons_Pre(int pThis)
+{
+	if (redbots_manager_use_custom_loadouts.BoolValue)
+	{
+		if (g_bIsDefenderBot[pThis] && TF2_GetPlayerClass(pThis) == TFClass_Spy && IsPlayerAlive(pThis))
+		{
+			//Don't add or remove builder items from spy when upgrading
+			if (TF2_IsInUpgradeZone(pThis))
+				return MRES_Supercede;
 		}
 	}
 	

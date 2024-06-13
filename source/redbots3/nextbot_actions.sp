@@ -47,6 +47,8 @@ static float m_vecNestArea[MAXPLAYERS + 1][3];
 static int m_iTankTarget[MAXPLAYERS + 1];
 static int m_iSapTarget[MAXPLAYERS + 1];
 static int m_iTeleporterTarget[MAXPLAYERS + 1];
+static int m_iPlayerSapTarget[MAXPLAYERS + 1];
+static float m_flSapperCooldown[MAXPLAYERS + 1];
 
 #if defined EXTRA_PLUGINBOT
 //Replicate behavior of PathFollower's PluginBot
@@ -88,6 +90,8 @@ void ResetNextBot(int client)
 	m_iTankTarget[client] = -1;
 	m_iSapTarget[client] = -1;
 	m_iTeleporterTarget[client] = -1;
+	m_iPlayerSapTarget[client] = -1;
+	m_flSapperCooldown[client] = 0.0;
 	
 #if defined EXTRA_PLUGINBOT
 	pb_bPath[client] = false;
@@ -1779,6 +1783,9 @@ public Action CTFBotSpyLurkMvM_OnStart(BehaviorAction action, int actor, Behavio
 
 public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
+	if (CTFBotSpySapPlayers_SelectTarget(actor))
+		return action.SuspendFor(CTFBotSpySapPlayers(), "Sap player");
+	
 	if (CTFBotSpySap_SelectTarget(actor))
 		return action.SuspendFor(CTFBotSpySap(), "Sapping");
 	
@@ -1995,6 +2002,79 @@ public Action CTFBotSpySap_ShouldAttack(BehaviorAction action, INextBot nextbot,
 }
 
 public Action CTFBotSpySap_IsHindrance(BehaviorAction action, INextBot nextbot, int entity, QueryResultType& result)
+{
+	result = ANSWER_NO;
+	return Plugin_Changed;
+}
+
+BehaviorAction CTFBotSpySapPlayers()
+{
+	BehaviorAction action = ActionsManager.Create("DefenderSpySapPlayer");
+	
+	action.OnStart = CTFBotSpySapPlayers_OnStart;
+	action.Update = CTFBotSpySapPlayers_Update;
+	action.ShouldAttack = CTFBotSpySapPlayers_ShouldAttack;
+	action.IsHindrance = CTFBotSpySapPlayers_IsHindrance;
+	
+	return action;
+}
+
+public Action CTFBotSpySapPlayers_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+{
+	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
+	
+	return action.Continue();
+}
+
+public Action CTFBotSpySapPlayers_Update(BehaviorAction action, int actor, float interval, ActionResult result)
+{
+	if (!IsValidClientIndex(m_iPlayerSapTarget[actor])
+	|| !IsPlayerAlive(m_iPlayerSapTarget[actor])
+	|| TF2_GetClientTeam(m_iPlayerSapTarget[actor]) != GetEnemyTeamOfPlayer(actor)
+	|| !IsPlayerSappable(m_iPlayerSapTarget[actor]))
+	{
+		return action.Done("No player to sap");
+	}
+	
+	int mySapper = GetPlayerWeaponSlot(actor, TFWeaponSlot_Secondary);
+	
+	if (mySapper == -1)
+		return action.Done("No sapper");
+	
+	float origin[3]; GetClientAbsOrigin(m_iPlayerSapTarget[actor], origin);
+	float myOrigin[3]; GetClientAbsOrigin(actor, myOrigin);
+	
+	SubtractVectors(origin, myOrigin, origin);
+	
+	//If we're close enough, build a sapper on them
+	if (GetVectorLength(origin) <= SAPPER_PLAYER_BUILD_ON_RANGE)
+	{
+		SpawnSapper(actor, m_iPlayerSapTarget[actor], mySapper);
+		m_flSapperCooldown[actor] = GetGameTime() + SAPPER_RECHARGE_TIME;
+		
+		return action.Done("Sapped player");
+	}
+	
+	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
+	
+	if (m_flRepathTime[actor] <= GetGameTime())
+	{
+		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.3, 0.4);
+		m_pPath[actor].ComputeToTarget(myBot, m_iPlayerSapTarget[actor]);
+	}
+	
+	m_pPath[actor].Update(myBot);
+	
+	return action.Continue();
+}
+
+public Action CTFBotSpySapPlayers_ShouldAttack(BehaviorAction action, INextBot nextbot, CKnownEntity knownEntity, QueryResultType& result)
+{
+	result = ANSWER_NO;
+	return Plugin_Changed;
+}
+
+public Action CTFBotSpySapPlayers_IsHindrance(BehaviorAction action, INextBot nextbot, int entity, QueryResultType& result)
 {
 	result = ANSWER_NO;
 	return Plugin_Changed;
@@ -4316,6 +4396,30 @@ bool CTFBotSpySap_SelectTarget(int actor)
 	m_iSapTarget[actor] = GetNearestSappableObject(actor, 2000.0);
 	
 	return m_iSapTarget[actor] != -1;
+}
+
+bool CTFBotSpySapPlayers_SelectTarget(int actor)
+{
+	if (m_flSapperCooldown[actor] > GetGameTime())
+		return false;
+	
+	m_iPlayerSapTarget[actor] = GetNearestSappablePlayer(actor, 1000.0, true, 230.0);
+	
+	if (m_iPlayerSapTarget[actor] == -1)
+	{
+		int secondary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Secondary);
+		
+		if (secondary != -1 && TF2Util_GetWeaponID(secondary) == TF_WEAPON_BUILDER && TF2Attrib_GetByName(secondary, "robo sapper") != Address_Null)
+		{
+			const float groupRadius = 600.0;
+			
+			//If there's a group of enemies near us, let's put a sapper on one of them
+			if (GetNearestEnemyCount(actor, groupRadius) >= 4)
+				m_iPlayerSapTarget[actor] = GetFarthestSappablePlayer(actor, groupRadius);
+		}
+	}
+	
+	return m_iPlayerSapTarget[actor] != -1;
 }
 
 bool CTFBotCampBomb_IsPossible(int client)

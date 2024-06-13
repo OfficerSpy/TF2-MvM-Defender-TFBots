@@ -104,7 +104,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.1.8",
+	version = "1.1.9",
 	url = ""
 };
 

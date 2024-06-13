@@ -110,6 +110,11 @@
 				"windows"	"\x55\x8B\xEC\x83\xEC\x74\x57\x8B\xF9\xE8\x2A\x2A\x2A\x2A\x8D\x8F\xE0\x1A\x00\x00"
 				"linux"		"@_ZN9CTFPlayer20ManageRegularWeaponsEP19TFPlayerClassData_t"
 			}
+			"CTFPlayer::ManageBuilderWeapons"
+			{
+				"windows"	"\x55\x8B\xEC\x83\xEC\x1C\x53\x56\x8B\xC1"
+				"linux"		"@_ZN9CTFPlayer20ManageBuilderWeaponsEP19TFPlayerClassData_t"
+			}
 		}
 		"Offsets"
 		{
@@ -237,7 +242,21 @@
 				{
 					"pData"
 					{
-						"type"	"int"
+						"type"	"int" //TFPlayerClassData_t
+					}
+				}
+			}
+			"CTFPlayer::ManageBuilderWeapons"
+			{
+				"signature"	"CTFPlayer::ManageBuilderWeapons"
+				"callconv"	"thiscall"
+				"return"	"void"
+				"this"		"entity"
+				"arguments"
+				{
+					"pData"
+					{
+						"type"	"int" //TFPlayerClassData_t
 					}
 				}
 			}

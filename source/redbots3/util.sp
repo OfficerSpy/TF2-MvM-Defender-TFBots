@@ -13,6 +13,9 @@
 //CTFWeaponBuilder::InternalGetEffectBarRechargeTime
 #define SAPPER_RECHARGE_TIME	15.0
 
+//Raw value found in CBaseObject::FindBuildPointOnPlayer
+#define SAPPER_PLAYER_BUILD_ON_RANGE	160.0
+
 enum //medigun_resist_types_t
 {
 	MEDIGUN_BULLET_RESIST = 0,
@@ -689,7 +692,7 @@ bool CanWeaponAirblast(int weapon)
 	return TF2Attrib_HookValueInt(0, "airblast_disabled", weapon) == 0;
 }
 
-int FindBotNearestToMe(int client, const float max_distance, bool bGiantsOnly = false)
+int FindBotNearestToMe(int client, const float max_distance, bool bGiantsOnly = false, bool bIgnoreUber = false)
 {
 	float origin[3]; origin = WorldSpaceCenter(client);
 	
@@ -716,6 +719,9 @@ int FindBotNearestToMe(int client, const float max_distance, bool bGiantsOnly = 
 		if (bGiantsOnly && !TF2_IsMiniBoss(i))
 			continue;
 		
+		if (bIgnoreUber && TF2_IsInvulnerable(i))
+			continue;
+		
 		float distance = GetVectorDistance(WorldSpaceCenter(i), origin);
 		
 		if (distance <= bestDistance && distance <= max_distance)
@@ -731,11 +737,11 @@ int FindBotNearestToMe(int client, const float max_distance, bool bGiantsOnly = 
 int GetBestTargetForSpy(int client, const float max_distance)
 {
 	//Find the closest giant near us
-	int target = FindBotNearestToMe(client, max_distance, true);
+	int target = FindBotNearestToMe(client, max_distance, true, true);
 	
 	//No giant, just target the one near us then
 	if (target == -1)
-		target = FindBotNearestToMe(client, max_distance);
+		target = FindBotNearestToMe(client, max_distance, false, true);
 	
 	//Target their healer first, if they have one
 	if (target != -1)
@@ -895,6 +901,114 @@ int GetNearestEnemyCount(int client, const float max_distance)
 	}
 	
 	return count;
+}
+
+//CBaseObject::FindBuildPointOnPlayer
+bool IsPlayerSappable(int client)
+{
+	if (TF2_IsPlayerInCondition(client, TFCond_Sapped))
+		return false;
+	
+	if (TF2_IsInvulnerable(client))
+		return false;
+	
+	if (TF2_IsPlayerInCondition(client, TFCond_Bonked))
+		return false;
+	
+	return true;
+}
+
+int GetNearestSappablePlayer(int client, const float max_distance, bool bGiantsOnly = false, float speedCheck = 0.0)
+{
+	float origin[3]; GetClientAbsOrigin(client, origin);
+	
+	float bestDistance = 999999.0;
+	int bestEntity = -1;
+	TFTeam enemyTeam = GetEnemyTeamOfPlayer(client);
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (i == client)
+			continue;
+		
+		if (!IsClientInGame(i))
+			continue;
+		
+		if (!IsPlayerAlive(i))
+			continue;
+		
+		if (TF2_GetClientTeam(i) != enemyTeam)
+			continue;
+		
+		if (IsSentryBusterRobot(i))
+			continue;
+		
+		if (bGiantsOnly && !TF2_IsMiniBoss(i))
+			continue;
+		
+		//Not fast enough
+		if (speedCheck > 0.0 && GetEntPropFloat(i, Prop_Send, "m_flMaxspeed") < speedCheck)
+			continue;
+		
+		if (!IsPlayerSappable(i))
+			continue;
+		
+		float distance = GetVectorDistance(WorldSpaceCenter(i), origin);
+		
+		if (distance <= bestDistance && distance <= max_distance)
+		{
+			bestDistance = distance;
+			bestEntity = i;
+		}
+	}
+	
+	return bestEntity;
+}
+
+int GetFarthestSappablePlayer(int client, const float max_distance, bool bGiantsOnly = false, float speedCheck = 0.0)
+{
+	float origin[3]; GetClientAbsOrigin(client, origin);
+	
+	float bestDistance = 0.0;
+	int bestEntity = -1;
+	TFTeam enemyTeam = GetEnemyTeamOfPlayer(client);
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (i == client)
+			continue;
+		
+		if (!IsClientInGame(i))
+			continue;
+		
+		if (!IsPlayerAlive(i))
+			continue;
+		
+		if (TF2_GetClientTeam(i) != enemyTeam)
+			continue;
+		
+		if (IsSentryBusterRobot(i))
+			continue;
+		
+		if (bGiantsOnly && !TF2_IsMiniBoss(i))
+			continue;
+		
+		if (speedCheck > 0.0 && GetEntPropFloat(i, Prop_Send, "m_flMaxspeed") < speedCheck)
+			continue;
+		
+		if (!IsPlayerSappable(i))
+			continue;
+		
+		float distance = GetVectorDistance(WorldSpaceCenter(i), origin);
+		
+		if (distance >= bestDistance && distance <= max_distance)
+		{
+			bestDistance = distance;
+			bestEntity = i;
+		}
+	}
+	
+	return bestEntity;
 }
 
 stock bool DoesAnyPlayerUseThisName(const char[] name)

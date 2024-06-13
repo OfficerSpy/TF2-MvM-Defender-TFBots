@@ -112,9 +112,8 @@ public Action Command_BoughtUpgrades(int client, int args)
 		}
 	}
 	
-#if defined TESTING_ONLY
-	PrintToChatAll("[Command_BoughtUpgrades] SAVED WEAPON STATS FOR %N", client);
-#endif
+	if (redbots_manager_debug.BoolValue)
+		PrintToChatAll("[Command_BoughtUpgrades] SAVED WEAPON STATS FOR %N", client);
 	
 	g_bHasBoughtUpgrades[client] = true;
 	
@@ -212,9 +211,21 @@ public Action Timer_GiveCustomLoadout(Handle timer, int client)
 	if (g_bHasBoughtUpgrades[client])
 		ReapplyItemUpgrades(client, primary, secondary, melee);
 	
+	/* Certain weapons or upgrades may have changed our health and ammo
+	so we must refill them completely to the max, though health
+	may get reduced if max health was lowered by a weapon's attribute */
+	int maxHealth = TF2Util_GetEntityMaxHealth(client);
+	
+	if (GetClientHealth(client) != maxHealth)
+		BaseEntity_SetHealth(client, maxHealth);
+	
+	for (int i = 0; i < TF_AMMO_COUNT; i++)
+		GivePlayerAmmo(client, GetMaxAmmo(client, i), i, true);
+	
 	PostInventoryApplication(client);
 	
-	//TODO: set proper health and ammo here because weapon or upgrades may change them
+	if (redbots_manager_debug.BoolValue)
+		PrintToChatAll("[Timer_GiveCustomLoadout] %N's ammo: %d/%d", client, GetAmmoCount(client, TF_AMMO_PRIMARY), GetMaxAmmo(client, TF_AMMO_PRIMARY));
 	
 	return Plugin_Stop;
 }
