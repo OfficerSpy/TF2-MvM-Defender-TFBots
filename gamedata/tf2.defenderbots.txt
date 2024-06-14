@@ -134,6 +134,11 @@
 				"windows"	"344"
 				"linux"		"350"
 			}
+			"CTFWeaponBaseGun::GetProjectileSpeed"
+			{		
+				"windows"	"481"		
+				"linux"		"488"
+			}
 			"CItem::MyTouch"
 			{
 				"windows"	"228"
