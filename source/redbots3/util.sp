@@ -871,7 +871,7 @@ int GetNearestEnemyTeleporter(int client, const float max_distance = 999999.0)
 	return bestEnt;
 }
 
-int GetNearestEnemyCount(int client, const float max_distance)
+int GetNearestEnemyCount(int client, const float max_distance, bool bIgnoreUber = false)
 {
 	float origin[3]; GetClientAbsOrigin(client, origin);
 	
@@ -894,6 +894,9 @@ int GetNearestEnemyCount(int client, const float max_distance)
 		
 		//Usually not a threat
 		if (IsSentryBusterRobot(i))
+			continue;
+		
+		if (bIgnoreUber && TF2_IsInvulnerable(i))
 			continue;
 		
 		if (GetVectorDistance(WorldSpaceCenter(i), origin) <= max_distance)
@@ -922,9 +925,9 @@ int GetNearestSappablePlayer(int client, const float max_distance, bool bGiantsO
 {
 	float origin[3]; GetClientAbsOrigin(client, origin);
 	
+	TFTeam enemyTeam = GetEnemyTeamOfPlayer(client);
 	float bestDistance = 999999.0;
 	int bestEntity = -1;
-	TFTeam enemyTeam = GetEnemyTeamOfPlayer(client);
 	
 	for (int i = 1; i <= MaxClients; i++)
 	{
@@ -969,9 +972,9 @@ int GetFarthestSappablePlayer(int client, const float max_distance, bool bGiants
 {
 	float origin[3]; GetClientAbsOrigin(client, origin);
 	
+	TFTeam enemyTeam = GetEnemyTeamOfPlayer(client);
 	float bestDistance = 0.0;
 	int bestEntity = -1;
-	TFTeam enemyTeam = GetEnemyTeamOfPlayer(client);
 	
 	for (int i = 1; i <= MaxClients; i++)
 	{
@@ -1009,6 +1012,52 @@ int GetFarthestSappablePlayer(int client, const float max_distance, bool bGiants
 	}
 	
 	return bestEntity;
+}
+
+int GetEnemyPlayerNearestToPosition(int client, float position[3], const float max_distance)
+{
+	TFTeam enemyTeam = GetEnemyTeamOfPlayer(client);
+	float bestDistance = 999999.0;
+	int bestEntity = -1;
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (i == client)
+			continue;
+		
+		if (!IsClientInGame(i))
+			continue;
+		
+		if (!IsPlayerAlive(i))
+			continue;
+		
+		if (TF2_GetClientTeam(i) != enemyTeam)
+			continue;
+		
+		if (IsSentryBusterRobot(i))
+			continue;
+		
+		float distance = GetVectorDistance(WorldSpaceCenter(i), position);
+		
+		if (distance <= bestDistance && distance <= max_distance)
+		{
+			bestDistance = distance;
+			bestEntity = i;
+		}
+	}
+	
+	return bestEntity;
+}
+
+int GetControlPointByID(int pointID)
+{
+	int ent = -1;
+	
+	while ((ent = FindEntityByClassname(ent, "team_control_point")) != -1)
+		if (GetEntProp(ent, Prop_Data, "m_iPointIndex") == pointID)
+			return ent;
+	
+	return -1;
 }
 
 stock bool DoesAnyPlayerUseThisName(const char[] name)

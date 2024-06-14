@@ -9,6 +9,7 @@
 #define SENTRY_WATCH_BOMB_RANGE	400.0
 #define FLAMETHROWER_REACH_RANGE	350.0
 #define FLAMEBALL_REACH_RANGE	526.0
+#define BOMB_GUARD_RADIUS	400.0
 
 static char g_strHealthAndAmmoEntities[][] = 
 {
@@ -142,7 +143,7 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 		if (StrEqual(name, "MainAction"))
 		{
 			action.SelectMoreDangerousThreat = CTFBotMainAction_SelectMoreDangerousThreat;
-			// action.SelectTargetPoint = CTFBotMainAction_SelectTargetPoint;
+			action.SelectTargetPoint = CTFBotMainAction_SelectTargetPoint;
 		}
 		else if (StrEqual(name, "TacticalMonitor"))
 		{
@@ -203,8 +204,7 @@ public Action CTFBotMainAction_SelectMoreDangerousThreat(BehaviorAction action, 
 	return Plugin_Changed;
 }
 
-//TODO: this doesn't work correctly for some reaosn as entity returns a bunch of numbers that doesn't seem to correspond with an actual index
-/* public Action CTFBotMainAction_SelectTargetPoint(BehaviorAction action, Address nextbot, int entity, float vec[3])
+public Action CTFBotMainAction_SelectTargetPoint(BehaviorAction action, INextBot nextbot, int entity, float vec[3])
 {
 	int me = action.Actor;
 	
@@ -217,9 +217,12 @@ public Action CTFBotMainAction_SelectMoreDangerousThreat(BehaviorAction action, 
 	{
 		switch (TF2Util_GetWeaponID(myWeapon))
 		{
+			//TFBots can't compensate their arc if projectile speed differs, so we do our own calculation here
 			case TF_WEAPON_GRENADELAUNCHER, TF_WEAPON_PIPEBOMBLAUNCHER:
 			{
-				float target_point[3]; target_point = WorldSpaceCenter(entity);
+				float target_point[3];
+				
+				target_point = WorldSpaceCenter(entity);
 				float vecTarget[3], vecActor[3];
 				vecTarget = GetAbsOrigin(entity);
 				GetClientAbsOrigin(me, vecActor);
@@ -258,14 +261,17 @@ public Action CTFBotMainAction_SelectMoreDangerousThreat(BehaviorAction action, 
 					target_point[2] += (sineValue * a5) / cosineValue;
 				
 				vec = target_point;
+				
 				return Plugin_Changed;
 			}
+			//TFBots won't do projectile prediciton with cow mangler 5000 since it's left out of the code, so we'll do it ourselves
 			case TF_WEAPON_PARTICLE_CANNON:
 			{
 				float target_point[3];
+				
 				float vecTarget[3], vecActor[3];
 				vecTarget = GetAbsOrigin(entity);
-				vecActor = GetAbsOrigin(entity);
+				vecActor = GetAbsOrigin(me);
 				
 				float distance = GetVectorDistance(vecTarget, vecActor);
 				
@@ -294,13 +300,14 @@ public Action CTFBotMainAction_SelectMoreDangerousThreat(BehaviorAction action, 
 				}
 				
 				vec = target_point;
+				
 				return Plugin_Changed;
 			}
 		}
 	}
 	
 	return Plugin_Continue;
-} */
+}
 
 public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
@@ -788,6 +795,7 @@ BehaviorAction CTFBotUpgrade()
 	action.Update = CTFBotUpgrade_Update;
 	action.OnEnd = CTFBotUpgrade_OnEnd;
 	action.OnSuspend = CTFBotUpgrade_OnSuspend;
+	action.OnResume = CTFBotUpgrade_OnResume;
 	
 	return action;
 }
@@ -951,6 +959,7 @@ BehaviorAction CTFBotGetAmmo()
 	action.Update = CTFBotGetAmmo_Update;
 	action.OnEnd = CTFBotGetAmmo_OnEnd;
 	action.ShouldHurry = CTFBotGetAmmo_ShouldHurry;
+	action.ShouldAttack = CTFBotGetAmmo_ShouldAttack;
 	
 	return action;
 }
@@ -1048,6 +1057,21 @@ public Action CTFBotGetAmmo_ShouldHurry(BehaviorAction action, INextBot nextbot,
 	//Disables dodging and we won't spin the minigun after recently seeing threats
 	result = ANSWER_YES;
 	return Plugin_Handled;
+}
+
+public Action CTFBotGetAmmo_ShouldAttack(BehaviorAction action, INextBot nextbot, CKnownEntity knownEntity, QueryResultType& result)
+{
+	int me = action.Actor;
+	
+	if (TF2_GetPlayerClass(me) == TFClass_Spy && GetNearestEnemyCount(me, 1000.0) > 1)
+	{
+		//There's too many enemies nearby, let's just redisguise so they'll forget about us
+		result = ANSWER_NO;
+		return Plugin_Changed;
+	}
+	
+	result = ANSWER_UNDEFINED;
+	return Plugin_Changed;
 }
 
 BehaviorAction CTFBotMoveToFront()
@@ -1175,6 +1199,7 @@ BehaviorAction CTFBotGetHealth()
 	action.Update = CTFBotGetHealth_Update;
 	action.OnEnd = CTFBotGetHealth_OnEnd;
 	action.ShouldHurry = CTFBotGetHealth_ShouldHurry;
+	action.ShouldAttack = CTFBotGetHealth_ShouldAttack;
 	
 	return action;
 }
@@ -1286,6 +1311,20 @@ public void CTFBotGetHealth_OnEnd(BehaviorAction action, int actor, BehaviorActi
 public Action CTFBotGetHealth_ShouldHurry(BehaviorAction action, INextBot nextbot, QueryResultType& result)
 {
 	result = ANSWER_YES;
+	return Plugin_Changed;
+}
+
+public Action CTFBotGetHealth_ShouldAttack(BehaviorAction action, INextBot nextbot, CKnownEntity knownEntity, QueryResultType& result)
+{
+	int me = action.Actor;
+	
+	if (TF2_GetPlayerClass(me) == TFClass_Spy && GetNearestEnemyCount(me, 1000.0) > 1)
+	{
+		result = ANSWER_NO;
+		return Plugin_Changed;
+	}
+	
+	result = ANSWER_UNDEFINED;
 	return Plugin_Changed;
 }
 
@@ -1778,16 +1817,19 @@ public Action CTFBotSpyLurkMvM_OnStart(BehaviorAction action, int actor, Behavio
 	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	m_pChasePath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	
+	//Track current target for IsHindrance
+	m_iAttackTarget[actor] = -1;
+	
 	return action.Continue();
 }
 
 public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
 	if (CTFBotSpySapPlayers_SelectTarget(actor))
-		return action.SuspendFor(CTFBotSpySapPlayers(), "Sap player");
+		return action.SuspendFor(CTFBotSpySapPlayers(), "Sapping player");
 	
 	if (CTFBotSpySap_SelectTarget(actor))
-		return action.SuspendFor(CTFBotSpySap(), "Sapping");
+		return action.SuspendFor(CTFBotSpySap(), "Sapping building");
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 	int target = GetBestTargetForSpy(actor, 2000.0);
@@ -1874,6 +1916,8 @@ public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 		}
 	}
 	
+	m_iAttackTarget[actor] = target;
+	
 	return action.Continue();
 }
 
@@ -1886,8 +1930,16 @@ public Action CTFBotSpyLurkMvM_ShouldAttack(BehaviorAction action, INextBot next
 
 public Action CTFBotSpyLurkMvM_IsHindrance(BehaviorAction action, INextBot nextbot, int entity, QueryResultType& result)
 {
-	//Avoid no one
-	result = ANSWER_NO;
+	int me = action.Actor;
+	
+	if (m_iAttackTarget[me] != -1 && nextbot.IsRangeLessThan(m_iAttackTarget[me], 300.0))
+	{
+		//Don't avoid anyone as we get closer to our target
+		result = ANSWER_NO;
+		return Plugin_Changed;
+	}
+	
+	result = ANSWER_UNDEFINED;
 	return Plugin_Changed;
 }
 
@@ -1944,7 +1996,7 @@ public Action CTFBotSpySap_Update(BehaviorAction action, int actor, float interv
 {
 	if (!IsValidEntity(m_iSapTarget[actor]) || TF2_HasSapper(m_iSapTarget[actor]))
 		if (!CTFBotSpySap_SelectTarget(actor))
-			return action.Done("No sap");
+			return action.Done("No sap target");
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 	const float sapRange = 40.0;
@@ -2003,7 +2055,15 @@ public Action CTFBotSpySap_ShouldAttack(BehaviorAction action, INextBot nextbot,
 
 public Action CTFBotSpySap_IsHindrance(BehaviorAction action, INextBot nextbot, int entity, QueryResultType& result)
 {
-	result = ANSWER_NO;
+	int me = action.Actor;
+	
+	if (m_iSapTarget[me] != -1 && nextbot.IsRangeLessThan(m_iSapTarget[me], 300.0))
+	{
+		result = ANSWER_NO;
+		return Plugin_Changed;
+	}
+	
+	result = ANSWER_UNDEFINED;
 	return Plugin_Changed;
 }
 
@@ -2076,6 +2136,7 @@ public Action CTFBotSpySapPlayers_ShouldAttack(BehaviorAction action, INextBot n
 
 public Action CTFBotSpySapPlayers_IsHindrance(BehaviorAction action, INextBot nextbot, int entity, QueryResultType& result)
 {
+	//Avoid no one
 	result = ANSWER_NO;
 	return Plugin_Changed;
 }
@@ -2266,14 +2327,32 @@ public Action CTFBotCampBomb_Update(BehaviorAction action, int actor, float inte
 		return action.ChangeTo(CTFBotDefenderAttack(), "Bomb is taken");
 	}
 	
-	float myOrigin[3]; GetClientAbsOrigin(actor, myOrigin);
+	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 	float bombPosition[3]; bombPosition = WorldSpaceCenter(flag);
+	int myWeapon = BaseCombatCharacter_GetActiveWeapon(actor);
+	
+	//Close-range has to get up and personal with them
+	if (myWeapon != -1 && (TF2Util_GetWeaponID(myWeapon) == TF_WEAPON_FLAMETHROWER || IsMeleeWeapon(myWeapon)))
+	{
+		int nearest = GetEnemyPlayerNearestToPosition(actor, bombPosition, BOMB_GUARD_RADIUS);
+		
+		if (nearest != -1)
+		{
+			if (m_flRepathTime[actor] <= GetGameTime())
+			{
+				m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.5, 1.0);
+				m_pPath[actor].ComputeToTarget(myBot, nearest);
+			}
+			
+			m_pPath[actor].Update(myBot);
+			
+			return action.Continue();
+		}
+	}
 	
 	//Move towards the bomb's current area if we're too far or can't see it
-	if (GetVectorDistance(myOrigin, bombPosition) > 400.0 || !TF2_IsLineOfFireClear2(actor, bombPosition))
+	if (myBot.IsRangeGreaterThanEx(bombPosition, BOMB_GUARD_RADIUS) || !TF2_IsLineOfFireClear2(actor, bombPosition))
 	{
-		INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
-		
 		if (m_flRepathTime[actor] <= GetGameTime())
 		{
 			m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(1.0, 2.0);
@@ -2763,7 +2842,7 @@ void CollectUpgrades(int client)
 	
 	iArraySlots.Push(-1); //Always buy player upgrades
 	
-	bool bDemoKnight = !IsCombatWeapon(GetPlayerWeaponSlot(client, TFWeaponSlot_Primary));
+	bool bDemoKnight = GetPlayerWeaponSlot(client, TFWeaponSlot_Primary) == -1;
 	bool bEngineer = TF2_GetPlayerClass(client) == TFClass_Engineer;
 	
 	if (bEngineer)
@@ -2805,10 +2884,16 @@ void CollectUpgrades(int client)
 			
 			switch (weaponID)
 			{
-				case TF_WEAPON_PIPEBOMBLAUNCHER, TF_WEAPON_JAR, TF_WEAPON_JAR_MILK, TF_WEAPON_BUFF_ITEM, TF_WEAPON_JAR_GAS:
+				case TF_WEAPON_JAR, TF_WEAPON_JAR_MILK, TF_WEAPON_BUFF_ITEM, TF_WEAPON_JAR_GAS:
 				{
 					//Secondary items that have some use
 					iArraySlots.Push(TF_LOADOUT_SLOT_SECONDARY);
+				}
+				case TF_WEAPON_PIPEBOMBLAUNCHER:
+				{
+					//If we don't have an actual primary, then we rely on our secondary
+					if (bDemoKnight)
+						iArraySlots.Push(TF_LOADOUT_SLOT_SECONDARY);
 				}
 			}
 		}
@@ -3563,11 +3648,14 @@ void UpdateLookAroundForEnemies(int client, bool bVal)
 	} */
 }
 
-bool IsCombatWeapon(int iWeapon)
+bool IsCombatWeapon(int client, int weapon)
 {
-	if (IsValidEntity(iWeapon))
+	if (!IsValidEntity(weapon))
+		weapon = BaseCombatCharacter_GetActiveWeapon(client);
+	
+	if (IsValidEntity(weapon))
 	{
-		switch(TF2Util_GetWeaponID(iWeapon))
+		switch (TF2Util_GetWeaponID(weapon))
 		{
 			case TF_WEAPON_MEDIGUN, TF_WEAPON_PDA, TF_WEAPON_PDA_ENGINEER_BUILD, TF_WEAPON_PDA_ENGINEER_DESTROY, TF_WEAPON_PDA_SPY, TF_WEAPON_BUILDER, TF_WEAPON_DISPENSER, TF_WEAPON_INVIS, TF_WEAPON_LUNCHBOX, TF_WEAPON_BUFF_ITEM, TF_WEAPON_PUMPKIN_BOMB:
 			{
@@ -3875,19 +3963,19 @@ void EquipBestWeaponForThreat(int client, const CKnownEntity threat)
 	
 	int primary = GetPlayerWeaponSlot(client, TFWeaponSlot_Primary);
 	
-	if (!IsCombatWeapon(primary))
+	if (!IsCombatWeapon(client, primary))
 		primary = -1;
 	
 	int secondary = GetPlayerWeaponSlot(client, TFWeaponSlot_Secondary);
 	
-	if (!IsCombatWeapon(secondary))
+	if (!IsCombatWeapon(client, secondary))
 		secondary = -1;
 	
 	//Don't care about mvm-specific rules here
 	
 	int melee = GetPlayerWeaponSlot(client, TFWeaponSlot_Melee);
 	
-	if (!IsCombatWeapon(melee))
+	if (!IsCombatWeapon(client, melee))
 		melee = -1;
 	
 	int gun = -1;

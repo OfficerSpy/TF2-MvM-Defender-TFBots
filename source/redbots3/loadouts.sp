@@ -219,8 +219,8 @@ public Action Timer_GiveCustomLoadout(Handle timer, int client)
 	if (GetClientHealth(client) != maxHealth)
 		BaseEntity_SetHealth(client, maxHealth);
 	
-	for (int i = 0; i < TF_AMMO_COUNT; i++)
-		GivePlayerAmmo(client, GetMaxAmmo(client, i), i, true);
+	for (int i = TF_AMMO_PRIMARY; i < TF_AMMO_COUNT; i++)
+		GivePlayerAmmo(client, 1000, i, true);
 	
 	PostInventoryApplication(client);
 	

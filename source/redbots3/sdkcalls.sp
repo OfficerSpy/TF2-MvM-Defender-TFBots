@@ -6,6 +6,7 @@ static Handle m_hRealizeSpy;
 static Handle m_hHasAmmo;
 static Handle m_hGetAmmoCount;
 static Handle m_hClip1;
+static Handle m_hGetProjectileSpeed;
 
 #if defined METHOD_MVM_UPGRADES
 static Handle m_hGEconItemSchema;
@@ -94,6 +95,15 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hClip1 = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFWeaponBase::Clip1!");
+		failCount++;
+	}
+	
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Virtual, "CTFWeaponBaseGun::GetProjectileSpeed");
+	PrepSDKCall_SetReturnInfo(SDKType_Float, SDKPass_Plain);
+	if ((m_hGetProjectileSpeed = EndPrepSDKCall()) == null)
+	{
+		LogError("Failed to create SDKCall for CTFWeaponBaseGun::GetProjectileSpeed!");
 		failCount++;
 	}
 	
@@ -213,6 +223,11 @@ int GetAmmoCount(int client, int iAmmoIndex)
 int Clip1(int weapon)
 {
 	return SDKCall(m_hClip1, weapon);
+}
+
+float GetProjectileSpeed(int weapon)
+{
+	return SDKCall(m_hGetProjectileSpeed, weapon);
 }
 
 #if defined METHOD_MVM_UPGRADES
