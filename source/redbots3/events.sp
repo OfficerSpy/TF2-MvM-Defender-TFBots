@@ -6,6 +6,7 @@ void InitGameEventHooks()
 	HookEvent("revive_player_notify", Event_RevivePlayerNotify);
 	HookEvent("mvm_begin_wave", Event_MvmWaveBegin);
 	HookEvent("player_team", Event_PlayerTeam);
+	HookEvent("player_used_powerup_bottle", Event_PlayerUsedPowerupBottle);
 }
 
 static void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
@@ -19,6 +20,8 @@ static void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	{
 		g_bIsBeingRevived[client] = false;
 		g_iBuyUpgradesNumber[client] = CanBuyUpgradesNow(client) ? GetRandomInt(1, 100) : 0;
+		
+		SetSapperCooldown(client, 0.0);
 		
 		if (redbots_manager_debug.BoolValue)
 			PrintToChatAll("[Event_PlayerSpawn] g_iBuyUpgradesNumber[%d] = %d", client, g_iBuyUpgradesNumber[client]);
@@ -114,6 +117,19 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		if ((isDisconnect && oldTeam == TFTeam_Red) || team == TFTeam_Red || oldTeam == TFTeam_Red)
 			UpdateChosenBotTeamComposition();
 	}
+}
+
+public void Event_PlayerUsedPowerupBottle(Event event, const char[] name, bool dontBroadcast)
+{
+	int client = event.GetInt("player");
+	
+	if (g_bIsDefenderBot[client] == false)
+		return;
+	
+	int powerupType = event.GetInt("type");
+	
+	if (powerupType == POWERUP_BOTTLE_REFILL_AMMO)
+		SetSapperCooldown(client, 0.0);
 }
 
 static Action Timer_PlayerSpawn(Handle timer, any data)

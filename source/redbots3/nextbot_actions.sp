@@ -18,7 +18,7 @@ static char g_strHealthAndAmmoEntities[][] =
 	"item_health*",
 	"obj_dispenser",
 	"tf_ammo_pack"
-}
+};
 
 static int MAX_INT = 99999999;
 static int MIN_INT = -99999999;
@@ -2101,6 +2101,8 @@ public Action CTFBotSpySapPlayers_Update(BehaviorAction action, int actor, float
 	if (mySapper == -1)
 		return action.Done("No sapper");
 	
+	TF2Util_SetPlayerActiveWeapon(actor, mySapper);
+	
 	float origin[3]; GetClientAbsOrigin(m_iPlayerSapTarget[actor], origin);
 	float myOrigin[3]; GetClientAbsOrigin(actor, myOrigin);
 	
@@ -2110,7 +2112,7 @@ public Action CTFBotSpySapPlayers_Update(BehaviorAction action, int actor, float
 	if (GetVectorLength(origin) <= SAPPER_PLAYER_BUILD_ON_RANGE)
 	{
 		SpawnSapper(actor, m_iPlayerSapTarget[actor], mySapper);
-		m_flSapperCooldown[actor] = GetGameTime() + SAPPER_RECHARGE_TIME;
+		SetSapperCooldown(actor, SAPPER_RECHARGE_TIME);
 		
 		return action.Done("Sapped player");
 	}
@@ -2156,12 +2158,6 @@ public Action CTFBotMedicRevive_OnStart(BehaviorAction action, int actor, Behavi
 {
 	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	
-	int secondary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Secondary);
-	
-	//Stop current healing
-	// if (secondary != -1 && TF2Util_GetWeaponID(secondary) == TF_WEAPON_MEDIGUN && GetEntPropEnt(secondary, Prop_Send, "m_hHealingTarget") != -1)
-		// SetEntPropEnt(secondary, Prop_Send, "m_hHealingTarget", -1);
-	
 	return action.Continue();
 }
 
@@ -2182,9 +2178,18 @@ public Action CTFBotMedicRevive_Update(BehaviorAction action, int actor, float i
 	
 	if (myBot.IsRangeLessThanEx(markerPos, WEAPON_MEDIGUN_RANGE) && TF2_IsLineOfFireClear2(actor, markerPos))
 	{
-		TF2Util_SetPlayerActiveWeapon(actor, secondary);
-		SnapViewToPosition(actor, markerPos);
-		VS_PressFireButton(actor);
+		int healTarget = GetEntPropEnt(secondary, Prop_Send, "m_hHealingTarget");
+		
+		if (healTarget != -1 && healTarget != marker)
+		{
+			// g_iSubtractiveButtons[actor] |= IN_ATTACK;
+		}
+		else
+		{
+			TF2Util_SetPlayerActiveWeapon(actor, secondary);
+			SnapViewToPosition(actor, markerPos);
+			VS_PressFireButton(actor);
+		}
 		
 		return action.Continue();
 	}
@@ -4488,7 +4493,7 @@ bool CTFBotSpySap_SelectTarget(int actor)
 
 bool CTFBotSpySapPlayers_SelectTarget(int actor)
 {
-	if (m_flSapperCooldown[actor] > GetGameTime())
+	if (!CanUseSapper(actor))
 		return false;
 	
 	m_iPlayerSapTarget[actor] = GetNearestSappablePlayer(actor, 1000.0, true, 230.0);
@@ -4508,6 +4513,19 @@ bool CTFBotSpySapPlayers_SelectTarget(int actor)
 	}
 	
 	return m_iPlayerSapTarget[actor] != -1;
+}
+
+bool CanUseSapper(int client)
+{
+	if (m_flSapperCooldown[client] > GetGameTime())
+		return false;
+	
+	return true;
+}
+
+void SetSapperCooldown(int client, float duration)
+{
+	m_flSapperCooldown[client] = duration <= 0.0 ? duration : GetGameTime() + duration;
 }
 
 bool CTFBotCampBomb_IsPossible(int client)
