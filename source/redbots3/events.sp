@@ -123,13 +123,13 @@ public void Event_PlayerUsedPowerupBottle(Event event, const char[] name, bool d
 {
 	int client = event.GetInt("player");
 	
-	if (g_bIsDefenderBot[client] == false)
-		return;
-	
-	int powerupType = event.GetInt("type");
-	
-	if (powerupType == POWERUP_BOTTLE_REFILL_AMMO)
-		SetSapperCooldown(client, 0.0);
+	if (g_bIsDefenderBot[client])
+	{
+		int powerupType = event.GetInt("type");
+		
+		if (powerupType == POWERUP_BOTTLE_REFILL_AMMO)
+			SetSapperCooldown(client, 0.0);
+	}
 }
 
 static Action Timer_PlayerSpawn(Handle timer, any data)
