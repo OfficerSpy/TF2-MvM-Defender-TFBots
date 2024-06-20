@@ -798,6 +798,22 @@ void RemoveEffects(int entity, int nEffects)
 		CBaseEntity(entity).DispatchUpdateTransmitState();
 }
 
+//Based on CTFKnife::CanPerformBackstabAgainstTarget
+bool HasBackstabPotential(int client)
+{
+	//These are MvM-specific conditions, where stunned bots are usually allowed to be backstabbed
+	if (TF2_GetClientTeam(client) == TFTeam_Blue)
+	{
+		if (TF2_IsPlayerInCondition(client, TFCond_MVMBotRadiowave))
+			return true;
+		
+		if (TF2_IsPlayerInCondition(client, TFCond_Sapped) && !TF2_IsMiniBoss(client))
+			return true;
+	}
+	
+	return false;
+}
+
 int GetNearestSappableObject(int client, const float max_distance = 1000.0)
 {
 	float origin[3]; GetClientAbsOrigin(client, origin);
@@ -1056,6 +1072,74 @@ int GetControlPointByID(int pointID)
 	while ((ent = FindEntityByClassname(ent, "team_control_point")) != -1)
 		if (GetEntProp(ent, Prop_Data, "m_iPointIndex") == pointID)
 			return ent;
+	
+	return -1;
+}
+
+//NOTE: not ideal, as a lot of maps just place the control point in the air
+/* int GetNearestDefendableControlPoint(int client, const float max_distance = 999999.0)
+{
+	float origin[3]; GetClientAbsOrigin(client, origin);
+	int myTeam = GetClientTeam(client);
+	
+	float bestDistance = 999999.0;
+	int bestEnt = -1;
+	
+	int ent = -1;
+	while ((ent = FindEntityByClassname(ent, "team_control_point")) != -1)
+	{
+		//My team does not own it
+		if (BaseEntity_GetTeamNumber(ent) != myTeam)
+			continue;
+		
+		//Cannot be captured right now
+		if (GetEntProp(ent, Prop_Data, "m_bLocked") == 1)
+			continue;
+		
+		float distance = GetVectorDistance(origin, GetAbsOrigin(ent));
+		
+		if (distance <= bestDistance && distance <= max_distance)
+		{
+			bestDistance = distance;
+			bestEnt = ent;
+		}
+	}
+	
+	return bestEnt;
+} */
+
+int GetDefendablePointTriggerDoor(int client)
+{
+	int trigger = -1;
+	
+	while ((trigger = FindEntityByClassname(trigger, "trigger_timer_door")) != -1)
+	{		
+		//Ignore disabled triggers
+		if (GetEntProp(trigger, Prop_Data, "m_bDisabled") == 1)
+			continue;
+		
+		//Apparently some community maps don't disable the trigger when capped
+		char cpname[32]; GetEntPropString(trigger, Prop_Data, "m_iszCapPointName", cpname, sizeof(cpname));
+		
+		//Trigger has no point associated with it
+		if (strlen(cpname) < 3)
+			continue;
+		
+		//Now find the matching control point
+		int point = -1;
+		char targetname[32];
+		int myTeam = GetClientTeam(client);
+		
+		while ((point = FindEntityByClassname(point, "team_control_point")) != -1)
+		{
+			GetEntPropString(point, Prop_Data, "m_iName", targetname, sizeof(targetname));
+			
+			//Found the match
+			if (strcmp(targetname, cpname, false) == 0)
+				if (BaseEntity_GetTeamNumber(point) == myTeam)
+					return trigger;
+		}
+	}
 	
 	return -1;
 }
