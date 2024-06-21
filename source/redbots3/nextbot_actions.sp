@@ -5042,7 +5042,7 @@ bool IsFailureImminent(int client)
 
 bool CTFBotDestroyTeleporter_SelectTarget(int actor)
 {
-	m_iTeleporterTarget[actor] = GetNearestEnemyTeleporter(actor);
+	m_iTeleporterTarget[actor] = GetNearestEnemyTeleporter(actor, 5000.0);
 	
 	return m_iTeleporterTarget[actor] != -1;
 }

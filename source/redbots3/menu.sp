@@ -151,55 +151,55 @@ void CreateDisplayPanelBotPercentages(int client, float classPercents[TFClass_En
 	
 	if (classPercents[0] > 0.0)
 	{
-		Format(itemText, sizeof(itemText), "Scout: %.0f", classPercents[0]);
+		Format(itemText, sizeof(itemText), "Scout: %.0f%%", classPercents[0]);
 		hPanel.DrawItem(itemText);
 	}
 	
 	if (classPercents[1] > 0.0)
 	{
-		Format(itemText, sizeof(itemText), "Soldier: %.0f", classPercents[1]);
+		Format(itemText, sizeof(itemText), "Soldier: %.0f%%", classPercents[1]);
 		hPanel.DrawItem(itemText);
 	}
 	
 	if (classPercents[2] > 0.0)
 	{
-		Format(itemText, sizeof(itemText), "Pyro: %.0f", classPercents[2]);
+		Format(itemText, sizeof(itemText), "Pyro: %.0f%%", classPercents[2]);
 		hPanel.DrawItem(itemText);
 	}
 	
 	if (classPercents[3] > 0.0)
 	{
-		Format(itemText, sizeof(itemText), "Demoman: %.0f", classPercents[3]);
+		Format(itemText, sizeof(itemText), "Demoman: %.0f%%", classPercents[3]);
 		hPanel.DrawItem(itemText);
 	}
 	
 	if (classPercents[4] > 0.0)
 	{
-		Format(itemText, sizeof(itemText), "Heavy: %.0f", classPercents[4]);
+		Format(itemText, sizeof(itemText), "Heavy: %.0f%%", classPercents[4]);
 		hPanel.DrawItem(itemText);
 	}
 	
 	if (classPercents[5] > 0.0)
 	{
-		Format(itemText, sizeof(itemText), "Engineer: %.0f", classPercents[5]);
+		Format(itemText, sizeof(itemText), "Engineer: %.0f%%", classPercents[5]);
 		hPanel.DrawItem(itemText);
 	}
 	
 	if (classPercents[6] > 0.0)
 	{
-		Format(itemText, sizeof(itemText), "Medic: %.0f", classPercents[6]);
+		Format(itemText, sizeof(itemText), "Medic: %.0f%%", classPercents[6]);
 		hPanel.DrawItem(itemText);
 	}
 	
 	if (classPercents[7] > 0.0)
 	{
-		Format(itemText, sizeof(itemText), "Sniper: %.0f", classPercents[7]);
+		Format(itemText, sizeof(itemText), "Sniper: %.0f%%", classPercents[7]);
 		hPanel.DrawItem(itemText);
 	}
 	
 	if (classPercents[8] > 0.0)
 	{
-		Format(itemText, sizeof(itemText), "Spy: %.0f", classPercents[8]);
+		Format(itemText, sizeof(itemText), "Spy: %.0f%%", classPercents[8]);
 		hPanel.DrawItem(itemText);
 	}
 	

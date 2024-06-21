@@ -19,6 +19,7 @@
 
 #define MOD_REQUEST_CREDITS
 #define MOD_CUSTOM_ATTRIBUTES
+#define MOD_ROLL_THE_DICE
 
 #define METHOD_MVM_UPGRADES
 
@@ -34,11 +35,13 @@ enum
 	MANAGER_MODE_AUTO_BOTS
 };
 
+//Globals
 bool g_bBotsEnabled;
 float g_flNextReadyTime;
 int g_iDetonatingPlayer = -1;
 ArrayList g_adtChosenBotClasses;
 
+//For defender bots
 bool g_bIsDefenderBot[MAXPLAYERS + 1];
 bool g_bIsBeingRevived[MAXPLAYERS + 1];
 bool g_bHasUpgraded[MAXPLAYERS + 1];
@@ -50,6 +53,11 @@ static float m_flDeadRethinkTime[MAXPLAYERS + 1];
 int g_iBuybackNumber[MAXPLAYERS + 1];
 int g_iBuyUpgradesNumber[MAXPLAYERS + 1];
 
+#if defined MOD_ROLL_THE_DICE
+static float m_flNextRollTime[MAXPLAYERS + 1];
+#endif
+
+//For other players
 static float m_flLastCommandTime[MAXPLAYERS + 1];
 static float m_flLastReadyInputTime[MAXPLAYERS + 1];
 
@@ -156,6 +164,8 @@ public void OnPluginStart()
 	
 	AddCommandListener(Listener_TournamentPlayerReadystate, "tournament_player_readystate");
 	
+	AddNormalSoundHook(SoundHook_General);
+	
 	InitGameEventHooks();
 	
 	GameData hGamedata = new GameData("tf2.defenderbots");
@@ -230,6 +240,11 @@ public void OnClientPutInServer(int client)
 	m_flDeadRethinkTime[client] = 0.0;
 	g_iBuybackNumber[client] = 0;
 	g_iBuyUpgradesNumber[client] = 0;
+	
+#if defined MOD_ROLL_THE_DICE
+	m_flNextRollTime[client] = 0.0;
+#endif
+	
 	m_flLastCommandTime[client] = GetGameTime();
 	m_flLastReadyInputTime[client] = 0.0;
 	
@@ -350,6 +365,14 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				}
 			}
 		}
+		
+#if defined MOD_ROLL_THE_DICE
+		if (m_flNextRollTime[client] <= GetGameTime())
+		{
+			m_flNextRollTime[client] = GetGameTime() + GetRandomFloat(COMMAND_MAX_RATE, 60.0);
+			FakeClientCommand(client, "sm_rtd");
+		}
+#endif
 	}
 	else
 	{
@@ -650,6 +673,34 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 					return Plugin_Handled;
 				}
 			}
+		}
+	}
+	
+	return Plugin_Continue;
+}
+
+public Action SoundHook_General(int clients[MAXPLAYERS], int &numClients, char sample[PLATFORM_MAX_PATH], int &entity, int &channel, float &volume, int &level, int &pitch, int &flags, char soundEntry[PLATFORM_MAX_PATH], int &seed)
+{
+	if (channel == SNDCHAN_VOICE && volume > 0.0 && BaseEntity_IsPlayer(entity) && TF2_IsPlayerInCondition(entity, TFCond_Disguised) && !TF2_IsStealthed(entity))
+	{
+		//Robots have robotic voices even when disguised
+		//Any defender bot that can see him right now will call him out
+		for (int i = 1; i <= MaxClients; i++)
+		{
+			if (i == entity)
+				continue;
+			
+			if (!IsClientInGame(i))
+				continue;
+			
+			if (g_bIsDefenderBot[i] == false)
+				continue;
+			
+			if (GetClientTeam(entity) == GetClientTeam(i))
+				continue;
+			
+			if (TF2_IsLineOfFireClear4(i, entity))
+				RealizeSpy(i, entity);
 		}
 	}
 	

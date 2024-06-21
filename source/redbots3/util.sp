@@ -722,6 +722,9 @@ int FindBotNearestToMe(int client, const float max_distance, bool bGiantsOnly = 
 		if (bIgnoreUber && TF2_IsInvulnerable(i))
 			continue;
 		
+		if (TF2_IsStealthed(i) && TF2_GetPercentInvisible(i) >= 0.75)
+			continue;
+		
 		float distance = GetVectorDistance(WorldSpaceCenter(i), origin);
 		
 		if (distance <= bestDistance && distance <= max_distance)
@@ -913,6 +916,9 @@ int GetNearestEnemyCount(int client, const float max_distance, bool bIgnoreUber 
 			continue;
 		
 		if (bIgnoreUber && TF2_IsInvulnerable(i))
+			continue;
+		
+		if (TF2_IsStealthed(i) && TF2_GetPercentInvisible(i) >= 0.75)
 			continue;
 		
 		if (GetVectorDistance(WorldSpaceCenter(i), origin) <= max_distance)
