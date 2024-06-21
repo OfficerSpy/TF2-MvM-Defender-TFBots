@@ -112,7 +112,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.2.4",
+	version = "1.2.6",
 	url = ""
 };
 
@@ -369,7 +369,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 #if defined MOD_ROLL_THE_DICE
 		if (m_flNextRollTime[client] <= GetGameTime())
 		{
-			m_flNextRollTime[client] = GetGameTime() + GetRandomFloat(COMMAND_MAX_RATE, 60.0);
+			m_flNextRollTime[client] = GetGameTime() + GetRandomFloat(COMMAND_MAX_RATE, 30.0);
 			FakeClientCommand(client, "sm_rtd");
 		}
 #endif
@@ -540,6 +540,15 @@ public Action Command_BotsReadyNow(int client, int args)
 
 public Action Command_AddBots(int client, int args)
 {
+	if (args > 0)
+	{
+		char arg1[3]; GetCmdArg(1, arg1, sizeof(arg1));
+		int amount = StringToInt(arg1);
+		AddBotsBasedOnPreferences(amount);
+		
+		return Plugin_Handled;
+	}
+	
 	CreateDisplayMenuAddDefenderBots(client);
 	return Plugin_Handled;
 }
