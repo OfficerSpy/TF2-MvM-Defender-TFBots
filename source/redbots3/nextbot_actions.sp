@@ -5,7 +5,7 @@
 #define BOMB_HATCH_RANGE_CRITICAL	1000.0
 #define BUY_UPGRADES_MAX_TIME	30.0
 #define BUY_UPGRADES_FAST_MAX_TIME	3.0
-#define MEDIC_REVIVE_RANGE	500.0
+#define MEDIC_REVIVE_RANGE	600.0
 #define SENTRY_WATCH_BOMB_RANGE	400.0
 #define FLAMETHROWER_REACH_RANGE	350.0
 #define FLAMEBALL_REACH_RANGE	526.0
@@ -4782,6 +4782,7 @@ void UtilizeCompressionBlast(int client, INextBot bot, const CKnownEntity threat
 			if (TF2_IsInvulnerable(iThreat))
 			{
 				//Shove ubers away from us
+				g_iSubtractiveButtons[client] |= IN_ATTACK;
 				VS_PressAltFireButton(client);
 				return;
 			}
@@ -4789,6 +4790,7 @@ void UtilizeCompressionBlast(int client, INextBot bot, const CKnownEntity threat
 			if (TF2_HasTheFlag(iThreat) && GetVectorDistance(threatOrigin, GetBombHatchPosition()) <= 100.0)
 			{
 				//Shove the bomb carrier off the hatch
+				g_iSubtractiveButtons[client] |= IN_ATTACK;
 				VS_PressAltFireButton(client);
 				return;
 			}

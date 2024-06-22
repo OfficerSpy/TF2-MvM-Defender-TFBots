@@ -112,7 +112,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.2.6",
+	version = "1.2.7",
 	url = ""
 };
 
@@ -335,7 +335,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			OpportunisticallyUseWeaponAbilities(client, myWeapon, myBot, threat);
 			OpportunisticallyUsePowerupBottle(client, myWeapon, myBot, threat);
 			
-			if (weaponID == TF_WEAPON_FLAMETHROWER || weaponID == TF_WEAPON_FLAME_BALL && CanWeaponAirblast(myWeapon))
+			if ((weaponID == TF_WEAPON_FLAMETHROWER || weaponID == TF_WEAPON_FLAME_BALL) && CanWeaponAirblast(myWeapon))
 				UtilizeCompressionBlast(client, myBot, threat);
 			
 			if (weaponID == TF_WEAPON_SNIPERRIFLE || weaponID == TF_WEAPON_SNIPERRIFLE_DECAP || weaponID == TF_WEAPON_SNIPERRIFLE_CLASSIC)
