@@ -7,6 +7,7 @@ void InitGameEventHooks()
 	HookEvent("mvm_begin_wave", Event_MvmWaveBegin);
 	HookEvent("player_team", Event_PlayerTeam);
 	HookEvent("player_used_powerup_bottle", Event_PlayerUsedPowerupBottle);
+	HookEvent("post_inventory_application", Event_PostInventoryApplication);
 }
 
 static void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
@@ -20,8 +21,6 @@ static void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 	{
 		g_bIsBeingRevived[client] = false;
 		g_iBuyUpgradesNumber[client] = CanBuyUpgradesNow(client) ? GetRandomInt(1, 100) : 0;
-		
-		SetSapperCooldown(client, 0.0);
 		
 		if (redbots_manager_debug.BoolValue)
 			PrintToChatAll("[Event_PlayerSpawn] g_iBuyUpgradesNumber[%d] = %d", client, g_iBuyUpgradesNumber[client]);
@@ -49,7 +48,7 @@ static void Event_MvmWaveFailed(Event event, const char[] name, bool dontBroadca
 	CreateTimer(0.1, Timer_WaveFailure, _, TIMER_FLAG_NO_MAPCHANGE);
 }
 
-public void Event_MvmWaveComplete(Event event, const char[] name, bool dontBroadcast)
+static void Event_MvmWaveComplete(Event event, const char[] name, bool dontBroadcast)
 {
 	if (redbots_manager_kick_bots.BoolValue)
 	{
@@ -78,7 +77,7 @@ public void Event_MvmWaveComplete(Event event, const char[] name, bool dontBroad
 	}
 }
 
-public void Event_RevivePlayerNotify(Event event, const char[] name, bool dontBroadcast)
+static void Event_RevivePlayerNotify(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = event.GetInt("entindex");
 	
@@ -86,7 +85,7 @@ public void Event_RevivePlayerNotify(Event event, const char[] name, bool dontBr
 	g_bIsBeingRevived[client] = true;
 }
 
-public void Event_MvmWaveBegin(Event event, const char[] name, bool dontBroadcast)
+static void Event_MvmWaveBegin(Event event, const char[] name, bool dontBroadcast)
 {
 	for (int i = 1; i <= MaxClients; i++)
 	{
@@ -101,7 +100,7 @@ public void Event_MvmWaveBegin(Event event, const char[] name, bool dontBroadcas
 		ManageDefenderBots(true);
 }
 
-public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
+static void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = GetClientOfUserId(event.GetInt("userid"));
 	TFTeam team = view_as<TFTeam>(event.GetInt("team"));
@@ -119,7 +118,7 @@ public void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 	}
 }
 
-public void Event_PlayerUsedPowerupBottle(Event event, const char[] name, bool dontBroadcast)
+static void Event_PlayerUsedPowerupBottle(Event event, const char[] name, bool dontBroadcast)
 {
 	int client = event.GetInt("player");
 	
@@ -130,6 +129,16 @@ public void Event_PlayerUsedPowerupBottle(Event event, const char[] name, bool d
 		if (powerupType == POWERUP_BOTTLE_REFILL_AMMO)
 			SetSapperCooldown(client, 0.0);
 	}
+}
+
+static void Event_PostInventoryApplication(Event event, const char[] name, bool dontBroadcast)
+{
+	//If this event happened, someone regenereated and thus refilled their ammo
+	
+	int client = GetClientOfUserId(event.GetInt("userid"));
+	
+	if (g_bIsDefenderBot[client])
+		SetSapperCooldown(client, 0.0);
 }
 
 static Action Timer_PlayerSpawn(Handle timer, any data)
@@ -199,7 +208,7 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 	return Plugin_Stop;
 }
 
-public Action Timer_WaveFailure(Handle timer)
+static Action Timer_WaveFailure(Handle timer)
 {
 	if (GameRules_GetRoundState() != RoundState_BetweenRounds)
 		return Plugin_Stop;

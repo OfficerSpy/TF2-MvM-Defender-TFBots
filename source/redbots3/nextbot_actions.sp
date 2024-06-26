@@ -1831,6 +1831,21 @@ public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 
 public Action CTFBotSpyLurkMvM_ShouldAttack(BehaviorAction action, INextBot nextbot, CKnownEntity knownEntity, QueryResultType& result)
 {
+	/* int me = action.Actor;
+	int iThreat = knownEntity.GetEntity();
+	
+	if (iThreat != m_iAttackTarget[me] && BaseEntity_IsPlayer(iThreat))
+	{
+		int myWeapon = BaseCombatCharacter_GetActiveWeapon(me);
+		
+		if (myWeapon != -1 && TF2Util_GetWeaponID(myWeapon) == TF_WEAPON_KNIFE && nextbot.IsRangeLessThan(iThreat, 71.0) && HasBackstabPotential(iThreat))
+		{
+			//If we can backstab them, we might as well
+			result = ANSWER_YES;
+			return Plugin_Changed;
+		}
+	} */
+	
 	//Don't as we will just make ourselves look stupid
 	result = ANSWER_NO;
 	return Plugin_Changed;
@@ -4188,6 +4203,7 @@ void EquipBestWeaponForThreat(int client, const CKnownEntity threat)
 		secondary = -1;
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(client);
+	int threatEnt = threat.GetEntity();
 	
 	switch (TF2_GetPlayerClass(client))
 	{
@@ -4198,14 +4214,27 @@ void EquipBestWeaponForThreat(int client, const CKnownEntity threat)
 		case TFClass_Scout:
 		{
 			if (secondary != -1)
-				if (gun != -1 && !Clip1(gun))
+			{
+				int weaponID = TF2Util_GetWeaponID(secondary);
+				
+				if ((weaponID == TF_WEAPON_JAR_MILK || weaponID == TF_WEAPON_CLEAVER) && HasAmmo(secondary) && BaseEntity_IsPlayer(threatEnt))
+				{
+					//Always throw milk at them if we can
 					gun = secondary;
+				}
+				else if (gun != -1 && !Clip1(gun))
+				{
+					gun = secondary;
+				}
+			}
 		}
 		case TFClass_Soldier:
 		{
 			if (gun != -1 && !Clip1(gun))
 			{
-				if (secondary != -1 && Clip1(secondary))
+				// NOTE: we do not want to switch off the rocket launcher against uber threats or else we will conflctingly ignore them
+				// on and off due to the detour callback that we do at DHookCallback_IsIgnored_Pre
+				if (secondary != -1 && !TF2_IsInvulnerable(threatEnt) && Clip1(secondary))
 				{
 					const float closeSoldierRange = 500.0;
 					
@@ -4218,7 +4247,12 @@ void EquipBestWeaponForThreat(int client, const CKnownEntity threat)
 		}
 		case TFClass_Sniper:
 		{
-			if (primary != -1 && TF2Util_GetWeaponID(primary) == TF_WEAPON_COMPOUND_BOW)
+			if (secondary != -1 && TF2Util_GetWeaponID(secondary) == TF_WEAPON_JAR && HasAmmo(secondary) && BaseEntity_IsPlayer(threatEnt))
+			{
+				//Always throw pee at them if we can
+				gun = secondary;
+			}
+			else if (primary != -1 && TF2Util_GetWeaponID(primary) == TF_WEAPON_COMPOUND_BOW)
 			{
 				//Always use the bow, unless it has no ammo
 				gun = primary;
@@ -4235,21 +4269,27 @@ void EquipBestWeaponForThreat(int client, const CKnownEntity threat)
 		}
 		case TFClass_Pyro:
 		{
-			const float flameRange = 750.0;
-			
-			float lastKnownPos[3]; threat.GetLastKnownPosition(lastKnownPos);
-			
-			if (secondary != -1 && myBot.IsRangeGreaterThanEx(lastKnownPos, flameRange))
-				gun = secondary;
-			
-			int threatEnt = threat.GetEntity();
-			
-			if (BaseEntity_IsPlayer(threatEnt))
+			if (secondary != -1 && TF2Util_GetWeaponID(secondary) == TF_WEAPON_JAR_GAS && HasAmmo(secondary) && BaseEntity_IsPlayer(threatEnt))
 			{
-				TFClassType threatClass = TF2_GetPlayerClass(threatEnt);
+				//Always throw gas
+				gun = secondary;
+			}
+			else
+			{
+				const float flameRange = 750.0;
 				
-				if (threatClass == TFClass_Soldier || threatClass == TFClass_DemoMan)
-					gun = primary;
+				float lastKnownPos[3]; threat.GetLastKnownPosition(lastKnownPos);
+				
+				if (secondary != -1 && myBot.IsRangeGreaterThanEx(lastKnownPos, flameRange))
+					gun = secondary;
+				
+				if (BaseEntity_IsPlayer(threatEnt))
+				{
+					TFClassType threatClass = TF2_GetPlayerClass(threatEnt);
+					
+					if (threatClass == TFClass_Soldier || threatClass == TFClass_DemoMan)
+						gun = primary;
+				}
 			}
 		}
 	}
