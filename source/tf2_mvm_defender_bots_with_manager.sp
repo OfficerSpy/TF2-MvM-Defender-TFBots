@@ -1,3 +1,8 @@
+/* --------------------------------------------------
+MvM Defender Bots
+April 08 2024
+Author: ★ Officer Spy ★
+-------------------------------------------------- */
 #include <sourcemod>
 #include <tf2_stocks>
 #include <dhooks>
@@ -36,6 +41,7 @@ enum
 };
 
 //Globals
+bool g_bLateLoad;
 bool g_bBotsEnabled;
 float g_flNextReadyTime;
 int g_iDetonatingPlayer = -1;
@@ -205,6 +211,11 @@ public void OnPluginStart()
 		SetFailState("Failed to load gamedata file tf2.defenderbots.txt");
 	}
 	
+	if (g_bLateLoad)
+	{
+		g_iPopulationManager = FindEntityByClassname(MaxClients + 1, "info_populator");
+	}
+	
 	LoadLoadoutFunctions();
 	LoadPreferencesData();
 	
@@ -212,6 +223,13 @@ public void OnPluginStart()
 	m_adtBotNames = new ArrayList(MAX_NAME_LENGTH);
 	
 	InitNextBotPathing();
+}
+
+public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
+{
+	g_bLateLoad = late;
+	
+	return APLRes_Success;
 }
 
 public void OnMapStart()

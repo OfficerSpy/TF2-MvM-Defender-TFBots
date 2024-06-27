@@ -190,7 +190,7 @@ void PostInventoryApplication(int client)
 	SDKCall(m_hPostInventoryApplication, client);
 }
 
-void SetMission(int client, MissionType mission, bool resetBehaviorSystem = true)
+void SetMission(int client, int mission, bool resetBehaviorSystem = true)
 {
 	SDKCall(m_hSetMission, client, mission, resetBehaviorSystem);
 }

@@ -87,9 +87,9 @@ int GetStartingCurrency(int populator)
 	return GetEntData(populator, GetOffset("CPopulationManager", "m_nStartingCurrency"));
 }
 
-MissionType GetTFBotMission(int client)
+int GetTFBotMission(int client)
 {
-	return view_as<MissionType>(GetEntData(client, GetOffset("CTFBot", "m_mission")));
+	return GetEntData(client, GetOffset("CTFBot", "m_mission"));
 }
 
 bool IsPlayingHorn(int weapon)
