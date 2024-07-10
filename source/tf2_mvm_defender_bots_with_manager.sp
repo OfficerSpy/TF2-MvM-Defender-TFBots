@@ -1,5 +1,5 @@
 /* --------------------------------------------------
-MvM Defender Bots
+MvM Defender TFBots
 April 08 2024
 Author: ★ Officer Spy ★
 -------------------------------------------------- */
@@ -90,6 +90,10 @@ ConVar redbots_manager_bot_buy_upgrades_chance;
 ConVar redbots_manager_bot_request_credits;
 #endif
 
+#if defined MOD_ROLL_THE_DICE
+ConVar redbots_manager_bot_rtd_frequency;
+#endif
+
 ConVar tf_bot_path_lookahead_range;
 ConVar tf_bot_health_critical_ratio;
 ConVar tf_bot_health_ok_ratio;
@@ -118,7 +122,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.2.8",
+	version = "1.2.9",
 	url = ""
 };
 
@@ -146,6 +150,10 @@ public void OnPluginStart()
 	
 #if defined MOD_REQUEST_CREDITS
 	redbots_manager_bot_request_credits = CreateConVar("sm_redbots_manager_bot_request_credits", "1", _, FCVAR_NOTIFY);
+#endif
+	
+#if defined MOD_ROLL_THE_DICE
+	redbots_manager_bot_rtd_frequency = CreateConVar("sm_redbots_manager_bot_rtd_frequency", "30.0", _, FCVAR_NOTIFY);
 #endif
 	
 	HookConVarChange(redbots_manager_mode, ConVarChanged_ManagerMode);
@@ -382,15 +390,18 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 					m_flNextSnipeFireTime[client] = GetGameTime() + 1.0;
 				}
 			}
-		}
-		
+			
 #if defined MOD_ROLL_THE_DICE
-		if (m_flNextRollTime[client] <= GetGameTime())
-		{
-			m_flNextRollTime[client] = GetGameTime() + GetRandomFloat(COMMAND_MAX_RATE, 30.0);
-			FakeClientCommand(client, "sm_rtd");
-		}
+			if (redbots_manager_bot_rtd_frequency.FloatValue >= COMMAND_MAX_RATE)
+			{
+				if (m_flNextRollTime[client] <= GetGameTime())
+				{
+					m_flNextRollTime[client] = GetGameTime() + GetRandomFloat(COMMAND_MAX_RATE, redbots_manager_bot_rtd_frequency.FloatValue);
+					FakeClientCommand(client, "sm_rtd");
+				}
+			}
 #endif
+		}
 	}
 	else
 	{
@@ -399,7 +410,18 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			//Think every second while we're dead
 			m_flDeadRethinkTime[client] = GetGameTime() + 1.0;
 			
-			g_iBuybackNumber[client] = GetRandomInt(1, 100);
+			int iObsMode = BasePlayer_GetObserverMode(client);
+			
+			if (iObsMode == OBS_MODE_FREEZECAM || iObsMode == OBS_MODE_DEATHCAM)
+			{
+				//We can't buyback right now, so don't even think about it
+				g_iBuybackNumber[client] = 0;
+			}
+			else
+			{
+				//Randomly think about buying back
+				g_iBuybackNumber[client] = GetRandomInt(1, 100);
+			}
 			
 			if (ShouldBuybackIntoGame(client))
 				PlayerBuyback(client);

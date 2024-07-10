@@ -59,7 +59,7 @@ public void DHooks_OnEntityCreated(int entity, const char[] classname)
 	}
 }
 
-public void DHooks_DefenderBot(int client)
+void DHooks_DefenderBot(int client)
 {
 	m_hIsBot.HookEntity(Hook_Pre, client, DHookCallback_IsBot_Pre);
 	m_hEventKilled.HookEntity(Hook_Pre, client, DHookCallback_EventKilled_Pre);

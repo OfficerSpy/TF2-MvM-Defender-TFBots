@@ -436,6 +436,7 @@ int FindBombNearestToHatch()
 	int iBestEntity = -1;
 	
 	int iEnt = -1;
+	
 	while ((iEnt = FindEntityByClassname(iEnt, "item_teamflag")) != -1)
 	{
 		//Ignore bombs not in play
@@ -679,10 +680,8 @@ int GetPowerupBottle(int client)
 	int ent = -1;
 	
 	while ((ent = FindEntityByClassname(ent, "tf_powerup_bottle")) != -1)
-	{
 		if (BaseEntity_GetOwnerEntity(ent) == client)
 			break;
-	}
 	
 	return ent;
 }
@@ -862,8 +861,8 @@ int GetNearestEnemyTeleporter(int client, const float max_distance = 999999.0)
 	
 	float bestDistance = 999999.0;
 	int bestEnt = -1;
-	
 	int ent = -1;
+	
 	while ((ent = FindEntityByClassname(ent, "obj_teleporter")) != -1)
 	{
 		if (BaseEntity_GetTeamNumber(ent) == myTeam)
@@ -1114,10 +1113,11 @@ int GetControlPointByID(int pointID)
 	return bestEnt;
 } */
 
-int GetDefendablePointTriggerDoor(int client)
+int GetDefendablePointTrigger(TFTeam team)
 {
 	int trigger = -1;
 	
+	//Look for a trigger_timer_door associated with a control point
 	while ((trigger = FindEntityByClassname(trigger, "trigger_timer_door")) != -1)
 	{		
 		//Ignore disabled triggers
@@ -1134,7 +1134,6 @@ int GetDefendablePointTriggerDoor(int client)
 		//Now find the matching control point
 		int point = -1;
 		char targetname[32];
-		int myTeam = GetClientTeam(client);
 		
 		while ((point = FindEntityByClassname(point, "team_control_point")) != -1)
 		{
@@ -1142,7 +1141,7 @@ int GetDefendablePointTriggerDoor(int client)
 			
 			//Found the match
 			if (strcmp(targetname, cpname, false) == 0)
-				if (BaseEntity_GetTeamNumber(point) == myTeam)
+				if (BaseEntity_GetTeamNumber(point) == view_as<int>(team))
 					return trigger;
 		}
 	}
