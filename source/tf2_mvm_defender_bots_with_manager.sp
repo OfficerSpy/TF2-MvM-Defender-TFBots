@@ -391,6 +391,21 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				}
 			}
 			
+			/* NOTE: this used to be handled in CTFBotMainAction_SelectTargetPoint, but it seems that function doesn't always get called when the bot is up close to it
+			The bot will look up, but then start looking towards the center again and stop firing before going to look up and fire again
+			It then just repeats this process over and over unless it gets away from the tank */
+			if (weaponID == TF_WEAPON_FLAMETHROWER && threat)
+			{
+				int iThreat = threat.GetEntity();
+				
+				if (IsBaseBoss(iThreat) && myBot.IsRangeLessThan(iThreat, 350.0))
+				{
+					float aimPos[3]; GetFlameThrowerAimForTank(iThreat, aimPos);
+					SnapViewToPosition(client, aimPos);
+					buttons |= IN_ATTACK;
+				}
+			}
+			
 #if defined MOD_ROLL_THE_DICE
 			if (redbots_manager_bot_rtd_frequency.FloatValue >= COMMAND_MAX_RATE)
 			{

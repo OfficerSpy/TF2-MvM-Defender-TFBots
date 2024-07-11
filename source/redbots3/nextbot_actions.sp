@@ -306,6 +306,16 @@ public Action CTFBotMainAction_SelectTargetPoint(BehaviorAction action, INextBot
 				
 				return Plugin_Changed;
 			}
+			/* case TF_WEAPON_FLAMETHROWER:
+			{
+				if (IsBaseBoss(entity))
+				{
+					GetFlameThrowerAimForTank(entity, vec);
+					PrintToChatAll("AIM AT: %f %f %f", vec[0], vec[1], vec[2]);
+					
+					return Plugin_Changed;
+				}
+			} */
 		}
 	}
 	
@@ -4234,7 +4244,7 @@ void EquipBestWeaponForThreat(int client, const CKnownEntity threat)
 			{
 				// NOTE: we do not want to switch off the rocket launcher against uber threats or else we will conflctingly ignore them
 				// on and off due to the detour callback that we do at DHookCallback_IsIgnored_Pre
-				if (secondary != -1 && !TF2_IsInvulnerable(threatEnt) && Clip1(secondary))
+				if (secondary != -1 && Clip1(secondary) && (!BaseEntity_IsPlayer(threatEnt) || !TF2_IsInvulnerable(threatEnt)))
 				{
 					const float closeSoldierRange = 500.0;
 					
@@ -5130,4 +5140,12 @@ bool CTFBotGuardPoint_IsPossible(int client)
 		return false;
 	
 	return true;
+}
+
+//Since jungle inferno, flamethrower damage is calculated based on the oldest particles
+//Aim a bit higher on the tank for the highest damage output
+void GetFlameThrowerAimForTank(int tank, float aimPos[3])
+{
+	aimPos = WorldSpaceCenter(tank);
+	aimPos[2] += 90.0;
 }
