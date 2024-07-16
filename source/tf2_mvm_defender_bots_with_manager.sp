@@ -91,7 +91,7 @@ ConVar redbots_manager_bot_request_credits;
 #endif
 
 #if defined MOD_ROLL_THE_DICE
-ConVar redbots_manager_bot_rtd_frequency;
+ConVar redbots_manager_bot_rtd_variance;
 #endif
 
 ConVar tf_bot_path_lookahead_range;
@@ -122,7 +122,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.2.9",
+	version = "1.3.0",
 	url = ""
 };
 
@@ -153,7 +153,7 @@ public void OnPluginStart()
 #endif
 	
 #if defined MOD_ROLL_THE_DICE
-	redbots_manager_bot_rtd_frequency = CreateConVar("sm_redbots_manager_bot_rtd_frequency", "30.0", _, FCVAR_NOTIFY);
+	redbots_manager_bot_rtd_variance = CreateConVar("sm_redbots_manager_bot_rtd_variance", "30.0", _, FCVAR_NOTIFY);
 #endif
 	
 	HookConVarChange(redbots_manager_mode, ConVarChanged_ManagerMode);
@@ -175,6 +175,7 @@ public void OnPluginStart()
 #endif
 	
 	RegAdminCmd("sm_addbots", Command_AddBots, ADMFLAG_GENERIC);
+	RegAdminCmd("sm_view_bot_upgrades", Command_ViewBotUpgrades, ADMFLAG_GENERIC);
 	
 	AddCommandListener(Listener_TournamentPlayerReadystate, "tournament_player_readystate");
 	
@@ -362,18 +363,18 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			OpportunisticallyUsePowerupBottle(client, myWeapon, myBot, threat);
 			
 			if ((weaponID == TF_WEAPON_FLAMETHROWER || weaponID == TF_WEAPON_FLAME_BALL) && CanWeaponAirblast(myWeapon))
-				UtilizeCompressionBlast(client, myBot, threat);
+				UtilizeCompressionBlast(client, myBot, threat, 1);
 			
 			if (weaponID == TF_WEAPON_SNIPERRIFLE || weaponID == TF_WEAPON_SNIPERRIFLE_DECAP || weaponID == TF_WEAPON_SNIPERRIFLE_CLASSIC)
 			{
 				if (TF2_IsPlayerInCondition(client, TFCond_Zoomed))
 				{
 					//TODO: this needs to be more precise with actually getting our current m_lookAtSubject in PlayerBody as this can cause jittery aim
-					if (threat && threat.IsVisibleInFOVNow())
+					if (threat)
 					{
 						int iThreat = threat.GetEntity();
 						
-						if (BaseEntity_IsPlayer(iThreat))
+						if (TF2_IsLineOfFireClear4(client, iThreat))
 						{
 							//Help aim towards the desired target point
 							float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
@@ -387,7 +388,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				else
 				{
 					//Delay before we fire again
-					m_flNextSnipeFireTime[client] = GetGameTime() + 1.0;
+					m_flNextSnipeFireTime[client] = GetGameTime() + 0.5;
 				}
 			}
 			
@@ -407,11 +408,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			}
 			
 #if defined MOD_ROLL_THE_DICE
-			if (redbots_manager_bot_rtd_frequency.FloatValue >= COMMAND_MAX_RATE)
+			if (redbots_manager_bot_rtd_variance.FloatValue >= COMMAND_MAX_RATE)
 			{
 				if (m_flNextRollTime[client] <= GetGameTime())
 				{
-					m_flNextRollTime[client] = GetGameTime() + GetRandomFloat(COMMAND_MAX_RATE, redbots_manager_bot_rtd_frequency.FloatValue);
+					m_flNextRollTime[client] = GetGameTime() + GetRandomFloat(COMMAND_MAX_RATE, redbots_manager_bot_rtd_variance.FloatValue);
 					FakeClientCommand(client, "sm_rtd");
 				}
 			}
@@ -605,6 +606,40 @@ public Action Command_AddBots(int client, int args)
 	}
 	
 	CreateDisplayMenuAddDefenderBots(client);
+	return Plugin_Handled;
+}
+
+public Action Command_ViewBotUpgrades(int client, int args)
+{
+	if (args < 1)
+	{
+		ReplyToCommand(client, "[SM] Usage: sm_view_bot_upgrades <#userid|name>");
+		return Plugin_Handled;
+	}
+	
+	char arg[65]; GetCmdArg(1, arg, sizeof(arg));
+	
+	char target_name[MAX_TARGET_LENGTH];
+	int target_list[MAXPLAYERS], target_count;
+	bool tn_is_ml;
+	
+	if ((target_count = ProcessTargetString(
+			arg,
+			client,
+			target_list,
+			MAXPLAYERS,
+			COMMAND_FILTER_ALIVE,
+			target_name,
+			sizeof(target_name),
+			tn_is_ml)) <= 0)
+	{
+		ReplyToTargetError(client, target_count);
+		return Plugin_Handled;
+	}
+	
+	for (int i = 0; i < target_count; i++)
+		ShowPlayerUpgrades(client, target_list[i]);
+	
 	return Plugin_Handled;
 }
 
@@ -908,6 +943,11 @@ void MakePlayerDance(int client)
 	{
 		//TODO: tauntem
 	}
+}
+
+void ShowPlayerUpgrades(int client, int target)
+{
+	//TODO: show all the bot's upgrades with a menu
 }
 
 void ManageDefenderBots(bool bManage, bool bAddBots = true)

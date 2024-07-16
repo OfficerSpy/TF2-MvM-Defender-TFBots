@@ -1273,3 +1273,27 @@ stock bool ParentEntity(int parent, int attachment, const char[] attachPoint = "
 				parent, parent);
 	}
 }
+
+//TODO: should use an actual call to CBaseEntity::IsDeflectable
+stock bool CanBeReflected(int projectile)
+{
+	char classname[32]; GetEntityClassname(projectile, classname, sizeof(classname));
+	
+	if (StrEqual(classname, "tf_projectile_arrow", false)
+	|| StrEqual(classname, "tf_projectile_ball_ornament", false)
+	|| StrEqual(classname, "tf_projectile_cleaver", false)
+	|| StrEqual(classname, "tf_projectile_energy_ball", false)
+	|| StrEqual(classname, "tf_projectile_flare", false)
+	|| StrEqual(classname, "tf_projectile_healing_bolt", false)
+	|| StrEqual(classname, "tf_projectile_jar", false)
+	|| StrEqual(classname, "tf_projectile_pipe", false)
+	|| StrEqual(classname, "tf_projectile_rocket", false)
+	|| StrEqual(classname, "tf_projectile_sentryrocket", false)
+	|| StrEqual(classname, "tf_projectile_stun_ball", false)
+	|| StrEqual(classname, "tf_projectile_balloffire", false))
+	{
+		return true;
+	}
+	
+	return false;
+}

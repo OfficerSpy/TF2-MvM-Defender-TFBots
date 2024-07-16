@@ -2442,6 +2442,11 @@ public Action CTFBotCampBomb_Update(BehaviorAction action, int actor, float inte
 		m_pPath[actor].Update(myBot);
 	}
 	
+	CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
+	
+	if (threat)
+		EquipBestWeaponForThreat(actor, threat);
+	
 	return action.Continue();
 }
 
@@ -2460,7 +2465,7 @@ public Action CTFBotDestroyTeleporter_OnStart(BehaviorAction action, int actor, 
 {
 	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	
-	BaseMultiplayerPlayer_SpeakConceptIfAllowed(actor, MP_CONCEPT_PLAYER_NEGATIVE);
+	BaseMultiplayerPlayer_SpeakConceptIfAllowed(actor, MP_CONCEPT_PLAYER_JEERS);
 	
 	return action.Continue();
 }
@@ -2577,7 +2582,7 @@ public Action CTFBotGuardPoint_OnStart(BehaviorAction action, int actor, Behavio
 	if (IsZeroVector(m_vecPointDefendArea[actor]))
 		return action.ChangeTo(CTFBotDefenderAttack(), "NULL defense area");
 	
-	BaseMultiplayerPlayer_SpeakConceptIfAllowed(actor, MP_CONCEPT_PLAYER_JEERS);
+	BaseMultiplayerPlayer_SpeakConceptIfAllowed(actor, MP_CONCEPT_PLAYER_HELP);
 	
 	return action.Continue();
 }
@@ -2766,8 +2771,8 @@ Action GetUpgradePostAction(int client, BehaviorAction action)
 			return action.ChangeTo(CTFBotMoveToFront(), "Finished upgrading; Move to front and press F4");
 	}
 	
-	//The round's probably already running
-	//CTFBotScenarioMonitor_Update will assign the appropriate task
+	/* The round's probably already running
+	CTFBotScenarioMonitor_Update will assign the appropriate task */
 	return action.Done("I finished upgrading");
 }
 
@@ -4844,6 +4849,34 @@ void UtilizeCompressionBlast(int client, INextBot bot, const CKnownEntity threat
 			if (TF2_HasTheFlag(iThreat) && GetVectorDistance(threatOrigin, GetBombHatchPosition()) <= 100.0)
 			{
 				//Shove the bomb carrier off the hatch
+				g_iSubtractiveButtons[client] |= IN_ATTACK;
+				VS_PressAltFireButton(client);
+				return;
+			}
+		}
+	}
+	
+	//Enhanced projectile airblast
+	if (enhancedStage > 0)
+	{
+		int myTeam = GetClientTeam(client);
+		float myEyePos[3]; GetClientEyePosition(client, myEyePos);
+		int ent = -1;
+		
+		while ((ent = FindEntityByClassname(ent, "tf_projectile_*")) != -1)
+		{
+			if (BaseEntity_GetTeamNumber(ent) == myTeam)
+				continue;
+			
+			if (!CanBeReflected(ent))
+				continue;
+			
+			float origin[3]; BaseEntity_GetLocalOrigin(ent, origin);
+			float vec[3]; MakeVectorFromPoints(origin, myEyePos, vec);
+			
+			//Airblast the projectile if we are actually facing towards it
+			if (GetVectorLength(vec) < 150.0)
+			{
 				g_iSubtractiveButtons[client] |= IN_ATTACK;
 				VS_PressAltFireButton(client);
 				return;
