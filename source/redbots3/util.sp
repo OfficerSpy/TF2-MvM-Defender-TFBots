@@ -172,10 +172,15 @@ int EconItemCreateNoSpawn(char[] classname, int itemDefIndex, int level, int qua
 			I suspect the client's game code change and not setting it cause it to read garbage */
 			SetEntProp(item, Prop_Send, "m_iObjectType", 3); //Set to OBJ_ATTACHMENT_SAPPER?
 			
-			SetEntProp(item, Prop_Send, "m_aBuildableObjectTypes", 1, _, 0); //OBJ_DISPENSER
-			SetEntProp(item, Prop_Send, "m_aBuildableObjectTypes", 1, _, 1); //OBJ_TELEPORTER
-			SetEntProp(item, Prop_Send, "m_aBuildableObjectTypes", 1, _, 2); //OBJ_SENTRYGUN
-			SetEntProp(item, Prop_Send, "m_aBuildableObjectTypes", 0, _, 3); //OBJ_ATTACHMENT_SAPPER
+			bool isSapper = IsItemDefIndexSapper(itemDefIndex);
+			
+			if (isSapper)
+				SetEntProp(item, Prop_Data, "m_iSubType", 3);
+			
+			SetEntProp(item, Prop_Send, "m_aBuildableObjectTypes", isSapper ? 0 : 1, _, 0); //OBJ_DISPENSER
+			SetEntProp(item, Prop_Send, "m_aBuildableObjectTypes", isSapper ? 0 : 1, _, 1); //OBJ_TELEPORTER
+			SetEntProp(item, Prop_Send, "m_aBuildableObjectTypes", isSapper ? 0 : 1, _, 2); //OBJ_SENTRYGUN
+			SetEntProp(item, Prop_Send, "m_aBuildableObjectTypes", isSapper ? 1 : 0, _, 3); //OBJ_ATTACHMENT_SAPPER
 		}
 		else if (StrEqual(classname, "tf_weapon_sapper", false))
 		{
@@ -189,7 +194,7 @@ int EconItemCreateNoSpawn(char[] classname, int itemDefIndex, int level, int qua
 	}
 	else
 	{
-		LogError("EconItemCreateNoSpawn: Failed to create entity '%s' with item definition %i.", classname, itemDefIndex);
+		LogError("EconItemCreateNoSpawn: Failed to create entity.");
 	}
 	
 	return item;
@@ -1293,6 +1298,19 @@ stock bool CanBeReflected(int projectile)
 	|| StrEqual(classname, "tf_projectile_balloffire", false))
 	{
 		return true;
+	}
+	
+	return false;
+}
+
+stock bool IsItemDefIndexSapper(int itemDefIndex)
+{
+	switch (itemDefIndex)
+	{
+		case 735, 736, 810, 831, 933, 1080, 1102:
+		{
+			return true;
+		}
 	}
 	
 	return false;
