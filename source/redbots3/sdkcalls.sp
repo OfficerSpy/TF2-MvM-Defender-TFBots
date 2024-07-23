@@ -3,6 +3,8 @@ static Handle m_hSetMission;
 static Handle m_hGetMaxAmmo;
 static Handle m_hGetNextThink;
 static Handle m_hRealizeSpy;
+static Handle m_hLookupBone;
+static Handle m_hGetBonePosition;
 static Handle m_hHasAmmo;
 static Handle m_hGetAmmoCount;
 static Handle m_hClip1;
@@ -17,6 +19,9 @@ static Handle m_hGetUpgradeTier;
 static Handle m_hIsUpgradeTierEnabled;
 #endif
 
+#if defined IDLEBOT_AIMING
+static Handle m_hGetProjectileGravity;
+#endif
 
 bool InitSDKCalls(GameData hGamedata)
 {
@@ -67,6 +72,27 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hRealizeSpy = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFBot::RealizeSpy!");
+		failCount++;
+	}
+	
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Signature, "CBaseAnimating::LookupBone");
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
+	if ((m_hLookupBone = EndPrepSDKCall()) == null)
+	{
+		LogError("Failed to create SDKCall for CBaseAnimating::LookupBone!");
+		failCount++;
+	}
+	
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Signature, "CBaseAnimating::GetBonePosition");
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	PrepSDKCall_AddParameter(SDKType_Vector, SDKPass_ByRef, _, VENCODE_FLAG_COPYBACK);
+	PrepSDKCall_AddParameter(SDKType_QAngle, SDKPass_ByRef, _, VENCODE_FLAG_COPYBACK);
+	if ((m_hGetBonePosition = EndPrepSDKCall()) == null)
+	{
+		LogError("Failed to create SDKCall for CBaseAnimating::GetBonePosition!");
 		failCount++;
 	}
 	
@@ -176,6 +202,17 @@ bool InitSDKCalls(GameData hGamedata)
 	}
 #endif
 	
+#if defined IDLEBOT_AIMING
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Virtual, "CTFWeaponBaseGun::GetProjectileGravity");
+	PrepSDKCall_SetReturnInfo(SDKType_Float, SDKPass_Plain);
+	if ((m_hGetProjectileGravity = EndPrepSDKCall()) == null)
+	{
+		LogError("Failed to create SDKCall for CTFWeaponBaseGun::GetProjectileGravity!");
+		failCount++;
+	}
+#endif
+	
 	if (failCount > 0)
 	{
 		LogError("InitSDKCalls: GameData file has %d problems!", failCount);
@@ -208,6 +245,16 @@ float GetNextThink(int entity, const char[] szContext = "")
 void RealizeSpy(int client, int pPlayer)
 {
 	SDKCall(m_hRealizeSpy, client, pPlayer);
+}
+
+int LookupBone(int entity, const char[] szName)
+{
+	return SDKCall(m_hLookupBone, entity, szName);
+}
+
+void GetBonePosition(int entity, int iBone, float origin[3], float angles[3])
+{
+	SDKCall(m_hGetBonePosition, entity, iBone, origin, angles);
 }
 
 bool HasAmmo(int weapon)
@@ -259,5 +306,12 @@ int GetUpgradeTier(int iUpgrade)
 bool IsUpgradeTierEnabled(int pTFPlayer, int iItemSlot, int iUpgrade)
 {
 	return SDKCall(m_hIsUpgradeTierEnabled, pTFPlayer, iItemSlot, iUpgrade);
+}
+#endif
+
+#if defined IDLEBOT_AIMING
+float GetProjectileGravity(int weapon)
+{
+	return SDKCall(m_hGetProjectileGravity, weapon);
 }
 #endif

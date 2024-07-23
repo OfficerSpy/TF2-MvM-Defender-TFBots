@@ -4,6 +4,7 @@
 #include <stocklib_officerspy/tf/tf_objective_resource>
 #include <stocklib_officerspy/tf/stocklib_extra_vscript>
 #include <stocklib_officerspy/econ_item_view>
+#include <stocklib_officerspy/tf/tf_weaponbase>
 
 #define SENTRY_MAX_RANGE 1100.0
 
@@ -367,8 +368,8 @@ float[] GetAbsOrigin(int client)
 	angle[2] = GetEntDataFloat(sentry, iAngleOffset + 8); //m_vecCurAngles.z
 	
 	return angle;
-}
- */
+} */
+
 bool IsWeapon(int client, int iWeaponID)
 {
 	int iWeapon = BaseCombatCharacter_GetActiveWeapon(client);
@@ -1314,4 +1315,78 @@ stock bool IsItemDefIndexSapper(int itemDefIndex)
 	}
 	
 	return false;
+}
+
+stock float AngleDiff( float destAngle, float srcAngle )
+{
+	return AngleNormalize(destAngle - srcAngle);
+}
+
+stock float AngleNormalize( float angle )
+{
+	angle = angle - 360.0 * RoundToFloor(angle / 360.0);
+	while (angle > 180.0) angle -= 360.0;
+	while (angle < -180.0) angle += 360.0;
+	return angle;
+}
+
+stock float[] GetAbsVelocity(int entity)
+{
+	float vec[3];
+
+	CBaseEntity(entity).GetAbsVelocity(vec);
+	
+	return vec;
+}
+
+stock float VMX_VectorNormalize(float a1[3])
+{
+	float flLength = GetVectorLength(a1, true) + 0.0000000001;
+	float v4 = (1.0 / SquareRoot(flLength)); 
+	float den = v4 * ((3.0 - ((v4 * v4) * flLength)) * 0.5);
+	
+	ScaleVector(a1, den);
+	
+	return den * flLength;
+}
+
+stock float[] GetEyePosition(int client)
+{
+	float vec[3]; BaseEntity_EyePosition(client, vec);
+	
+	return vec;
+}
+
+stock float ApproachAngle( float target, float value, float speed )
+{
+	float delta = AngleDiff(target, value);
+	
+	if (speed < 0.0) 
+		speed = -speed;
+	
+	if (delta > speed) 
+		value += speed;
+	else if (delta < -speed) 
+		value -= speed;
+	else
+		value = target;
+	
+	return AngleNormalize(value);
+}
+
+stock float GetCurrentCharge(int iWeapon)
+{
+	if (!HasEntProp(iWeapon, Prop_Send, "m_flChargeBeginTime"))
+		return 0.0;
+	
+	float flCharge = 0.0;
+	
+	float flChargeBeginTime = GetEntPropFloat(iWeapon, Prop_Send, "m_flChargeBeginTime");
+	
+	if (flChargeBeginTime != 0.0)
+	{
+		flCharge = MinFloat(1.0, GetGameTime() - flChargeBeginTime);
+	}
+	
+	return flCharge;
 }

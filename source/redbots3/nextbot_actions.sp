@@ -10,7 +10,6 @@
 #define FLAMETHROWER_REACH_RANGE	350.0
 #define FLAMEBALL_REACH_RANGE	526.0
 #define BOMB_GUARD_RADIUS	400.0
-#define DEFEND_POINT_DURATION	60.0
 
 static char g_strHealthAndAmmoEntities[][] = 
 {
@@ -186,8 +185,21 @@ public Action CTFBotMainAction_SelectMoreDangerousThreat(BehaviorAction action, 
 	if (g_bIsDefenderBot[me] == false)
 		return Plugin_Continue;
 	
-	// if (!knownThreat1.IsVisibleRecently() && !knownThreat2.IsVisibleRecently())
-		// return Plugin_Continue;
+	bool isImmediateThreat1 = IsImmediateThreat(me, threat1);
+	bool isImmediateThreat2 = IsImmediateThreat(me, threat2);
+	
+	if (isImmediateThreat1 && !isImmediateThreat2)
+	{
+		knownEntity = threat1;
+		return Plugin_Changed;
+	}
+	else if (!isImmediateThreat1 && isImmediateThreat2)
+	{
+		knownEntity = threat2;
+		return Plugin_Changed;
+	}
+	
+	//Neither one is immediately dangerous
 	
 	CKnownEntity closeThreat = SelectCloserThreat(nextbot, threat1, threat1);
 	
@@ -3991,7 +4003,7 @@ bool OpportunisticallyUseWeaponAbilities(int client, int activeWeapon, INextBot 
 	}
 	
 	//Phlogistinator
-	if (weaponID == TF_WEAPON_FLAMETHROWER && bot.IsRangeLessThan(threat.GetEntity(), 750.0) && !TF2_IsCritBoosted(client))
+	if (weaponID == TF_WEAPON_FLAMETHROWER && bot.IsRangeLessThan(threat.GetEntity(), FLAMETHROWER_REACH_RANGE) && !TF2_IsCritBoosted(client))
 	{
 		if (TF2_GetRageMeter(client) >= 100.0 && !TF2_IsRageDraining(client))
 		{
@@ -5071,11 +5083,13 @@ bool ShouldBuybackIntoGame(int client)
 	if (g_bIsBeingRevived[client])
 		return false;
 	
+	//Based on our rolled number, decide to buyback
 	return g_iBuybackNumber[client] <= redbots_manager_bot_buyback_chance.IntValue;
 }
 
 bool ShouldUpgradeMidRound(int client)
 {
+	//Based on our rolled number from spawn, decide to buy upgrades now
 	return g_iBuyUpgradesNumber[client] > 0 && g_iBuyUpgradesNumber[client] <= redbots_manager_bot_buy_upgrades_chance.IntValue;
 }
 
@@ -5196,4 +5210,32 @@ int GetMoneyCollectorCount()
 			count++;
 	
 	return count;
+}
+
+bool IsImmediateThreat(int client, const CKnownEntity threat)
+{
+	if (!threat.IsVisibleRecently())
+		return false;
+	
+	int iThreat = threat.GetEntity();
+	
+	if (!TF2_IsLineOfFireClear4(client, iThreat))
+		return false;
+	
+	float myAbsOrigin[3]; GetClientAbsOrigin(client, myAbsOrigin);
+	float lastKnownPos[3]; threat.GetLastKnownPosition(lastKnownPos);
+	
+	float to[3]; SubtractVectors(myAbsOrigin, lastKnownPos, to);
+	float threatRange = NormalizeVector(to, to);
+	
+	const float nearbyRange = 500.0;
+	
+	//Nearby threats are always dangerous
+	if (threatRange < nearbyRange)
+		return true;
+	
+	if (!BaseEntity_IsPlayer(iThreat))
+		return false;
+	
+	return false;
 }
