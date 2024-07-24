@@ -55,11 +55,14 @@ bool g_bIsBeingRevived[MAXPLAYERS + 1];
 bool g_bHasUpgraded[MAXPLAYERS + 1];
 int g_iAdditionalButtons[MAXPLAYERS + 1];
 int g_iSubtractiveButtons[MAXPLAYERS + 1];
-static float m_flNextSnipeFireTime[MAXPLAYERS + 1];
 float g_flBlockInputTime[MAXPLAYERS + 1];
 static float m_flDeadRethinkTime[MAXPLAYERS + 1];
 int g_iBuybackNumber[MAXPLAYERS + 1];
 int g_iBuyUpgradesNumber[MAXPLAYERS + 1];
+
+#if !defined IDLEBOT_AIMING
+static float m_flNextSnipeFireTime[MAXPLAYERS + 1];
+#endif
 
 #if defined MOD_ROLL_THE_DICE_REVAMPED
 static float m_flNextRollTime[MAXPLAYERS + 1];
@@ -156,7 +159,7 @@ public void OnPluginStart()
 #endif
 	
 #if defined MOD_ROLL_THE_DICE_REVAMPED
-	redbots_manager_bot_rtd_variance = CreateConVar("sm_redbots_manager_bot_rtd_variance", "30.0", _, FCVAR_NOTIFY);
+	redbots_manager_bot_rtd_variance = CreateConVar("sm_redbots_manager_bot_rtd_variance", "1.0", _, FCVAR_NOTIFY);
 #endif
 	
 	HookConVarChange(redbots_manager_mode, ConVarChanged_ManagerMode);
@@ -235,6 +238,10 @@ public void OnPluginStart()
 	m_adtBotNames = new ArrayList(MAX_NAME_LENGTH);
 	
 	InitNextBotPathing();
+	
+#if defined IDLEBOT_AIMING
+	InitTFBotAim();
+#endif
 }
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
@@ -265,11 +272,12 @@ public void OnClientPutInServer(int client)
 	g_bHasUpgraded[client] = false;
 	g_iAdditionalButtons[client] = 0;
 	g_iSubtractiveButtons[client] = 0;
-	// m_flNextSnipeFireTime[client] = 0.0;
 	g_flBlockInputTime[client] = 0.0;
 	m_flDeadRethinkTime[client] = 0.0;
 	g_iBuybackNumber[client] = 0;
 	g_iBuyUpgradesNumber[client] = 0;
+	
+	// m_flNextSnipeFireTime[client] = 0.0;
 	
 #if defined MOD_ROLL_THE_DICE_REVAMPED
 	m_flNextRollTime[client] = 0.0;
@@ -281,6 +289,10 @@ public void OnClientPutInServer(int client)
 	g_bHasBoughtUpgrades[client] = false;
 	
 	ResetNextBot(client);
+	
+#if defined IDLEBOT_AIMING
+	BotAim(client).Reset();
+#endif
 }
 
 public void OnEntityCreated(int entity, const char[] classname)
@@ -323,6 +335,23 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		
 #if defined EXTRA_PLUGINBOT
 		PluginBot_SimulateFrame(client);
+#endif
+		
+#if defined IDLEBOT_AIMING
+		if (m_ctReload[client] > GetGameTime())
+		{
+			buttons |= IN_RELOAD;
+		}
+		
+		if (m_ctFire[client] > GetGameTime())
+		{
+			buttons |= IN_ATTACK;
+		}
+		
+		if (m_ctAltFire[client] > GetGameTime())
+		{
+			buttons |= IN_ATTACK2;
+		}
 #endif
 		
 		if (GameRules_GetRoundState() != RoundState_BetweenRounds)
@@ -370,7 +399,14 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			if ((weaponID == TF_WEAPON_FLAMETHROWER || weaponID == TF_WEAPON_FLAME_BALL) && CanWeaponAirblast(myWeapon))
 				UtilizeCompressionBlast(client, myBot, threat, 1);
 			
-#if !defined IDLEBOT_AIMING
+#if defined IDLEBOT_AIMING
+			if (threat)
+			{
+				//TODO: disable on engineers for now until we make a proper better behavior
+				if (TF2_GetPlayerClass(client) != TFClass_Engineer)
+					BotAim(client).AimHeadTowardsEntity(threat.GetEntity(), CRITICAL, 0.1);
+			}
+#else
 			if (WeaponID_IsSniperRifle(weaponID))
 			{
 				if (TF2_IsPlayerInCondition(client, TFCond_Zoomed))
@@ -436,6 +472,11 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			}
 #endif
 		}
+		
+#if defined IDLEBOT_AIMING
+		BotAim(client).Upkeep();
+		BotAim(client).FireWeaponAtEnemy();
+#endif
 	}
 	else
 	{

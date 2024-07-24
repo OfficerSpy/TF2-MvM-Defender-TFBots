@@ -167,22 +167,16 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 	if (StrContains(clientName, TFBOT_IDENTITY_NAME) != -1)
 	{
 		g_bIsDefenderBot[data] = true;
-		
-		SetRandomNameOnBot(data);
-		
 		g_bHasBoughtUpgrades[data] = false;
-		
-		SDKHook(data, SDKHook_TouchPost, DefenderBot_TouchPost);
-		
-		DHooks_DefenderBot(data);
 		
 		if (redbots_manager_use_custom_loadouts.BoolValue)
 		{
-			//For some reason, custom weapons aren't given unless the player respawns again
+			//NOTE: for some reason, custom weapons aren't given unless the player respawns again
 			TF2_RespawnPlayer(data);
 		}
 		else
 		{
+			//Not using custom loadouts, so we will only ever be using a sniper rifle
 			//NOTE: custom loadouts runs it own check for the sniper's primary
 			if (TF2_GetPlayerClass(data) == TFClass_Sniper)
 				SetMission(data, CTFBot_MISSION_SNIPER);
@@ -195,6 +189,19 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 		//Set their credits manually to what they should have like human players
 		TF2_SetCurrency(data, GetStartingCurrency(g_iPopulationManager) + GetAcquiredCreditsOfAllWaves());
 		
+		//Set the bot's field-of-view to 90
+		//Its vision FOV will update in CTFBotMainAction::Update based on the property m_iFOV
+		SetFakeClientConVar(data, "fov_desired", "90");
+		
+		SDKHook(data, SDKHook_TouchPost, DefenderBot_TouchPost);
+		
+		DHooks_DefenderBot(data);
+		
+#if defined IDLEBOT_AIMING
+		//In this build we handle the bot's aiming manually, so don't have any of its nextbot aiming interfere with ours
+		VS_AddBotAttribute(data, CTFBot_IGNORE_ENEMIES);
+#endif
+		
 #if defined MOD_REQUEST_CREDITS
 		if (redbots_manager_bot_request_credits.BoolValue)
 			FakeClientCommand(data, "sm_requestcredits");
@@ -203,6 +210,8 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 #if defined MOD_CUSTOM_ATTRIBUTES
 		TF2Attrib_SetByName(data, "cannot be sapped", 1.0);
 #endif
+		
+		SetRandomNameOnBot(data);
 	}
 	
 	return Plugin_Stop;
