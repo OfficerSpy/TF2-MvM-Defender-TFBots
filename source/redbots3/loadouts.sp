@@ -73,9 +73,11 @@ public Action Command_BoughtUpgrades(int client, int args)
 	
 	int count;
 	Address attr;
+	
 	if (IsValidEntity(primaryWep))
 	{		
 		count = TF2Attrib_ListDefIndices(primaryWep, m_iAttribPrimary[client]); //Save attribute indexes
+		
 		if (count > 0)
 		{
 			for (int i = 0; i < count; i++)
@@ -89,6 +91,7 @@ public Action Command_BoughtUpgrades(int client, int args)
 	if (IsValidEntity(secondaryWep))
 	{		
 		count = TF2Attrib_ListDefIndices(secondaryWep, m_iAttribSecondary[client]);
+		
 		if (count > 0)
 		{
 			for (int i = 0; i < count; i++)
@@ -102,6 +105,7 @@ public Action Command_BoughtUpgrades(int client, int args)
 	if (IsValidEntity(meleeWep))
 	{		
 		count = TF2Attrib_ListDefIndices(meleeWep, m_iAttribMelee[client]);
+		
 		if (count > 0)
 		{
 			for (int i = 0; i < count; i++)

@@ -17,6 +17,8 @@
 //Raw value found in CBaseObject::FindBuildPointOnPlayer
 #define SAPPER_PLAYER_BUILD_ON_RANGE	160.0
 
+#define SNIPER_REACTION_TIME	0.5
+
 enum //medigun_resist_types_t
 {
 	MEDIGUN_BULLET_RESIST = 0,
@@ -697,12 +699,13 @@ bool CanWeaponAirblast(int weapon)
 	return TF2Attrib_HookValueInt(0, "airblast_disabled", weapon) == 0;
 }
 
-int FindBotNearestToMe(int client, const float max_distance, bool bGiantsOnly = false, bool bIgnoreUber = false)
+int FindEnemyNearestToMe(int client, const float max_distance, bool bGiantsOnly = false, bool bIgnoreUber = false, bool bStunnedOnly = false, TFClassType class = TFClass_Unknown)
 {
 	float origin[3]; origin = WorldSpaceCenter(client);
 	
 	float bestDistance = 999999.0;
 	int bestEntity = -1;
+	TFTeam enemyTeam = GetEnemyTeamOfPlayer(client);
 	
 	for (int i = 1; i <= MaxClients; i++)
 	{
@@ -715,7 +718,7 @@ int FindBotNearestToMe(int client, const float max_distance, bool bGiantsOnly = 
 		if (!IsPlayerAlive(i))
 			continue;
 		
-		if (TF2_GetClientTeam(i) != GetEnemyTeamOfPlayer(client))
+		if (TF2_GetClientTeam(i) != enemyTeam)
 			continue;
 		
 		if (IsSentryBusterRobot(i))
@@ -725,6 +728,12 @@ int FindBotNearestToMe(int client, const float max_distance, bool bGiantsOnly = 
 			continue;
 		
 		if (bIgnoreUber && TF2_IsInvulnerable(i))
+			continue;
+		
+		if (bStunnedOnly && !TF2_IsPlayerInCondition(i, TFCond_Dazed))
+			continue;
+		
+		if (class > TFClass_Unknown && TF2_GetPlayerClass(i) != class)
 			continue;
 		
 		if (TF2_IsStealthed(i) && TF2_GetPercentInvisible(i) >= 0.75)
@@ -744,12 +753,22 @@ int FindBotNearestToMe(int client, const float max_distance, bool bGiantsOnly = 
 
 int GetBestTargetForSpy(int client, const float max_distance)
 {
-	//Find the closest giant near us
-	int target = FindBotNearestToMe(client, max_distance, true, true);
+	int target = -1;
 	
-	//No giant, just target the one near us then
+	//Find the nearest enemy engineer
+	target = FindEnemyNearestToMe(client, max_distance, false, true, false, TFClass_Engineer);
+	
+	//Find the nearest stunned enemy
 	if (target == -1)
-		target = FindBotNearestToMe(client, max_distance, false, true);
+		target = FindEnemyNearestToMe(client, max_distance, true, true, true);
+	
+	//Find the nearest enemy giant
+	if (target == -1)
+		target = FindEnemyNearestToMe(client, max_distance, true, true);
+	
+	//Find the nearest enemy
+	if (target == -1)
+		target = FindEnemyNearestToMe(client, max_distance, false, true);
 	
 	//Target their healer first, if they have one
 	if (target != -1)
@@ -948,7 +967,7 @@ bool IsPlayerSappable(int client)
 	return true;
 }
 
-int GetNearestSappablePlayer(int client, const float max_distance, bool bGiantsOnly = false, float speedCheck = 0.0)
+int GetNearestSappablePlayer(int client, const float max_distance, bool bGiantsOnly = false, TFClassType class = TFClass_Unknown, float speedCheck = 0.0)
 {
 	float origin[3]; GetClientAbsOrigin(client, origin);
 	
@@ -976,6 +995,9 @@ int GetNearestSappablePlayer(int client, const float max_distance, bool bGiantsO
 		if (bGiantsOnly && !TF2_IsMiniBoss(i))
 			continue;
 		
+		if (class > TFClass_Unknown && TF2_GetPlayerClass(i) != class)
+			continue;
+		
 		//Not fast enough
 		if (speedCheck > 0.0 && GetEntPropFloat(i, Prop_Send, "m_flMaxspeed") < speedCheck)
 			continue;
@@ -995,7 +1017,7 @@ int GetNearestSappablePlayer(int client, const float max_distance, bool bGiantsO
 	return bestEntity;
 }
 
-int GetFarthestSappablePlayer(int client, const float max_distance, bool bGiantsOnly = false, float speedCheck = 0.0)
+int GetFarthestSappablePlayer(int client, const float max_distance, bool bGiantsOnly = false, TFClassType class = TFClass_Unknown, float speedCheck = 0.0)
 {
 	float origin[3]; GetClientAbsOrigin(client, origin);
 	
@@ -1021,6 +1043,9 @@ int GetFarthestSappablePlayer(int client, const float max_distance, bool bGiants
 			continue;
 		
 		if (bGiantsOnly && !TF2_IsMiniBoss(i))
+			continue;
+		
+		if (class > TFClass_Unknown && TF2_GetPlayerClass(i) != class)
 			continue;
 		
 		if (speedCheck > 0.0 && GetEntPropFloat(i, Prop_Send, "m_flMaxspeed") < speedCheck)
@@ -1155,6 +1180,98 @@ int GetDefendablePointTrigger(TFTeam team)
 	return -1;
 }
 
+int GetNearestSappablePlayerHealingSomeone(int client, const float max_distance, bool bGiantsOnly = false, TFClassType class = TFClass_Unknown, float speedCheck = 0.0)
+{
+	float origin[3]; GetClientAbsOrigin(client, origin);
+	
+	TFTeam enemyTeam = GetEnemyTeamOfPlayer(client);
+	float bestDistance = 999999.0;
+	int bestEntity = -1;
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		if (i == client)
+			continue;
+		
+		if (!IsClientInGame(i))
+			continue;
+		
+		if (!IsPlayerAlive(i))
+			continue;
+		
+		if (TF2_GetClientTeam(i) != enemyTeam)
+			continue;
+		
+		if (IsSentryBusterRobot(i))
+			continue;
+		
+		if (bGiantsOnly && !TF2_IsMiniBoss(i))
+			continue;
+		
+		if (class > TFClass_Unknown && TF2_GetPlayerClass(i) != class)
+			continue;
+		
+		if (speedCheck > 0.0 && GetEntPropFloat(i, Prop_Send, "m_flMaxspeed") < speedCheck)
+			continue;
+		
+		if (!IsPlayerHealingSomething(i))
+			continue;
+		
+		if (!IsPlayerSappable(i))
+			continue;
+		
+		float distance = GetVectorDistance(WorldSpaceCenter(i), origin);
+		
+		if (distance <= bestDistance && distance <= max_distance)
+		{
+			bestDistance = distance;
+			bestEntity = i;
+		}
+	}
+	
+	return bestEntity;
+}
+
+bool IsPlayerHealingSomething(int client)
+{
+	int weapon = BaseCombatCharacter_GetActiveWeapon(client);
+	
+	if (weapon == -1)
+		return false;
+	
+	return TF2Util_GetWeaponID(weapon) == TF_WEAPON_MEDIGUN && GetEntPropEnt(weapon, Prop_Send, "m_hHealingTarget") != -1;
+}
+
+int GetNearestCurrencyPack(int client, const float max_distance = 999999.0)
+{
+	float origin[3]; GetClientAbsOrigin(client, origin);
+	
+	float bestDistance = 999999.0;
+	int bestEnt = -1;
+	int ent = -1;
+	
+	while ((ent = FindEntityByClassname(ent, "item_currency*")) != -1)
+	{
+		//This pack has already been distributed to the team
+		if (GetEntProp(ent, Prop_Send, "m_bDistributed") == 1)
+			continue;
+		
+		//Wait for it to reach the ground the first
+		if (!(GetEntityFlags(ent) & FL_ONGROUND))
+			continue;
+		
+		float distance = GetVectorDistance(origin, GetAbsOrigin(ent));
+		
+		if (distance <= bestDistance && distance <= max_distance)
+		{
+			bestDistance = distance;
+			bestEnt = ent;
+		}
+	}
+	
+	return bestEnt;
+}
+
 stock bool DoesAnyPlayerUseThisName(const char[] name)
 {
 	char playerName[MAX_NAME_LENGTH];
@@ -1253,17 +1370,6 @@ stock void UseActionSlotItem(int client)
 stock void PlayerBuyback(int client)
 {
 	FakeClientCommand(client, "td_buyback");
-}
-
-stock int GetTeamHumanClientCount(int team)
-{
-	int count = 0;
-	
-	for (int i = 1; i <= MaxClients; i++)
-		if (IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == team)
-			count++;
-	
-	return count;
 }
 
 //From stocksoup/entity_tools.inc
@@ -1389,4 +1495,20 @@ stock float GetCurrentCharge(int iWeapon)
 	}
 	
 	return flCharge;
+}
+
+stock bool IsServerFull()
+{
+	return GetClientCount(false) >= MaxClients;
+}
+
+stock int GetTeamHumanClientCount(int team)
+{
+	int count = 0;
+	
+	for (int i = 1; i <= MaxClients; i++)
+		if (IsClientInGame(i) && !IsFakeClient(i) && GetClientTeam(i) == team)
+			count++;
+	
+	return count;
 }

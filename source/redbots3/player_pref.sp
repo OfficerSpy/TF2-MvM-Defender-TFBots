@@ -229,7 +229,7 @@ void SetRandomWeaponPreference(int client, char[] class, char[] slot)
 void AddBotsBasedOnPreferences(int amount)
 {
 	//Can't add any more if the server is full
-	if (GetClientCount(false) >= MaxClients)
+	if (IsServerFull())
 		return;
 	
 	PrintToChatAll("%s Adding %d bot(s)...", PLUGIN_PREFIX, amount);

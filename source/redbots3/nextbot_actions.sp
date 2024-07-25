@@ -190,33 +190,57 @@ public Action CTFBotMainAction_SelectMoreDangerousThreat(BehaviorAction action, 
 	if (g_bIsDefenderBot[me] == false)
 		return Plugin_Continue;
 	
+	int myWeapon = BaseCombatCharacter_GetActiveWeapon(me);
+	
+	if (myWeapon != -1 && (TF2Util_GetWeaponID(myWeapon) == TF_WEAPON_FLAMETHROWER || IsMeleeWeapon(myWeapon)))
+	{
+		//Always target the closest one to us with these weapons
+		knownEntity = SelectCloserThreat(nextbot, threat1, threat2);
+		return Plugin_Changed;
+	}
+	
+	CKnownEntity biggestThreat = NULL_KNOWN_ENTITY;
 	bool isImmediateThreat1 = IsImmediateThreat(me, threat1);
 	bool isImmediateThreat2 = IsImmediateThreat(me, threat2);
 	
 	if (isImmediateThreat1 && !isImmediateThreat2)
 	{
-		knownEntity = threat1;
-		return Plugin_Changed;
+		biggestThreat = threat1;
 	}
 	else if (!isImmediateThreat1 && isImmediateThreat2)
 	{
-		knownEntity = threat2;
+		biggestThreat = threat2;
+	}
+	
+	if (biggestThreat != NULL_KNOWN_ENTITY)
+	{
+		if (BaseEntity_IsPlayer(biggestThreat.GetEntity()))
+		{
+			//Target the healer
+			knownEntity = GetHealerOfThreat(nextbot, biggestThreat);
+		}
+		else
+		{
+			//Target the threat
+			knownEntity = biggestThreat;
+		}
+		
 		return Plugin_Changed;
 	}
 	
 	//Either both are immediately dangerous, or neither one of them are
 	
-	CKnownEntity closeThreat = SelectCloserThreat(nextbot, threat1, threat1);
+	biggestThreat = SelectCloserThreat(nextbot, threat1, threat1);
 	
-	if (BaseEntity_IsPlayer(closeThreat.GetEntity()))
+	if (BaseEntity_IsPlayer(biggestThreat.GetEntity()))
 	{
 		//For players, target their healer first if they have one
-		knownEntity = GetHealerOfThreat(nextbot, closeThreat);
+		knownEntity = GetHealerOfThreat(nextbot, biggestThreat);
 	}
 	else
 	{
 		//We target the closest threat to us
-		knownEntity = closeThreat;
+		knownEntity = biggestThreat;
 	}
 	
 	// PrintToChatAll("CTFBotMainAction_SelectMoreDangerousThreat");
@@ -517,7 +541,7 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 	if (CTFBotGuardPoint_IsPossible(actor))
 		return action.ChangeTo(CTFBotGuardPoint(), "Defending a point");
 	
-	if (GetTeleporterKillerCount() < 1 && CTFBotDestroyTeleporter_SelectTarget(actor))
+	if (CTFBotDestroyTeleporter_SelectTarget(actor))
 		return action.SuspendFor(CTFBotDestroyTeleporter(), "Get teleporter");
 	
 	if (!IsValidClientIndex(m_iAttackTarget[actor])
@@ -2934,7 +2958,7 @@ bool CTFBotMarkGiant_IsPossible(int actor)
 
 float GetTimeUntilRemoved(int powerup)
 {
-	return (GetNextThink(powerup, "PowerupRemoveThink") - GetGameTime());
+	return GetNextThink(powerup, "PowerupRemoveThink") - GetGameTime();
 }
 
 int SelectCurrencyPack(int actor)
@@ -2982,7 +3006,7 @@ bool IsValidCurrencyPack(int pack)
 bool CTFBotCollectMoney_IsPossible(int actor)
 {	
 	//Only one of us needs to really be doing this
-	if (GetMoneyCollectorCount() > 0)
+	if (GetCountOfBotsWithNamedAction("DefenderCollectMoney") > 0)
 		return false;
 	
 	if (!IsValidCurrencyPack(SelectCurrencyPack(actor)))
@@ -4015,7 +4039,7 @@ bool OpportunisticallyUseWeaponAbilities(int client, int activeWeapon, INextBot 
 	int weaponID = TF2Util_GetWeaponID(activeWeapon);
 	
 	//Hitmans Heatmaker
-	if (weaponID == TF_WEAPON_SNIPERRIFLE && TF2_IsPlayerInCondition(client, TFCond_Slowed))
+	if (weaponID == TF_WEAPON_SNIPERRIFLE && TF2_IsPlayerInCondition(client, TFCond_Slowed) && threat.IsVisibleRecently())
 	{
 		if (TF2_GetRageMeter(client) >= 0.0 && !TF2_IsRageDraining(client))
 		{
@@ -4137,6 +4161,14 @@ bool OpportunisticallyUsePowerupBottle(int client, int activeWeapon, INextBot bo
 		{
 			//TODO: medic can't share this, but he could use it for himself in an attempt to defend the hatch
 			if (TF2_GetPlayerClass(client) == TFClass_Medic)
+				return false;
+			
+			//TODO: engineer should probably only uses this if his sentry was destroyed
+			if (TF2_GetPlayerClass(client) == TFClass_Engineer)
+				return false;
+			
+			//We're busy going for the tank
+			if (ActionsManager.GetAction(client, "DefenderAttackTank") != INVALID_ACTION)
 				return false;
 			
 			float myPosition[3]; myPosition = WorldSpaceCenter(client);
@@ -4778,7 +4810,12 @@ bool CTFBotSpySapPlayers_SelectTarget(int actor)
 	if (!CanBuildSapper(actor))
 		return false;
 	
-	m_iPlayerSapTarget[actor] = GetNearestSappablePlayer(actor, 1000.0, true, 230.0);
+	//Get the nearest fast giant
+	m_iPlayerSapTarget[actor] = GetNearestSappablePlayer(actor, 1000.0, true, _, 230.0);
+	
+	//Get the nearest medic that is healing someone
+	if (m_iPlayerSapTarget[actor] == -1)
+		m_iPlayerSapTarget[actor] = GetNearestSappablePlayerHealingSomeone(actor, 1000.0, false, TFClass_Medic);
 	
 	if (m_iPlayerSapTarget[actor] == -1)
 	{
@@ -4786,7 +4823,7 @@ bool CTFBotSpySapPlayers_SelectTarget(int actor)
 		
 		if (secondary != -1 && TF2Util_GetWeaponID(secondary) == TF_WEAPON_BUILDER && TF2Attrib_GetByName(secondary, "robo sapper") != Address_Null)
 		{
-			const float groupRadius = 600.0;
+			const float groupRadius = 800.0;
 			
 			//If there's a group of enemies near us, let's put a sapper on one of them
 			if (GetNearestEnemyCount(actor, groupRadius) >= 4)
@@ -4858,18 +4895,18 @@ bool CTFBotCampBomb_IsPossible(int client)
 	}
 	
 	//There;s too many of us doing this behavior
-	if (GetBotBombCampCount() > 0)
+	if (GetCountOfBotsWithNamedAction("DefenderCampBomb") > 0)
 		return false;
 	
 	return true;
 }
 
-int GetBotBombCampCount()
+int GetCountOfBotsWithNamedAction(const char[] name)
 {
 	int count = 0;
 	
 	for (int i = 1; i <= MaxClients; i++)
-		if (IsClientInGame(i) && g_bIsDefenderBot[i] && ActionsManager.GetAction(i, "DefenderCampBomb") != INVALID_ACTION)
+		if (IsClientInGame(i) && g_bIsDefenderBot[i] && ActionsManager.GetAction(i, name) != INVALID_ACTION)
 			count++;
 	
 	return count;
@@ -5184,31 +5221,12 @@ bool IsFailureImminent(int client)
 
 bool CTFBotDestroyTeleporter_SelectTarget(int actor)
 {
+	if (GetCountOfBotsWithNamedAction("DefenderKillTeleporter") > 0)
+		return false;
+	
 	m_iTeleporterTarget[actor] = GetNearestEnemyTeleporter(actor, 5000.0);
 	
 	return m_iTeleporterTarget[actor] != -1;
-}
-
-int GetTeleporterKillerCount()
-{
-	int count = 0;
-	
-	for (int i = 1; i <= MaxClients; i++)
-		if (IsClientInGame(i) && g_bIsDefenderBot[i] && ActionsManager.GetAction(i, "DefenderKillTeleporter") != INVALID_ACTION)
-			count++;
-	
-	return count;
-}
-
-int GetPointGuardCount()
-{
-	int count = 0;
-	
-	for (int i = 1; i <= MaxClients; i++)
-		if (IsClientInGame(i) && g_bIsDefenderBot[i] && ActionsManager.GetAction(i, "DefenderGuardPoint") != INVALID_ACTION)
-			count++;
-	
-	return count;
 }
 
 bool CTFBotGuardPoint_IsPossible(int client)
@@ -5218,7 +5236,7 @@ bool CTFBotGuardPoint_IsPossible(int client)
 		return false;
 	
 	//One of us is already watching the point
-	if (GetPointGuardCount() > 0)
+	if (GetCountOfBotsWithNamedAction("DefenderGuardPoint") > 0)
 		return false;
 	
 	//Nothing to defend
@@ -5238,17 +5256,6 @@ void GetFlameThrowerAimForTank(int tank, float aimPos[3])
 {
 	aimPos = WorldSpaceCenter(tank);
 	aimPos[2] += 90.0;
-}
-
-int GetMoneyCollectorCount()
-{
-	int count = 0;
-	
-	for (int i = 1; i <= MaxClients; i++)
-		if (IsClientInGame(i) && g_bIsDefenderBot[i] && ActionsManager.GetAction(i, "DefenderCollectMoney") != INVALID_ACTION)
-			count++;
-	
-	return count;
 }
 
 bool IsImmediateThreat(int client, const CKnownEntity threat)

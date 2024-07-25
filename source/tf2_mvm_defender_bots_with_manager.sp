@@ -412,48 +412,55 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				if (TF2_IsPlayerInCondition(client, TFCond_Zoomed))
 				{
 					//TODO: this needs to be more precise with actually getting our current m_lookAtSubject in PlayerBody as this can cause jittery aim
-					if (threat && threat.IsVisibleInFOVNow())
+					if (threat && TF2_IsLineOfFireClear4(client, threat.GetEntity()))
 					{
-						int iThreat = threat.GetEntity();
-						
 						//Help aim towards the desired target point
-						float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
+						float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(threat.GetEntity(), aimPos);
 						SnapViewToPosition(client, aimPos);
 						
 						if (m_flNextSnipeFireTime[client] <= GetGameTime())
 							VS_PressFireButton(client);
 					}
+					else
+					{
+						//Delay to give a reaction time the next time we can see a threat
+						m_flNextSnipeFireTime[client] = GetGameTime() + SNIPER_REACTION_TIME;
+					}
 				}
 				else
 				{
-					//Delay before we fire again
-					m_flNextSnipeFireTime[client] = GetGameTime() + 0.5;
+					//Set a reaction time when we're not scoped in
+					m_flNextSnipeFireTime[client] = GetGameTime() + SNIPER_REACTION_TIME;
 				}
 			}
 			else
 			{
 				if (threat)
 				{
-					int iThreat = threat.GetEntity();
-					
-					if (!threat.IsVisibleInFOVNow() && TF2_IsLineOfFireClear4(client, iThreat))
+					//Exclude certain things for scenarios where aim shouldn't be altered
+					if (IsCombatWeapon(client, myWeapon) && weaponID != TF_WEAPON_KNIFE && TF2_GetPlayerClass(client) != TFClass_Engineer)
 					{
-						//We're not currently facing our threat, so let's quickly turn towards them
-						float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
-						SnapViewToPosition(client, aimPos);
-					}
-					else
-					{
-						/* NOTE: this used to be handled in CTFBotMainAction_SelectTargetPoint, but it seems that function doesn't always get called when the bot is up close to it
-						The bot will look up, but then start looking towards the center again and stop firing before going to look up and fire again
-						It then just repeats this process over and over unless it gets away from the tank */
-						if (weaponID == TF_WEAPON_FLAMETHROWER)
+						int iThreat = threat.GetEntity();
+						
+						if (!threat.IsVisibleInFOVNow() && TF2_IsLineOfFireClear4(client, iThreat))
 						{
-							if (IsBaseBoss(iThreat) && myBot.IsRangeLessThan(iThreat, FLAMETHROWER_REACH_RANGE))
+							//We're not currently facing our threat, so let's quickly turn towards them
+							float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
+							SnapViewToPosition(client, aimPos);
+						}
+						else
+						{
+							/* NOTE: this used to be handled in CTFBotMainAction_SelectTargetPoint, but it seems that function doesn't always get called when the bot is up close to it
+							The bot will look up, but then start looking towards the center again and stop firing before going to look up and fire again
+							It then just repeats this process over and over unless it gets away from the tank */
+							if (weaponID == TF_WEAPON_FLAMETHROWER)
 							{
-								float aimPos[3]; GetFlameThrowerAimForTank(iThreat, aimPos);
-								SnapViewToPosition(client, aimPos);
-								buttons |= IN_ATTACK;
+								if (IsBaseBoss(iThreat) && myBot.IsRangeLessThan(iThreat, FLAMETHROWER_REACH_RANGE))
+								{
+									float aimPos[3]; GetFlameThrowerAimForTank(iThreat, aimPos);
+									SnapViewToPosition(client, aimPos);
+									buttons |= IN_ATTACK;
+								}
 							}
 						}
 					}
@@ -529,7 +536,7 @@ public Action Command_Votebots(int client, int args)
 		return Plugin_Handled;
 	}
 	
-	if (GetClientCount(false) >= MaxClients)
+	if (IsServerFull())
 	{
 		PrintToChat(client, "%s Server is at max capacity.", PLUGIN_PREFIX);
 		return Plugin_Handled;
@@ -557,7 +564,7 @@ public Action Command_Votebots(int client, int args)
 	{
 		case TFTeam_Red:
 		{
-			if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < redbots_manager_defender_team_size.IntValue)
+			if (GetHumanAndDefenderBotCount(TFTeam_Red) < redbots_manager_defender_team_size.IntValue)
 			{
 				StartBotVote(client);
 				return Plugin_Handled;
@@ -626,7 +633,7 @@ public Action Command_JoinBluePlayWithBots(int client, int args)
 		return Plugin_Handled;
 	}
 	
-	if (GetTeamClientCount(view_as<int>(TFTeam_Red)) > 0)
+	if (GetHumanAndDefenderBotCount(TFTeam_Red) > 0)
 	{
 		PrintToChat(client, "%s You cannot use this with players on RED team.", PLUGIN_PREFIX);
 		return Plugin_Handled;
@@ -672,7 +679,7 @@ public Action Command_ViewBotUpgrades(int client, int args)
 {
 	if (args < 1)
 	{
-		ReplyToCommand(client, "[SM] Usage: sm_view_bot_upgrades <#userid|name>");
+		ReplyToCommand(client, "[SM] Usage: sm_view_bot_upgrades <#userid|name> <slot>");
 		return Plugin_Handled;
 	}
 	
@@ -696,8 +703,17 @@ public Action Command_ViewBotUpgrades(int client, int args)
 		return Plugin_Handled;
 	}
 	
+	int slot = -1;
+	
+	if (args >= 2)
+	{
+		char arg2[3]; GetCmdArg(2, arg2, sizeof(arg2));
+		
+		slot = StringToInt(arg2);
+	}
+	
 	for (int i = 0; i < target_count; i++)
-		ShowPlayerUpgrades(client, target_list[i]);
+		ShowPlayerUpgrades(client, target_list[i], slot);
 	
 	return Plugin_Handled;
 }
@@ -745,7 +761,7 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 						trueMinPlayers = minPlayers > defenderTeamSize ? defenderTeamSize : minPlayers;
 						
 						//Block ready status if we don't have enough players
-						if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
+						if (GetHumanAndDefenderBotCount(TFTeam_Red) < trueMinPlayers)
 						{
 							PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
 							return Plugin_Handled;
@@ -755,7 +771,7 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 					{
 						trueMinPlayers = minPlayers + 1 > defenderTeamSize ? defenderTeamSize : minPlayers + 1;
 						
-						if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
+						if (GetHumanAndDefenderBotCount(TFTeam_Red) < trueMinPlayers)
 						{
 							PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
 							return Plugin_Handled;
@@ -765,7 +781,7 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 					{
 						trueMinPlayers = minPlayers + 2 > defenderTeamSize ? defenderTeamSize : minPlayers + 2;
 						
-						if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
+						if (GetHumanAndDefenderBotCount(TFTeam_Red) < trueMinPlayers)
 						{
 							PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
 							return Plugin_Handled;
@@ -775,7 +791,7 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 					{
 						trueMinPlayers = minPlayers + 3 > defenderTeamSize ? defenderTeamSize : minPlayers + 3;
 						
-						if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
+						if (GetHumanAndDefenderBotCount(TFTeam_Red) < trueMinPlayers)
 						{
 							PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
 							return Plugin_Handled;
@@ -785,7 +801,7 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 					{
 						trueMinPlayers = minPlayers + 4 > defenderTeamSize ? defenderTeamSize : minPlayers + 4;
 						
-						if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < trueMinPlayers)
+						if (GetHumanAndDefenderBotCount(TFTeam_Red) < trueMinPlayers)
 						{
 							PrintToChat(client, "%s More players are required.", PLUGIN_PREFIX);
 							return Plugin_Handled;
@@ -878,9 +894,11 @@ public Action Timer_CheckBotImbalance(Handle timer)
 			if (GameRules_GetRoundState() != RoundState_BetweenRounds && GameRules_GetRoundState() != RoundState_RoundRunning)
 				return Plugin_Stop;
 			
-			if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < redbots_manager_defender_team_size.IntValue)
+			int defenderCount = GetHumanAndDefenderBotCount(TFTeam_Red);
+			
+			if (defenderCount < redbots_manager_defender_team_size.IntValue)
 			{
-				int amount = redbots_manager_defender_team_size.IntValue - GetTeamClientCount(view_as<int>(TFTeam_Red));
+				int amount = redbots_manager_defender_team_size.IntValue - defenderCount;
 				AddBotsBasedOnPreferences(amount);
 			}
 		}
@@ -890,9 +908,11 @@ public Action Timer_CheckBotImbalance(Handle timer)
 			if (GameRules_GetRoundState() != RoundState_RoundRunning)
 				return Plugin_Stop;
 			
-			if (GetTeamClientCount(view_as<int>(TFTeam_Red)) < redbots_manager_defender_team_size.IntValue)
+			int defenderCount = GetHumanAndDefenderBotCount(TFTeam_Red);
+			
+			if (defenderCount < redbots_manager_defender_team_size.IntValue)
 			{
-				int amount = redbots_manager_defender_team_size.IntValue - GetTeamClientCount(view_as<int>(TFTeam_Red));
+				int amount = redbots_manager_defender_team_size.IntValue - defenderCount;
 				AddBotsBasedOnPreferences(amount);
 			}
 		}
@@ -932,8 +952,120 @@ bool FakeClientCommandThrottled(int client, const char[] command)
 	return true;
 }
 
-//Used to check players last command input
-//Usually for preventing palyers from sending a command multiple times in a single frame
+void MakePlayerDance(int client)
+{
+	if (IsPlayerAlive(client))
+	{
+		//TODO: tauntem
+	}
+}
+
+void ShowPlayerUpgrades(int client, int target, int slot)
+{
+	Address pAttr;
+	float value;
+	int attribIndexes[MAX_RUNTIME_ATTRIBUTES];
+	
+	switch (slot)
+	{
+		case -1: //Player
+		{
+			PrintToChat(client, "UPGRADES FOR %N", target);
+			
+			int count = TF2Attrib_ListDefIndices(target, attribIndexes, sizeof(attribIndexes));
+			
+			for (int i = 0; i < count; i++)
+			{
+				pAttr = TF2Attrib_GetByDefIndex(target, attribIndexes[i]);
+				value = TF2Attrib_GetValue(pAttr);
+				
+				PrintToChat(client, "INDEX %d, VALUE %f", attribIndexes[i], value);
+			}
+		}
+		case 0: //Primary
+		{
+			int weapon = GetPlayerWeaponSlot(target, TFWeaponSlot_Primary);
+			
+			if (weapon == -1)
+			{
+				PrintToChat(client, "%N doesn't have a primary weapon.", target);
+				return;
+			}
+			
+			PrintToChat(client, "UPGRADES FOR %N's primary", target);
+			
+			int count = TF2Attrib_ListDefIndices(weapon, attribIndexes, sizeof(attribIndexes));
+			
+			for (int i = 0; i < count; i++)
+			{
+				pAttr = TF2Attrib_GetByDefIndex(weapon, attribIndexes[i]);
+				value = TF2Attrib_GetValue(pAttr);
+				
+				PrintToChat(client, "INDEX %d, VALUE %f", attribIndexes[i], value);
+			}
+		}
+		case 1: //Secondary
+		{
+			int weapon = GetPlayerWeaponSlot(target, TFWeaponSlot_Secondary);
+			
+			if (weapon == -1)
+			{
+				PrintToChat(client, "%N doesn't have a secondary weapon.", target);
+				return;
+			}
+			
+			PrintToChat(client, "UPGRADES FOR %N's secondary", target);
+			
+			int count = TF2Attrib_ListDefIndices(weapon, attribIndexes, sizeof(attribIndexes));
+			
+			for (int i = 0; i < count; i++)
+			{
+				pAttr = TF2Attrib_GetByDefIndex(weapon, attribIndexes[i]);
+				value = TF2Attrib_GetValue(pAttr);
+				
+				PrintToChat(client, "INDEX %d, VALUE %f", attribIndexes[i], value);
+			}
+		}
+		case 2: //Melee
+		{
+			int weapon = GetPlayerWeaponSlot(target, TFWeaponSlot_Melee);
+			
+			if (weapon == -1)
+			{
+				PrintToChat(client, "%N doesn't have a melee weapon.", target);
+				return;
+			}
+			
+			PrintToChat(client, "UPGRADES FOR %N's melee", target);
+			
+			int count = TF2Attrib_ListDefIndices(weapon, attribIndexes, MAX_RUNTIME_ATTRIBUTES);
+			
+			for (int i = 0; i < count; i++)
+			{
+				pAttr = TF2Attrib_GetByDefIndex(weapon, attribIndexes[i]);
+				value = TF2Attrib_GetValue(pAttr);
+				
+				PrintToChat(client, "INDEX %d, VALUE %f", attribIndexes[i], value);
+			}
+		}
+	}
+	
+	PrintToChat(client, "%N currently has %d credits.", target, TF2_GetCurrency(target));
+}
+
+int GetHumanAndDefenderBotCount(TFTeam team)
+{
+	int count = 0;
+	
+	for (int i = 1; i <= MaxClients; i++)
+		if (IsClientInGame(i) && (g_bIsDefenderBot[i] || !IsFakeClient(i)) && TF2_GetClientTeam(i) == team)
+			count++;
+	
+	return count;
+}
+
+/* Used to check players last command input
+Usually for preventing palyers from sending a command multiple times in a single frame */
 bool ShouldProcessCommand(int client)
 {
 	if (m_flLastCommandTime[client] > GetGameTime())
@@ -994,19 +1126,6 @@ void GetRandomDefenderBotName(char[] buffer, int maxlen)
 	char botName[MAX_NAME_LENGTH]; m_adtBotNames.GetString(GetRandomInt(0, m_adtBotNames.Length - 1), botName, sizeof(botName));
 	
 	strcopy(buffer, maxlen, botName);
-}
-
-void MakePlayerDance(int client)
-{
-	if (IsPlayerAlive(client))
-	{
-		//TODO: tauntem
-	}
-}
-
-void ShowPlayerUpgrades(int client, int target)
-{
-	//TODO: show all the bot's upgrades with a menu
 }
 
 void ManageDefenderBots(bool bManage, bool bAddBots = true)
@@ -1077,7 +1196,7 @@ void UpdateChosenBotTeamComposition()
 {
 	g_adtChosenBotClasses.Clear();
 	
-	int newBotsToAdd = redbots_manager_defender_team_size.IntValue - GetTeamClientCount(view_as<int>(TFTeam_Red));
+	int newBotsToAdd = redbots_manager_defender_team_size.IntValue - GetHumanAndDefenderBotCount(TFTeam_Red);
 	
 	if (newBotsToAdd < 1)
 		return;
