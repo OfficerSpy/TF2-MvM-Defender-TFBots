@@ -159,7 +159,7 @@ public void OnPluginStart()
 #endif
 	
 #if defined MOD_ROLL_THE_DICE_REVAMPED
-	redbots_manager_bot_rtd_variance = CreateConVar("sm_redbots_manager_bot_rtd_variance", "1.0", _, FCVAR_NOTIFY);
+	redbots_manager_bot_rtd_variance = CreateConVar("sm_redbots_manager_bot_rtd_variance", "15.0", _, FCVAR_NOTIFY);
 #endif
 	
 	HookConVarChange(redbots_manager_mode, ConVarChanged_ManagerMode);
@@ -1135,7 +1135,7 @@ void ManageDefenderBots(bool bManage, bool bAddBots = true)
 		if (bAddBots)
 			AddBotsFromChosenTeamComposition();
 		
-		CreateTimer(0.1, Timer_CheckBotImbalance, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
+		CreateTimer(0.2, Timer_CheckBotImbalance, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
 		g_bBotsEnabled = true;
 		
 		PrintToChatAll("%s Bots have been enabled.", PLUGIN_PREFIX);
@@ -1238,6 +1238,8 @@ void AddBotsFromChosenTeamComposition()
 		g_adtChosenBotClasses.GetString(i, class, sizeof(class));
 		AddDefenderTFBot(1, class, "red", "expert");
 	}
+	
+	PrintToChatAll("%s Added %d bot(s).", PLUGIN_PREFIX, g_adtChosenBotClasses.Length);
 }
 
 eMissionDifficulty GetMissionDifficulty()

@@ -33,7 +33,7 @@ static void Event_MvmWaveFailed(Event event, const char[] name, bool dontBroadca
 	{
 		RemoveAllDefenderBots("BotManager3: Wave failed!");
 		ManageDefenderBots(false);
-		UpdateChosenBotTeamComposition();
+		CreateTimer(0.1, Timer_UpdateChosenBotTeamComposition, _, TIMER_FLAG_NO_MAPCHANGE);
 		PrintToChatAll("%s Use command !viewbotlineup to view the next bot team composition", PLUGIN_PREFIX);
 	}
 	
@@ -54,7 +54,7 @@ static void Event_MvmWaveComplete(Event event, const char[] name, bool dontBroad
 	{
 		RemoveAllDefenderBots("BotManager3: Wave complete!", IsFinalWave());
 		ManageDefenderBots(false);
-		UpdateChosenBotTeamComposition();
+		CreateTimer(0.1, Timer_UpdateChosenBotTeamComposition, _, TIMER_FLAG_NO_MAPCHANGE);
 		PrintToChatAll("%s Use command !viewbotlineup to view the next bot team composition", PLUGIN_PREFIX);
 	}
 	
@@ -114,7 +114,7 @@ static void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		- player joined red
 		- player left red */
 		if ((isDisconnect && oldTeam == TFTeam_Red) || team == TFTeam_Red || oldTeam == TFTeam_Red)
-			UpdateChosenBotTeamComposition();
+			CreateTimer(0.1, Timer_UpdateChosenBotTeamComposition, _, TIMER_FLAG_NO_MAPCHANGE);
 	}
 }
 
@@ -238,6 +238,13 @@ static Action Timer_WaveFailure(Handle timer)
 			}
 		}
 	}
+	
+	return Plugin_Stop;
+}
+
+static Action Timer_UpdateChosenBotTeamComposition(Handle timer)
+{
+	UpdateChosenBotTeamComposition();
 	
 	return Plugin_Stop;
 }

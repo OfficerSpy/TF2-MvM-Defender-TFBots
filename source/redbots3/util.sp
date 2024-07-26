@@ -88,11 +88,11 @@ char g_sPlayerUseMyNameResponse[][] =
 char g_sMissionDifficultyFilePaths[][] =
 {
 	"",
-	"configs/defender_bots_manager/mission_normal.txt",
-	"configs/defender_bots_manager/mission_intermediate.txt",
-	"configs/defender_bots_manager/mission_advanced.txt",
-	"configs/defender_bots_manager/mission_expert.txt",
-	"configs/defender_bots_manager/mission_nightmare.txt"
+	"configs/defender_bots_manager/mission/mission_normal.txt",
+	"configs/defender_bots_manager/mission/mission_intermediate.txt",
+	"configs/defender_bots_manager/mission/mission_advanced.txt",
+	"configs/defender_bots_manager/mission/mission_expert.txt",
+	"configs/defender_bots_manager/mission/mission_nightmare.txt"
 };
 
 char g_sBotTeamCompositions[][][] =
@@ -518,7 +518,7 @@ bool IsHealedByMedic(int client)
 {
 	for (int i = 0; i < TF2_GetNumHealers(client); i++)
 	{
-		int iHealerIndex = TF2_GetHealerByIndex(client, i);
+		int iHealerIndex = TF2Util_GetPlayerHealer(client, i);
 		
 		//Not a player.
 		if (!IsValidClientIndex(iHealerIndex))
@@ -760,7 +760,7 @@ int GetBestTargetForSpy(int client, const float max_distance)
 	
 	//Find the nearest stunned enemy
 	if (target == -1)
-		target = FindEnemyNearestToMe(client, max_distance, true, true, true);
+		target = FindEnemyNearestToMe(client, max_distance, false, true, true);
 	
 	//Find the nearest enemy giant
 	if (target == -1)
@@ -777,7 +777,7 @@ int GetBestTargetForSpy(int client, const float max_distance)
 		
 		for (int i = 0; i < TF2_GetNumHealers(target); i++)
 		{
-			int healer = TF2_GetHealerByIndex(target, i);
+			int healer = TF2Util_GetPlayerHealer(target, i);
 			
 			if (healer != -1 && BaseEntity_IsPlayer(healer) && GetClientTeam(healer) != myTeam)
 			{

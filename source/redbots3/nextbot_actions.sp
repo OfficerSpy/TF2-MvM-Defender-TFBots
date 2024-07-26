@@ -780,6 +780,7 @@ BehaviorAction CTFBotGotoUpgrade()
 	action.OnStart = CTFBotGotoUpgrade_OnStart;
 	action.Update = CTFBotGotoUpgrade_Update;
 	action.OnEnd = CTFBotGotoUpgrade_OnEnd;
+	action.OnNavAreaChanged = CTFBotGotoUpgrade_OnNavAreaChanged;
 	
 	return action;
 }
@@ -859,6 +860,20 @@ public Action CTFBotGotoUpgrade_Update(BehaviorAction action, int actor, float i
 public void CTFBotGotoUpgrade_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
 	m_iStation[actor] = -1;
+}
+
+public Action CTFBotGotoUpgrade_OnNavAreaChanged(BehaviorAction action, int actor, CTFNavArea newArea, CTFNavArea oldArea, ActionDesiredResult result)
+{
+	//If we are for some reason not in our spawn room during an active game, just bail out
+	if (newArea && GameRules_GetRoundState() == RoundState_RoundRunning)
+	{
+		TFNavAttributeType spawnRoomFlag = TF2_GetClientTeam(actor) == TFTeam_Red ? RED_SPAWN_ROOM : BLUE_SPAWN_ROOM;
+		
+		if (!newArea.HasAttributeTF(spawnRoomFlag))
+			return action.TryDone(RESULT_IMPORTANT, "I am not in a spawn room");
+	}
+	
+	return action.TryContinue();
 }
 
 BehaviorAction CTFBotUpgrade()
@@ -4724,7 +4739,7 @@ CKnownEntity GetHealerOfThreat(INextBot bot, const CKnownEntity threat)
 	
 	for (int i = 0; i < TF2_GetNumHealers(threatEnt); i++)
 	{
-		int healer = TF2_GetHealerByIndex(threatEnt, i);
+		int healer = TF2Util_GetPlayerHealer(threatEnt, i);
 		
 		if (healer != -1 && BaseEntity_IsPlayer(healer))
 		{
