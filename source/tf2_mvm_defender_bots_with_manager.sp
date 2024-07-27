@@ -128,7 +128,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.3.2",
+	version = "1.3.3",
 	url = ""
 };
 
@@ -1135,7 +1135,7 @@ void ManageDefenderBots(bool bManage, bool bAddBots = true)
 		if (bAddBots)
 			AddBotsFromChosenTeamComposition();
 		
-		CreateTimer(0.2, Timer_CheckBotImbalance, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
+		CreateTimer(1.0, Timer_CheckBotImbalance, _, TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
 		g_bBotsEnabled = true;
 		
 		PrintToChatAll("%s Bots have been enabled.", PLUGIN_PREFIX);
