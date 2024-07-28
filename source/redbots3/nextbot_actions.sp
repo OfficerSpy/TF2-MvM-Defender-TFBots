@@ -2000,7 +2000,7 @@ public Action CTFBotSpySap_OnStart(BehaviorAction action, int actor, BehaviorAct
 
 public Action CTFBotSpySap_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
-	if (!IsValidEntity(m_iSapTarget[actor]) || TF2_HasSapper(m_iSapTarget[actor]))
+	if (!IsValidEntity(m_iSapTarget[actor]) || !BaseEntity_IsBaseObject(m_iSapTarget[actor]) || TF2_HasSapper(m_iSapTarget[actor]))
 		if (!CTFBotSpySap_SelectTarget(actor))
 			return action.Done("No sap target");
 	
@@ -2545,7 +2545,7 @@ public Action CTFBotDestroyTeleporter_OnStart(BehaviorAction action, int actor, 
 
 public Action CTFBotDestroyTeleporter_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
-	if (!IsValidEntity(m_iTeleporterTarget[actor]) || TF2_HasSapper(m_iTeleporterTarget[actor]))
+	if (!IsValidEntity(m_iTeleporterTarget[actor]) || !BaseEntity_IsBaseObject(m_iTeleporterTarget[actor]) || TF2_HasSapper(m_iTeleporterTarget[actor]))
 		return action.Done("No teleporter");
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
