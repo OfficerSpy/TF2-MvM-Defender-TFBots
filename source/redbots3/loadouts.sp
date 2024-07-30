@@ -370,7 +370,7 @@ void ReapplyItemUpgrades(int client, int primary, int secondary, int melee)
 }
 
 //Return weapon def index
-int GetRandomWeaponForClass(char[] class, char[] slot)
+int GetRandomWeaponForClass(const char[] class, const char[] slot)
 {
 	if (StrEqual(class, "scout", false))
 	{

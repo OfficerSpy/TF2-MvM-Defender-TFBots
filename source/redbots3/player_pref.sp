@@ -17,9 +17,14 @@ enum
 char g_sPlayerPrefPath[PLATFORM_MAX_PATH];
 static KeyValues m_kvPlayerPrefData;
 
-public Action Timer_SavePrefData(Handle timer)
+static Action Timer_SavePrefData(Handle timer)
 {
-	m_kvPlayerPrefData.ExportToFile(g_sPlayerPrefPath);
+	if (!m_kvPlayerPrefData.ExportToFile(g_sPlayerPrefPath))
+	{
+		LogError("Timer_SavePrefData: Failed to save player preference data!");
+		PrintToChatAll("%s ERROR: Player preference data failed to save!", PLUGIN_PREFIX);
+		return Plugin_Continue;
+	}
 	
 	if (redbots_manager_debug.BoolValue)
 		PrintToServer("%s Saved player preference data.", PLUGIN_PREFIX);
@@ -37,7 +42,7 @@ void LoadPreferencesData()
 
 int GetClassPreferencesFlags(int client)
 {
-	char steamID[32]; GetClientAuthId(client, AuthId_Steam3, steamID, sizeof(steamID));
+	char steamID[MAX_AUTHID_LENGTH]; GetClientAuthId(client, AuthId_Steam3, steamID, sizeof(steamID));
 	int flags = PREF_FL_NONE;
 	
 	m_kvPlayerPrefData.JumpToKey(steamID, true);
@@ -75,9 +80,9 @@ int GetClassPreferencesFlags(int client)
 	return flags;
 }
 
-void SetClassPreferences(int client, char[] class, int value)
+void SetClassPreferences(int client, const char[] class, int value)
 {
-	char steamID[32]; GetClientAuthId(client, AuthId_Steam3, steamID, sizeof(steamID));
+	char steamID[MAX_AUTHID_LENGTH]; GetClientAuthId(client, AuthId_Steam3, steamID, sizeof(steamID));
 	
 	m_kvPlayerPrefData.JumpToKey(steamID, true);
 	m_kvPlayerPrefData.JumpToKey("class", true);
@@ -86,9 +91,9 @@ void SetClassPreferences(int client, char[] class, int value)
 }
 
 //Return weapon def index
-int GetWeaponPreference(int client, char[] class, char[] slot)
+int GetWeaponPreference(int client, const char[] class, const char[] slot)
 {
-	char steamID[32]; GetClientAuthId(client, AuthId_Steam3, steamID, sizeof(steamID));
+	char steamID[MAX_AUTHID_LENGTH]; GetClientAuthId(client, AuthId_Steam3, steamID, sizeof(steamID));
 	int weaponIndex;
 	
 	m_kvPlayerPrefData.JumpToKey(steamID, true);
@@ -101,13 +106,13 @@ int GetWeaponPreference(int client, char[] class, char[] slot)
 }
 
 //Return weapon def index
-int GetPreferredWeaponForClass(char[] class, char[] slot)
+int GetPreferredWeaponForClass(const char[] class, const char[] slot)
 {
 	ArrayList adtWeaponPref = new ArrayList();
 	
 	for (int i = 1; i <= MaxClients; i++)
 	{
-		if (IsClientInGame(i) && !IsFakeClient(i) && TF2_GetClientTeam(i) == TFTeam_Red)
+		if (IsClientInGame(i) && IsValidForBotPreferences(i))
 		{
 			int prefWeapon = GetWeaponPreference(i, class, slot);
 			
@@ -118,14 +123,21 @@ int GetPreferredWeaponForClass(char[] class, char[] slot)
 	
 	//No preferences found, probably no human red players
 	if (adtWeaponPref.Length < 1)
+	{
+		delete adtWeaponPref;
 		return GetRandomWeaponForClass(class, slot);
+	}
 	
-	return adtWeaponPref.Get(GetRandomInt(0, adtWeaponPref.Length - 1));
+	int itemDefIndex = adtWeaponPref.Get(GetRandomInt(0, adtWeaponPref.Length - 1));
+	
+	delete adtWeaponPref;
+	
+	return itemDefIndex;
 }
 
-void SetWeaponPreference(int client, char[] class, char[] slot, int value)
+void SetWeaponPreference(int client, const char[] class, const char[] slot, int value)
 {
-	char steamID[32]; GetClientAuthId(client, AuthId_Steam3, steamID, sizeof(steamID));
+	char steamID[MAX_AUTHID_LENGTH]; GetClientAuthId(client, AuthId_Steam3, steamID, sizeof(steamID));
 	
 	m_kvPlayerPrefData.JumpToKey(steamID, true);
 	m_kvPlayerPrefData.JumpToKey("loadout", true);
@@ -134,7 +146,7 @@ void SetWeaponPreference(int client, char[] class, char[] slot, int value)
 	m_kvPlayerPrefData.Rewind();
 }
 
-void SetRandomWeaponPreference(int client, char[] class, char[] slot)
+void SetRandomWeaponPreference(int client, const char[] class, const char[] slot)
 {
 	if (StrEqual(class, "scout", false))
 	{
