@@ -4,6 +4,8 @@ static DynamicHook m_hEventKilled;
 static DynamicHook m_hIsVisibleEntityNoticed;
 static DynamicHook m_hIsIgnored;
 
+bool g_bSpyKilled;
+
 static bool m_bTouchCredits;
 static bool m_bPlayerKilled;
 static bool m_bEngineerKilled;
@@ -199,11 +201,15 @@ static MRESReturn DHookCallback_EventKilled_Pre(int pThis, DHookParam hParams)
 		
 		if (TF2_GetPlayerClass(pThis) == TFClass_Engineer)
 		{
-			//CTFBot::Event_Killed pretty much disbands the buildings from the engineer bot when it dies in mvm mode
-			//Change to another class besides engineer before this death occurs
-			//NOTE: this will mess with achievement data for class-specific requirements, but this shouldn't matter in mvm
+			/* CTFBot::Event_Killed pretty much disbands the buildings from the engineer bot when it dies in mvm mode
+			Change to another class besides engineer before this death occurs
+			NOTE: this will mess with achievement data for class-specific requirements, but this shouldn't matter in mvm */
 			TF2_SetPlayerClass(pThis, TFClass_Soldier, _, false);
 			m_bEngineerKilled = true;
+		}
+		else if (TF2_GetPlayerClass(pThis) == TFClass_Spy)
+		{
+			g_bSpyKilled = true;
 		}
 	}
 	
@@ -221,6 +227,9 @@ static MRESReturn DHookCallback_EventKilled_Post(int pThis, DHookParam hParams)
 			TF2_SetPlayerClass(pThis, TFClass_Engineer, _, false);
 			m_bEngineerKilled = false;
 		}
+		
+		if (g_bSpyKilled)
+			g_bSpyKilled = false;
 	}
 	
 	return MRES_Ignored;

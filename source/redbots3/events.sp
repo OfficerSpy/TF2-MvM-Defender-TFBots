@@ -8,6 +8,7 @@ void InitGameEventHooks()
 	HookEvent("player_team", Event_PlayerTeam);
 	HookEvent("player_used_powerup_bottle", Event_PlayerUsedPowerupBottle);
 	HookEvent("post_inventory_application", Event_PostInventoryApplication);
+	HookEvent("mvm_mission_update", Event_MvmMissionUpdate, EventHookMode_Pre);
 }
 
 static void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
@@ -139,6 +140,13 @@ static void Event_PostInventoryApplication(Event event, const char[] name, bool 
 	
 	if (g_bIsDefenderBot[client])
 		SetSapperCooldown(client, 0.0);
+}
+
+static void Event_MvmMissionUpdate(Event event, const char[] name, bool dontBroadcast)
+{
+	//TFBot spies fire this event on death, so block it when a defender bot dies
+	if (g_bSpyKilled)
+		event.BroadcastDisabled = true;
 }
 
 static Action Timer_PlayerSpawn(Handle timer, any data)
