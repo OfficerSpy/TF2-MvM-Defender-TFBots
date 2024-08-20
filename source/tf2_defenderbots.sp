@@ -90,6 +90,7 @@ ConVar redbots_manager_bot_upgrade_interval;
 ConVar redbots_manager_bot_use_upgrades;
 ConVar redbots_manager_bot_buyback_chance;
 ConVar redbots_manager_bot_buy_upgrades_chance;
+ConVar redbots_manager_extra_bots;
 
 #if defined MOD_REQUEST_CREDITS
 ConVar redbots_manager_bot_request_credits;
@@ -128,7 +129,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.3.5",
+	version = "1.3.6",
 	url = ""
 };
 
@@ -153,6 +154,7 @@ public void OnPluginStart()
 	redbots_manager_bot_use_upgrades = CreateConVar("sm_redbots_manager_bot_use_upgrades", "1", "Enable bots to buy upgrades.", FCVAR_NOTIFY);
 	redbots_manager_bot_buyback_chance = CreateConVar("sm_redbots_manager_bot_buyback_chance", "5", "Chance for bots to buyback into the game.", FCVAR_NOTIFY);
 	redbots_manager_bot_buy_upgrades_chance = CreateConVar("sm_redbots_manager_bot_buy_upgrades_chance", "50", "Chance for bots to buy upgrades in the middle of a game.", FCVAR_NOTIFY);
+	redbots_manager_extra_bots = CreateConVar("sm_redbots_manager_extra_bots", "1", "How many more bots we are allowed to request beyond the team size", FCVAR_NOTIFY);
 	
 #if defined MOD_REQUEST_CREDITS
 	redbots_manager_bot_request_credits = CreateConVar("sm_redbots_manager_bot_request_credits", "1", _, FCVAR_NOTIFY);
@@ -174,7 +176,9 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_botlineup", Command_ShowNewBotTeamComposition);
 	RegConsoleCmd("sm_rerollbotclasses", Command_RerollNewBotTeamComposition);
 	RegConsoleCmd("sm_rerollbots", Command_RerollNewBotTeamComposition);
+	RegConsoleCmd("sm_rollbots", Command_RerollNewBotTeamComposition);
 	RegConsoleCmd("sm_playwithbots", Command_JoinBluePlayWithBots);
+	RegConsoleCmd("sm_requestbot", Command_RequestExtraBot);
 	
 #if defined TESTING_ONLY
 	RegConsoleCmd("sm_bots_start_now", Command_BotsReadyNow);
@@ -642,6 +646,40 @@ public Action Command_JoinBluePlayWithBots(int client, int args)
 	AddRandomDefenderBots(redbots_manager_defender_team_size.IntValue); //TODO: replace me with a smarter team comp
 	g_bBotsEnabled = true;
 	PrintToChatAll("%s You will play a game with bots.", PLUGIN_PREFIX);
+	
+	return Plugin_Handled;
+}
+
+public Action Command_RequestExtraBot(int client, int args)
+{
+	if (!g_bBotsEnabled)
+	{
+		PrintToChat(client, "%s Bots aren't enabled.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	if (TF2_GetClientTeam(client) != TFTeam_Red)
+	{
+		PrintToChat(client, "%s Your team is not allowed to use this.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	if (IsServerFull())
+	{
+		PrintToChat(client, "%s It is currently not possible to add any more.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	int defenderLimit = redbots_manager_defender_team_size.IntValue + redbots_manager_extra_bots.IntValue;
+	
+	if (GetHumanAndDefenderBotCount(TFTeam_Red) >= defenderLimit)
+	{
+		PrintToChat(client, "%s You already have an additional unit.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	AddBotsBasedOnPreferences(1);
+	PrintToChatAll("%s %N requested an additional unit.", PLUGIN_PREFIX, client);
 	
 	return Plugin_Handled;
 }
