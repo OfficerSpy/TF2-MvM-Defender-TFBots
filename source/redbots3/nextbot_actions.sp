@@ -389,7 +389,7 @@ public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, flo
 	{
 		bool low_health = false;
 		
-		float health_ratio = float(GetClientHealth(actor)) / float(TF2Util_GetEntityMaxHealth(actor));
+		float health_ratio = float(GetClientHealth(actor)) / float(BaseEntity_GetMaxHealth(actor));
 		
 		if ((GetTimeSinceWeaponFired(actor) > 2.0 || TF2_GetPlayerClass(actor) == TFClass_Sniper) && health_ratio < tf_bot_health_critical_ratio.FloatValue)
 			low_health = true;
@@ -1310,7 +1310,7 @@ public Action CTFBotGetHealth_OnStart(BehaviorAction action, int actor, Behavior
 	pb_bPath[actor] = false;
 #endif
 	
-	float health_ratio = float(GetClientHealth(actor)) / float(TF2Util_GetEntityMaxHealth(actor));
+	float health_ratio = float(GetClientHealth(actor)) / float(BaseEntity_GetMaxHealth(actor));
 	float ratio = ClampFloat((health_ratio - tf_bot_health_critical_ratio.FloatValue) / (tf_bot_health_ok_ratio.FloatValue - tf_bot_health_critical_ratio.FloatValue), 0.0, 1.0);
 	
 	//	if (TF2_IsPlayerInCondition(actor, TFCond_OnFire))
@@ -1376,7 +1376,7 @@ public Action CTFBotGetHealth_Update(BehaviorAction action, int actor, float int
 	if (IsHealedByMedic(actor))
 		return action.Done("A medic heals me");
 	
-	if (GetClientHealth(actor) >= TF2Util_GetEntityMaxHealth(actor))
+	if (GetClientHealth(actor) >= BaseEntity_GetMaxHealth(actor))
 		return action.Done("I am healed");
 	
 	if (TF2_IsCarryingObject(actor))
@@ -3796,7 +3796,7 @@ bool CTFBotGetHealth_IsPossible(int actor)
 	if (IsHealedByMedic(actor) || TF2_IsInvulnerable(actor))
 		return false;
 	
-	float health_ratio = float(GetClientHealth(actor)) / float(TF2Util_GetEntityMaxHealth(actor));
+	float health_ratio = float(GetClientHealth(actor)) / float(BaseEntity_GetMaxHealth(actor));
 	float ratio = ClampFloat((health_ratio - tf_bot_health_critical_ratio.FloatValue) / (tf_bot_health_ok_ratio.FloatValue - tf_bot_health_critical_ratio.FloatValue), 0.0, 1.0);
 	
 //	if (TF2_IsPlayerInCondition(actor, TFCond_OnFire))
@@ -4154,7 +4154,7 @@ bool OpportunisticallyUsePowerupBottle(int client, int activeWeapon, INextBot bo
 			if (!threat || !threat.IsVisibleRecently())
 				return false;
 			
-			float healthRatio = float(GetClientHealth(client)) / float(TF2Util_GetEntityMaxHealth(client));
+			float healthRatio = float(GetClientHealth(client)) / float(BaseEntity_GetMaxHealth(client));
 			
 			if (healthRatio < tf_bot_health_critical_ratio.FloatValue)
 			{
