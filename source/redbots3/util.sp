@@ -1397,7 +1397,7 @@ stock bool CanBeReflected(int projectile)
 	|| StrEqual(classname, "tf_projectile_energy_ball", false)
 	|| StrEqual(classname, "tf_projectile_flare", false)
 	|| StrEqual(classname, "tf_projectile_healing_bolt", false)
-	|| StrEqual(classname, "tf_projectile_jar", false)
+	|| StrContains(classname, "tf_projectile_jar", false) != -1
 	|| StrEqual(classname, "tf_projectile_pipe", false)
 	|| StrEqual(classname, "tf_projectile_rocket", false)
 	|| StrEqual(classname, "tf_projectile_sentryrocket", false)
