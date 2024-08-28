@@ -1841,10 +1841,9 @@ public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 		SubtractVectors(toPlayerThreat, myOrigin, toPlayerThreat);
 		
 		float threatRange = NormalizeVector(toPlayerThreat, toPlayerThreat);
-		
 		const float behindTolerance = 0.0;
-		
 		bool isBehindVictim = GetVectorDotProduct(playerThreatForward, toPlayerThreat) > behindTolerance;
+		bool isMovingTowardsVictim = true;
 		
 		if (TF2_IsLineOfFireClear4(actor, target))
 		{
@@ -1864,6 +1863,10 @@ public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 						g_iAdditionalButtons[actor] |= IN_MOVERIGHT;
 					else
 						g_iAdditionalButtons[actor] |= IN_MOVELEFT;
+					
+					//Don't bump into them unless we're going for the stab
+					if (threatRange < 100.0)
+						isMovingTowardsVictim = false;
 				}
 			}
 			
@@ -1883,7 +1886,8 @@ public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 			}
 		}
 		
-		m_pChasePath[actor].Update(myBot, target);
+		if (isMovingTowardsVictim)
+			m_pChasePath[actor].Update(myBot, target);
 	}
 	else
 	{

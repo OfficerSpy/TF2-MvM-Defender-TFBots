@@ -129,7 +129,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.3.7",
+	version = "1.3.8",
 	url = ""
 };
 
@@ -248,6 +248,11 @@ public void OnPluginStart()
 #endif
 }
 
+public void OnPluginEnd()
+{
+	RemoveAllDefenderBots("BM3 OnPluginEnd");
+}
+
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	g_bLateLoad = late;
@@ -263,6 +268,22 @@ public void OnMapStart()
 	Config_LoadBotNames();
 	CreateBotPreferenceMenu();
 }
+
+public void OnConfigsExecuted()
+{
+	tf_bot_path_lookahead_range = FindConVar("tf_bot_path_lookahead_range");
+	tf_bot_health_critical_ratio = FindConVar("tf_bot_health_critical_ratio");
+	tf_bot_health_ok_ratio = FindConVar("tf_bot_health_ok_ratio");
+	tf_bot_ammo_search_range = FindConVar("tf_bot_ammo_search_range");
+	tf_bot_health_search_far_range = FindConVar("tf_bot_health_search_far_range");
+	tf_bot_health_search_near_range = FindConVar("tf_bot_health_search_near_range");
+	tf_bot_suicide_bomb_range = FindConVar("tf_bot_suicide_bomb_range");
+}
+
+/* public void OnMapEnd()
+{
+	RemoveAllDefenderBots("BM3 OnMapEnd");
+} */
 
 public void OnClientDisconnect(int client)
 {
@@ -307,17 +328,6 @@ public void OnEntityCreated(int entity, const char[] classname)
 	DHooks_OnEntityCreated(entity, classname);
 }
 
-public void OnConfigsExecuted()
-{
-	tf_bot_path_lookahead_range = FindConVar("tf_bot_path_lookahead_range");
-	tf_bot_health_critical_ratio = FindConVar("tf_bot_health_critical_ratio");
-	tf_bot_health_ok_ratio = FindConVar("tf_bot_health_ok_ratio");
-	tf_bot_ammo_search_range = FindConVar("tf_bot_ammo_search_range");
-	tf_bot_health_search_far_range = FindConVar("tf_bot_health_search_far_range");
-	tf_bot_health_search_near_range = FindConVar("tf_bot_health_search_near_range");
-	tf_bot_suicide_bomb_range = FindConVar("tf_bot_suicide_bomb_range");
-}
-
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
 	if (g_bIsDefenderBot[client] == false)
@@ -327,6 +337,18 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	{
 		if (g_iAdditionalButtons[client] != 0)
 		{
+			if (g_iAdditionalButtons[client] & IN_BACK)
+				vel[0] -= PLAYER_SIDESPEED;
+			
+			if (g_iAdditionalButtons[client] & IN_FORWARD)
+				vel[0] += PLAYER_SIDESPEED;
+			
+			if (g_iAdditionalButtons[client] & IN_MOVELEFT)
+				vel[1] -= PLAYER_SIDESPEED;
+			
+			if (g_iAdditionalButtons[client] & IN_MOVERIGHT)
+				vel[1] += PLAYER_SIDESPEED;
+			
 			buttons |= g_iAdditionalButtons[client];
 			g_iAdditionalButtons[client] = 0;
 		}
@@ -1113,14 +1135,14 @@ bool ShouldProcessCommand(int client)
 	return true;
 }
 
-void RemoveAllDefenderBots(char[] reason = "", bool bFinalWave = false)
+void RemoveAllDefenderBots(char[] reason = "", bool bDanceInstead = false)
 {
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (IsClientInGame(i) && g_bIsDefenderBot[i])
 		{
 			//We dance on the final wave instead
-			if (bFinalWave)
+			if (bDanceInstead)
 			{
 				MakePlayerDance(i);
 				continue;

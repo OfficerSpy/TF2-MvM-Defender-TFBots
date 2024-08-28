@@ -17,6 +17,9 @@
 //Raw value found in CBaseObject::FindBuildPointOnPlayer
 #define SAPPER_PLAYER_BUILD_ON_RANGE	160.0
 
+//ConVar cl_sidespeed
+#define PLAYER_SIDESPEED	500.0
+
 #define SNIPER_REACTION_TIME	0.5
 
 enum //medigun_resist_types_t
