@@ -116,6 +116,17 @@ static void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		- player left red */
 		if ((isDisconnect && oldTeam == TFTeam_Red) || team == TFTeam_Red || oldTeam == TFTeam_Red)
 			CreateTimer(0.1, Timer_UpdateChosenBotTeamComposition, _, TIMER_FLAG_NO_MAPCHANGE);
+		
+#if defined CHANGETEAM_RESTRICTIONS
+		if (!isDisconnect && team == TFTeam_Red && oldTeam == TFTeam_Blue)
+		{
+			//Switching from BLUE to RED will temporarily ban the player from starting the bots
+			if (g_flEnableBotsCooldown[client] <= GetGameTime())
+				g_flEnableBotsCooldown[client] = GetGameTime() + 30.0;
+			else
+				g_flEnableBotsCooldown[client] += 10.0;
+		}
+#endif
 	}
 }
 

@@ -28,6 +28,8 @@ Author: ★ Officer Spy ★
 
 #define METHOD_MVM_UPGRADES
 
+#define CHANGETEAM_RESTRICTIONS
+
 // #define EXTRA_PLUGINBOT
 
 // #define IDLEBOT_AIMING
@@ -69,6 +71,10 @@ static float m_flNextRollTime[MAXPLAYERS + 1];
 #endif
 
 //For other players
+#if defined CHANGETEAM_RESTRICTIONS
+float g_flEnableBotsCooldown[MAXPLAYERS + 1];
+#endif
+
 static float m_flLastCommandTime[MAXPLAYERS + 1];
 static float m_flLastReadyInputTime[MAXPLAYERS + 1];
 
@@ -306,6 +312,10 @@ public void OnClientPutInServer(int client)
 	
 #if defined MOD_ROLL_THE_DICE_REVAMPED
 	m_flNextRollTime[client] = 0.0;
+#endif
+	
+#if defined CHANGETEAM_RESTRICTIONS
+	g_flEnableBotsCooldown[client] = 0.0;
 #endif
 	
 	m_flLastCommandTime[client] = GetGameTime();
@@ -556,6 +566,12 @@ public void TF2_OnConditionAdded(int client, TFCond condition)
 
 public Action Command_Votebots(int client, int args)
 {
+	if (g_bBotsEnabled)
+	{
+		PrintToChat(client, "%s Bots are already enabled for this round.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
 	if (redbots_manager_mode.IntValue != MANAGER_MODE_MANUAL_BOTS)
 	{
 		PrintToChat(client, "%s This is only allowed in MANAGER_MODE_MANUAL_BOTS.", PLUGIN_PREFIX);
@@ -565,12 +581,6 @@ public Action Command_Votebots(int client, int args)
 	if (IsServerFull())
 	{
 		PrintToChat(client, "%s Server is at max capacity.", PLUGIN_PREFIX);
-		return Plugin_Handled;
-	}
-	
-	if (g_bBotsEnabled)
-	{
-		PrintToChat(client, "%s Bots are already enabled for this round.", PLUGIN_PREFIX);
 		return Plugin_Handled;
 	}
 	
@@ -590,6 +600,22 @@ public Action Command_Votebots(int client, int args)
 	{
 		case TFTeam_Red:
 		{
+#if defined CHANGETEAM_RESTRICTIONS
+			float botBanTime = g_flEnableBotsCooldown[client] - GetGameTime();
+			
+			if (botBanTime > 0.0)
+			{
+				if (CheckCommandAccess(client, NULL_STRING, ADMFLAG_GENERIC, true))
+					ReplyToCommand(client, "%s You cannot start the bots at this time. (%f)", PLUGIN_PREFIX, botBanTime);
+				else
+					ReplyToCommand(client, "%s You cannot start the bots at this time.", PLUGIN_PREFIX);
+				
+				LogAction(client, -1, "MANAGER_MODE_MANUAL_BOTS: %L tried to start the bots on cooldown. (%f seconds)", client, botBanTime);
+				
+				return Plugin_Handled;
+			}
+#endif
+			
 			if (GetHumanAndDefenderBotCount(TFTeam_Red) < redbots_manager_defender_team_size.IntValue)
 			{
 				StartBotVote(client);
@@ -893,6 +919,22 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 					//Give more time to ready dawg
 					return Plugin_Handled;
 				}
+				
+#if defined CHANGETEAM_RESTRICTIONS
+				float botBanTime = g_flEnableBotsCooldown[client] - GetGameTime();
+				
+				if (botBanTime > 0.0)
+				{
+					if (CheckCommandAccess(client, NULL_STRING, ADMFLAG_GENERIC, true))
+						ReplyToCommand(client, "%s You cannot start the bots at this time. (%f)", PLUGIN_PREFIX, botBanTime);
+					else
+						ReplyToCommand(client, "%s You cannot start the bots at this time.", PLUGIN_PREFIX);
+					
+					LogAction(client, -1, "MANAGER_MODE_READY_BOTS: %L tried to start the bots on cooldown. (%f seconds)", client, botBanTime);
+					
+					return Plugin_Handled;
+				}
+#endif
 				
 				if (m_flLastReadyInputTime[client] <= GetGameTime())
 				{
