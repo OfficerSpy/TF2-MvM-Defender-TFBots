@@ -3854,6 +3854,9 @@ bool CTFBotGetHealth_IsPossible(int actor)
 
 bool CTFBotAttackTank_SelectTarget(int actor)
 {
+	if (GetCountOfBotsWithNamedAction("DefenderAttackTank", actor) >= redbots_manager_bot_max_tank_attackers.IntValue)
+		return false;
+	
 	m_iTankTarget[actor] = GetTankToTarget(actor);
 	
 	return m_iTankTarget[actor] != -1;
@@ -3984,28 +3987,39 @@ int GetTankToTarget(int actor, float max_distance = 999999.0)
 	//TODO: We should be targetting the closest tank that has the farthest progress
 	//to the hatch instead of going for the closest one to us
 	
-	float flOrigin[3]; GetClientAbsOrigin(actor, flOrigin);
+	float origin[3]; GetClientAbsOrigin(actor, origin);
+	int myTeam = GetClientTeam(actor);
+	int primary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Primary);
+	int primaryID = primary != -1 ? TF2Util_GetWeaponID(primary) : -1;
 	
-	float flBestDistance = 999999.0;
-	int iBestEntity = -1;
+	float bestDistance = 999999.0;
+	int bestEntity = -1;
 	
-	int iEnt = -1;
-	while ((iEnt = FindEntityByClassname(iEnt, "tank_boss")) != -1)
+	int ent = -1;
+	
+	while ((ent = FindEntityByClassname(ent, "tank_boss")) != -1)
 	{
 		//Ignore tanks on our team
-		if (GetClientTeam(actor) == BaseEntity_GetTeamNumber(iEnt))
+		if (myTeam == BaseEntity_GetTeamNumber(ent))
 			continue;
 		
-		float flDistance = GetVectorDistance(flOrigin, WorldSpaceCenter(iEnt));
-		
-		if (flDistance <= flBestDistance && flDistance <= max_distance)
+		if (primaryID == TF_WEAPON_FLAMETHROWER)
 		{
-			flBestDistance = flDistance;
-			iBestEntity = iEnt;
+			//Somehow this tank is in the air, we can't reach it with this weapon
+			if (GetEntityFlags(ent) & FL_ONGROUND == 0)
+				continue;
+		}
+		
+		float distance = GetVectorDistance(origin, WorldSpaceCenter(ent));
+		
+		if (distance <= bestDistance && distance <= max_distance)
+		{
+			bestDistance = distance;
+			bestEntity = ent;
 		}
 	}
 	
-	return iBestEntity;
+	return bestEntity;
 }
 
 float GetIdealTankAttackRange(int client)
@@ -4920,12 +4934,12 @@ bool CTFBotCampBomb_IsPossible(int client)
 	return true;
 }
 
-int GetCountOfBotsWithNamedAction(const char[] name)
+int GetCountOfBotsWithNamedAction(const char[] name, int ignore = -1)
 {
 	int count = 0;
 	
 	for (int i = 1; i <= MaxClients; i++)
-		if (IsClientInGame(i) && g_bIsDefenderBot[i] && ActionsManager.GetAction(i, name) != INVALID_ACTION)
+		if (i != ignore && IsClientInGame(i) && g_bIsDefenderBot[i] && ActionsManager.GetAction(i, name) != INVALID_ACTION)
 			count++;
 	
 	return count;

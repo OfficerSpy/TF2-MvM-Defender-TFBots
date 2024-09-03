@@ -96,6 +96,7 @@ ConVar redbots_manager_bot_upgrade_interval;
 ConVar redbots_manager_bot_use_upgrades;
 ConVar redbots_manager_bot_buyback_chance;
 ConVar redbots_manager_bot_buy_upgrades_chance;
+ConVar redbots_manager_bot_max_tank_attackers;
 ConVar redbots_manager_extra_bots;
 
 #if defined MOD_REQUEST_CREDITS
@@ -135,7 +136,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.3.8",
+	version = "1.3.9",
 	url = ""
 };
 
@@ -160,6 +161,7 @@ public void OnPluginStart()
 	redbots_manager_bot_use_upgrades = CreateConVar("sm_redbots_manager_bot_use_upgrades", "1", "Enable bots to buy upgrades.", FCVAR_NOTIFY);
 	redbots_manager_bot_buyback_chance = CreateConVar("sm_redbots_manager_bot_buyback_chance", "5", "Chance for bots to buyback into the game.", FCVAR_NOTIFY);
 	redbots_manager_bot_buy_upgrades_chance = CreateConVar("sm_redbots_manager_bot_buy_upgrades_chance", "50", "Chance for bots to buy upgrades in the middle of a game.", FCVAR_NOTIFY);
+	redbots_manager_bot_max_tank_attackers = CreateConVar("sm_redbots_manager_bot_max_tank_attackers", "3", _, FCVAR_NOTIFY);
 	redbots_manager_extra_bots = CreateConVar("sm_redbots_manager_extra_bots", "1", "How many more bots we are allowed to request beyond the team size", FCVAR_NOTIFY);
 	
 #if defined MOD_REQUEST_CREDITS
@@ -605,11 +607,7 @@ public Action Command_Votebots(int client, int args)
 			
 			if (botBanTime > 0.0)
 			{
-				if (CheckCommandAccess(client, NULL_STRING, ADMFLAG_GENERIC, true))
-					ReplyToCommand(client, "%s You cannot start the bots at this time. (%f)", PLUGIN_PREFIX, botBanTime);
-				else
-					ReplyToCommand(client, "%s You cannot start the bots at this time.", PLUGIN_PREFIX);
-				
+				ReplyToCommand(client, "%s You cannot start the bots at this time.", PLUGIN_PREFIX);
 				LogAction(client, -1, "MANAGER_MODE_MANUAL_BOTS: %L tried to start the bots on cooldown. (%f seconds)", client, botBanTime);
 				
 				return Plugin_Handled;
@@ -925,11 +923,7 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 				
 				if (botBanTime > 0.0)
 				{
-					if (CheckCommandAccess(client, NULL_STRING, ADMFLAG_GENERIC, true))
-						ReplyToCommand(client, "%s You cannot start the bots at this time. (%f)", PLUGIN_PREFIX, botBanTime);
-					else
-						ReplyToCommand(client, "%s You cannot start the bots at this time.", PLUGIN_PREFIX);
-					
+					ReplyToCommand(client, "%s You cannot start the bots at this time.", PLUGIN_PREFIX);
 					LogAction(client, -1, "MANAGER_MODE_READY_BOTS: %L tried to start the bots on cooldown. (%f seconds)", client, botBanTime);
 					
 					return Plugin_Handled;
