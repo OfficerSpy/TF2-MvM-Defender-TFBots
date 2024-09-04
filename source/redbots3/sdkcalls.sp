@@ -9,6 +9,7 @@ static Handle m_hHasAmmo;
 static Handle m_hGetAmmoCount;
 static Handle m_hClip1;
 static Handle m_hGetProjectileSpeed;
+static Handle m_hAimHeadTowards;
 
 #if defined METHOD_MVM_UPGRADES
 static Handle m_hGEconItemSchema;
@@ -130,6 +131,19 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hGetProjectileSpeed = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFWeaponBaseGun::GetProjectileSpeed!");
+		failCount++;
+	}
+	
+	StartPrepSDKCall(SDKCall_Raw);
+	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Virtual, "IBody::AimHeadTowards");
+	PrepSDKCall_AddParameter(SDKType_Vector, SDKPass_ByRef);
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	PrepSDKCall_AddParameter(SDKType_Float, SDKPass_Plain);
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
+	if ((m_hAimHeadTowards = EndPrepSDKCall()) == null)
+	{
+		LogError("Failed to create SDKCall for IBody::AimHeadTowards!");
 		failCount++;
 	}
 	
@@ -275,6 +289,11 @@ int Clip1(int weapon)
 float GetProjectileSpeed(int weapon)
 {
 	return SDKCall(m_hGetProjectileSpeed, weapon);
+}
+
+void AimHeadTowards(IBody body, float lookAtPos[3], LookAtPriorityType priority = BORING, float duration = 0.0, Address replyWhenAimed = Address_Null, const char[] reason = NULL_STRING)
+{
+	SDKCall(m_hAimHeadTowards, body, lookAtPos, priority, duration, replyWhenAimed, reason);
 }
 
 #if defined METHOD_MVM_UPGRADES

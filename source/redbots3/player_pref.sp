@@ -146,7 +146,7 @@ void SetWeaponPreference(int client, const char[] class, const char[] slot, int 
 	m_kvPlayerPrefData.Rewind();
 }
 
-void SetRandomWeaponPreference(int client, const char[] class, const char[] slot)
+/* void SetRandomWeaponPreference(int client, const char[] class, const char[] slot)
 {
 	if (StrEqual(class, "scout", false))
 	{
@@ -236,7 +236,7 @@ void SetRandomWeaponPreference(int client, const char[] class, const char[] slot
 		PrintToChatAll("[SetRandomWeaponPreference] Unknown class of %s", class);
 		LogError("SetRandomWeaponPreference: Unknown class %s", class);
 	}
-}
+} */
 
 void AddBotsBasedOnPreferences(int amount)
 {

@@ -1,7 +1,8 @@
 Menu g_hBotPreferenceMenu;
 static Menu m_hWeaponPrefClassMenu;
 
-static char m_sSelectedClass[MAXPLAYERS + 1][32];
+static char m_sSelectedClass[MAXPLAYERS + 1][16];
+static char m_sSelectedWeaponSlot[MAXPLAYERS + 1][10];
 
 bool StartBotVote(int callerClient)
 {
@@ -34,7 +35,7 @@ void CreateBotPreferenceMenu()
 	
 	delete m_hWeaponPrefClassMenu;
 	
-	m_hWeaponPrefClassMenu = CreateMenu(MenuHandler_WeaponClassPreference);
+	m_hWeaponPrefClassMenu = CreateMenu(MenuHandler_WeaponPreferenceClassList);
 	SetMenuExitBackButton(m_hWeaponPrefClassMenu, true);
 	AddMenuItem(m_hWeaponPrefClassMenu, "0", "Scout");
 	AddMenuItem(m_hWeaponPrefClassMenu, "1", "Soldier");
@@ -68,6 +69,7 @@ void DisplayClassPreferenceMenu(int client, int item = 0)
 
 void DisplayWeaponPreferenceMenu(int client, char[] class, int item = 0)
 {
+	//Tell us the class we just chose so everything else will get the correct data for this class
 	strcopy(m_sSelectedClass[client], sizeof(m_sSelectedClass[]), class);
 	
 	Menu hWeaponPrefMenu = CreateMenu(MenuHandler_WeaponPreference);
@@ -81,6 +83,358 @@ void DisplayWeaponPreferenceMenu(int client, char[] class, int item = 0)
 		AddMenuItem(hWeaponPrefMenu, "3", GetWeaponPrefMenuItemText(client, class, TFWeaponSlot_Item1));
 	
 	DisplayMenuAtItem(hWeaponPrefMenu, client, item, MENU_TIME_FOREVER);
+}
+
+void ShowWeaponPreferenceItemListMenu(int client, const char[] class, const char[] slot)
+{
+	//Tell us the weapon slot that we now want to edit
+	strcopy(m_sSelectedWeaponSlot[client], sizeof(m_sSelectedWeaponSlot[]), slot);
+	
+	Menu hMenu = new Menu(MenuHandler_WeaponPreferenceItemList);
+	char menuInfo[7];
+	char weaponName[PLATFORM_MAX_PATH];
+	
+	if (StrEqual(class, "scout", false))
+	{
+		if (StrEqual(slot, "primary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_SCOUT_PRIMARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_SCOUT_PRIMARY[i], weaponName, sizeof(weaponName)))
+				{
+					//Menu item info will store the item defintion index as a string
+					IntToString(WEAPONS_SCOUT_PRIMARY[i], menuInfo, sizeof(menuInfo));
+					
+					//List the item by its name
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "secondary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_SCOUT_SECONDARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_SCOUT_SECONDARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_SCOUT_SECONDARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "melee", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_SCOUT_MELEE); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_SCOUT_MELEE[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_SCOUT_MELEE[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+	}
+	else if (StrEqual(class, "soldier", false))
+	{
+		if (StrEqual(slot, "primary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_SOLDIER_PRIMARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_SOLDIER_PRIMARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_SOLDIER_PRIMARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "secondary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_SOLDIER_SECONDARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_SOLDIER_SECONDARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_SOLDIER_SECONDARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "melee", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_SOLDIER_MELEE); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_SOLDIER_MELEE[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_SOLDIER_MELEE[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+	}
+	else if (StrEqual(class, "pyro", false))
+	{
+		if (StrEqual(slot, "primary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_PYRO_PRIMARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_PYRO_PRIMARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_PYRO_PRIMARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "secondary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_PYRO_SECONDARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_PYRO_SECONDARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_PYRO_SECONDARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "melee", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_PYRO_MELEE); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_PYRO_MELEE[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_PYRO_MELEE[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+	}
+	else if (StrEqual(class, "demoman", false))
+	{
+		if (StrEqual(slot, "primary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_DEMOMAN_PRIMARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_DEMOMAN_PRIMARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_DEMOMAN_PRIMARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "secondary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_DEMOMAN_SECONDARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_DEMOMAN_SECONDARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_DEMOMAN_SECONDARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "melee", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_DEMOMAN_MELEE); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_DEMOMAN_MELEE[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_DEMOMAN_MELEE[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+	}
+	else if (StrEqual(class, "heavyweapons", false))
+	{
+		if (StrEqual(slot, "primary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_HEAVY_PRIMARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_HEAVY_PRIMARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_HEAVY_PRIMARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "secondary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_HEAVY_SECONDARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_HEAVY_SECONDARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_HEAVY_SECONDARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "melee", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_HEAVY_MELEE); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_HEAVY_MELEE[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_HEAVY_MELEE[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+	}
+	else if (StrEqual(class, "engineer", false))
+	{
+		if (StrEqual(slot, "primary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_ENGINEER_PRIMARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_ENGINEER_PRIMARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_ENGINEER_PRIMARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "secondary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_ENGINEER_SECONDARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_ENGINEER_SECONDARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_ENGINEER_SECONDARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "melee", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_ENGINEER_MELEE); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_ENGINEER_MELEE[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_ENGINEER_MELEE[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+	}
+	else if (StrEqual(class, "medic", false))
+	{
+		if (StrEqual(slot, "primary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_MEDIC_PRIMARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_MEDIC_PRIMARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_MEDIC_PRIMARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "secondary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_MEDIC_SECONDARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_MEDIC_SECONDARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_MEDIC_SECONDARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "melee", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_MEDIC_MELEE); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_MEDIC_MELEE[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_MEDIC_MELEE[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+	}
+	else if (StrEqual(class, "sniper", false))
+	{
+		if (StrEqual(slot, "primary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_SNIPER_PRIMARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_SNIPER_PRIMARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_SNIPER_PRIMARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "secondary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_SNIPER_SECONDARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_SNIPER_SECONDARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_SNIPER_SECONDARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "melee", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_SNIPER_MELEE); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_SNIPER_MELEE[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_SNIPER_MELEE[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+	}
+	else if (StrEqual(class, "spy", false))
+	{
+		if (StrEqual(slot, "primary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_SPY_SECONDARY); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_SPY_SECONDARY[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_SPY_SECONDARY[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "secondary", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_SPY_BUILDING); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_SPY_BUILDING[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_SPY_BUILDING[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "melee", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_SPY_MELEE); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_SPY_MELEE[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_SPY_MELEE[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+		else if (StrEqual(slot, "pda2", false))
+		{
+			for (int i = 0; i < sizeof(WEAPONS_SPY_PDA2); i++)
+			{
+				if (TF2Econ_GetItemName(WEAPONS_SPY_PDA2[i], weaponName, sizeof(weaponName)))
+				{
+					IntToString(WEAPONS_SPY_PDA2[i], menuInfo, sizeof(menuInfo));
+					hMenu.AddItem(menuInfo, weaponName);
+				}
+			}
+		}
+	}
+	
+	hMenu.ExitBackButton = true;
+	hMenu.Display(client, MENU_TIME_FOREVER);
 }
 
 char[] GetWeaponPrefMenuItemText(int client, char[] class, int slot)
@@ -297,16 +651,21 @@ static int MenuHandler_ClassPreference(Menu menu, MenuAction action, int param1,
 			
 			DisplayClassPreferenceMenu(param1, GetMenuSelectionPosition());
 		}
-		case MenuAction_End:	delete menu;
+		case MenuAction_End:
+		{
+			delete menu;
+		}
+		case MenuAction_Cancel:
+		{
+			if (param2 == MenuCancel_ExitBack)
+				DisplayMenu(g_hBotPreferenceMenu, param1, MENU_TIME_FOREVER);
+		}
 	}
-	
-	if (param2 == MenuCancel_ExitBack)
-		DisplayMenu(g_hBotPreferenceMenu, param1, MENU_TIME_FOREVER);
 	
 	return 0;
 }
 
-static int MenuHandler_WeaponClassPreference(Menu menu, MenuAction action, int param1, int param2)
+static int MenuHandler_WeaponPreferenceClassList(Menu menu, MenuAction action, int param1, int param2)
 {
 	switch (action)
 	{
@@ -325,10 +684,12 @@ static int MenuHandler_WeaponClassPreference(Menu menu, MenuAction action, int p
 				case 8:	DisplayWeaponPreferenceMenu(param1, "spy");
 			}
 		}
+		case MenuAction_Cancel:
+		{
+			if (param2 == MenuCancel_ExitBack)
+				DisplayMenu(g_hBotPreferenceMenu, param1, MENU_TIME_FOREVER);
+		}
 	}
-	
-	if (param2 == MenuCancel_ExitBack)
-		DisplayMenu(g_hBotPreferenceMenu, param1, MENU_TIME_FOREVER);
 	
 	return 0;
 }
@@ -341,19 +702,53 @@ static int MenuHandler_WeaponPreference(Menu menu, MenuAction action, int param1
 		{
 			switch (param2)
 			{
-				case 0:	SetRandomWeaponPreference(param1, m_sSelectedClass[param1], "primary");
-				case 1:	SetRandomWeaponPreference(param1, m_sSelectedClass[param1], "secondary");
-				case 2:	SetRandomWeaponPreference(param1, m_sSelectedClass[param1], "melee");
-				case 3:	SetRandomWeaponPreference(param1, m_sSelectedClass[param1], "pda2");
+				case 0:	ShowWeaponPreferenceItemListMenu(param1, m_sSelectedClass[param1], "primary");
+				case 1:	ShowWeaponPreferenceItemListMenu(param1, m_sSelectedClass[param1], "secondary");
+				case 2:	ShowWeaponPreferenceItemListMenu(param1, m_sSelectedClass[param1], "melee");
+				case 3:	ShowWeaponPreferenceItemListMenu(param1, m_sSelectedClass[param1], "pda2");
 			}
-			
-			DisplayWeaponPreferenceMenu(param1, m_sSelectedClass[param1], GetMenuSelectionPosition());
 		}
-		case MenuAction_End:	delete menu;
+		case MenuAction_End:
+		{
+			delete menu;
+		}
+		case MenuAction_Cancel:
+		{
+			if (param2 == MenuCancel_ExitBack)
+				DisplayMenu(m_hWeaponPrefClassMenu, param1, MENU_TIME_FOREVER);
+		}
 	}
 	
-	if (param2 == MenuCancel_ExitBack)
-		DisplayMenu(m_hWeaponPrefClassMenu, param1, MENU_TIME_FOREVER);
+	return 0;
+}
+
+static int MenuHandler_WeaponPreferenceItemList(Menu menu, MenuAction action, int param1, int param2)
+{
+	switch (action)
+	{
+		case MenuAction_Select:
+		{
+			char info[6];
+			
+			if (menu.GetItem(param2, info, sizeof(info)))
+			{
+				//Info should be storing an item's defintion index
+				int itemDefIndex = StringToInt(info);
+				
+				SetWeaponPreference(param1, m_sSelectedClass[param1], m_sSelectedWeaponSlot[param1], itemDefIndex);
+				DisplayWeaponPreferenceMenu(param1, m_sSelectedClass[param1]);
+			}
+		}
+		case MenuAction_End:
+		{
+			delete menu;
+		}
+		case MenuAction_Cancel:
+		{
+			if (param2 == MenuCancel_ExitBack)
+				DisplayWeaponPreferenceMenu(param1, m_sSelectedClass[param1]);
+		}
+	}
 	
 	return 0;
 }

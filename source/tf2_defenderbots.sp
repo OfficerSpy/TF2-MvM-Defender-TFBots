@@ -56,6 +56,7 @@ bool g_bIsDefenderBot[MAXPLAYERS + 1];
 bool g_bIsBeingRevived[MAXPLAYERS + 1];
 bool g_bHasUpgraded[MAXPLAYERS + 1];
 int g_iAdditionalButtons[MAXPLAYERS + 1];
+float g_flForceHoldButtonsTime[MAXPLAYERS + 1];
 int g_iSubtractiveButtons[MAXPLAYERS + 1];
 float g_flBlockInputTime[MAXPLAYERS + 1];
 static float m_flDeadRethinkTime[MAXPLAYERS + 1];
@@ -137,7 +138,7 @@ public Plugin myinfo =
 	author = "Officer Spy",
 	description = "Bot Management",
 	version = "1.3.9",
-	url = ""
+	url = "https://github.com/OfficerSpy/TF2-MvM-Defender-TFBots"
 };
 
 public void OnPluginStart()
@@ -304,6 +305,7 @@ public void OnClientPutInServer(int client)
 {
 	g_bHasUpgraded[client] = false;
 	g_iAdditionalButtons[client] = 0;
+	g_flForceHoldButtonsTime[client] = 0.0;
 	g_iSubtractiveButtons[client] = 0;
 	g_flBlockInputTime[client] = 0.0;
 	m_flDeadRethinkTime[client] = 0.0;
@@ -340,6 +342,10 @@ public void OnEntityCreated(int entity, const char[] classname)
 	DHooks_OnEntityCreated(entity, classname);
 }
 
+/* NOTE: This forward is not consistent with nextbot functionalities such as Action::Update
+Nextbot behavior updates are based on the value of convar nb_update_frequency
+This forward is only called every time CBasePlayer::PlayerRunCommand is called, which updates on its own interval
+So what gets done in here will never always be consistent with the nextbot behavior actions */
 public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3], float angles[3], int &weapon, int &subtype, int &cmdnum, int &tickcount, int &seed, int mouse[2])
 {
 	if (g_bIsDefenderBot[client] == false)
@@ -362,7 +368,10 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				vel[1] += PLAYER_SIDESPEED;
 			
 			buttons |= g_iAdditionalButtons[client];
-			g_iAdditionalButtons[client] = 0;
+			
+			//We are told to hold these inputs down for a specific time, don't clear until it expires
+			if (g_flForceHoldButtonsTime[client] <= GetGameTime())
+				g_iAdditionalButtons[client] = 0;
 		}
 		
 		if (g_iSubtractiveButtons[client] != 0)

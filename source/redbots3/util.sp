@@ -18,7 +18,7 @@
 #define SAPPER_PLAYER_BUILD_ON_RANGE	160.0
 
 //ConVar cl_sidespeed
-#define PLAYER_SIDESPEED	500.0
+#define PLAYER_SIDESPEED	450.0
 
 #define SNIPER_REACTION_TIME	0.5
 

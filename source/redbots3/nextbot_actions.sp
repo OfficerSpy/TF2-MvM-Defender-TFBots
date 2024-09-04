@@ -1851,7 +1851,8 @@ public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 			
 			if (threatRange < circleStrafeRange)
 			{
-				SnapViewToPosition(actor, WorldSpaceCenter(target));
+				// SnapViewToPosition(actor, WorldSpaceCenter(target));
+				AimHeadTowards(myBot.GetBodyInterface(), WorldSpaceCenter(target), MANDATORY, 0.1, Address_Null, "Aim stab");
 				
 				if (!isBehindVictim)
 				{
@@ -1860,12 +1861,18 @@ public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 					float cross[3]; GetVectorCrossProduct(playerThreatForward, myForward, cross);
 					
 					if (cross[2] < 0.0)
-						g_iAdditionalButtons[actor] |= IN_MOVERIGHT;
+					{
+						g_iAdditionalButtons[actor] = IN_MOVERIGHT;
+						g_flForceHoldButtonsTime[actor] = GetGameTime() + 0.1;
+					}
 					else
-						g_iAdditionalButtons[actor] |= IN_MOVELEFT;
+					{
+						g_iAdditionalButtons[actor] = IN_MOVELEFT;
+						g_flForceHoldButtonsTime[actor] = GetGameTime() + 0.1;
+					}
 					
 					//Don't bump into them unless we're going for the stab
-					if (threatRange < 100.0)
+					if (threatRange < 100.0 && !HasBackstabPotential(target))
 						isMovingTowardsVictim = false;
 				}
 			}
