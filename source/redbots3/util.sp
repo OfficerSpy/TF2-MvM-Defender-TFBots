@@ -20,6 +20,9 @@
 //ConVar cl_sidespeed
 #define PLAYER_SIDESPEED	450.0
 
+//Raw value found in CTFBotMainAction::FireWeaponAtEnemy
+#define TFBOT_MELEE_ATTACK_RANGE	250.0
+
 #define SNIPER_REACTION_TIME	0.5
 
 enum //medigun_resist_types_t
@@ -263,6 +266,7 @@ float GetTimeSinceWeaponFired(int client)
 	return GetGameTime() - flLastFireTime;
 }
 
+//CWeaponMedigun::GetMedigunType
 int GetMedigunType(int weapon)
 {
 	return TF2Attrib_HookValueInt(0, "set_weapon_mode", weapon);
@@ -637,6 +641,7 @@ int GetNearestReviveMarker(int client, const float max_distance)
 	SetEntProp(bottle, Prop_Send, "m_bActive", false);
 } */
 
+//CTFPowerupBottle::GetPowerupType
 int PowerupBottle_GetType(int bottle)
 {
 	if (TF2Attrib_HookValueInt(0, "critboost", bottle))
@@ -669,6 +674,7 @@ int PowerupBottle_GetNumCharges(int bottle)
 	return GetEntProp(bottle, Prop_Send, "m_usNumCharges");
 }
 
+//CTFPowerupBottle::GetMaxNumCharges
 int PowerupBottle_GetMaxNumCharges(int bottle)
 {
 	return TF2Attrib_HookValueInt(0, "powerup_max_charges", bottle);
@@ -697,6 +703,7 @@ int GetPowerupBottle(int client)
 	return ent;
 }
 
+//CTFFlameThrower::CanAirBlast
 bool CanWeaponAirblast(int weapon)
 {
 	return TF2Attrib_HookValueInt(0, "airblast_disabled", weapon) == 0;
@@ -1243,6 +1250,24 @@ bool IsPlayerHealingSomething(int client)
 		return false;
 	
 	return TF2Util_GetWeaponID(weapon) == TF_WEAPON_MEDIGUN && GetEntPropEnt(weapon, Prop_Send, "m_hHealingTarget") != -1;
+}
+
+//CTFRevolver::CanHeadshot
+bool CanRevolverHeadshot(int weapon)
+{
+	return TF2Attrib_HookValueInt(0, "set_weapon_mode", weapon) == 1;
+}
+
+bool IsPlayerMoving(int client)
+{
+	float vec[3]; CBaseEntity(client).GetAbsVelocity(vec);
+	
+	return !IsZeroVector(vec);
+}
+
+bool CanWeaponAddUberOnHit(int weapon)
+{
+	return TF2Attrib_HookValueFloat(0.0, "add_onhit_ubercharge", weapon) > 0.0;
 }
 
 int GetNearestCurrencyPack(int client, const float max_distance = 999999.0)

@@ -10,6 +10,8 @@
 #define FLAMETHROWER_REACH_RANGE	350.0
 #define FLAMEBALL_REACH_RANGE	526.0
 #define BOMB_GUARD_RADIUS	400.0
+#define MEDIC_ATTACK_UBER_LOW_HEALTH	100
+#define MEDIC_ATTACK_UBER_SEEK_RANGE	500.0
 
 static char g_strHealthAndAmmoEntities[][] = 
 {
@@ -48,6 +50,7 @@ static float m_vecNestArea[MAXPLAYERS + 1][3];
 static int m_iSapTarget[MAXPLAYERS + 1];
 static int m_iPlayerSapTarget[MAXPLAYERS + 1];
 static float m_flSapperCooldown[MAXPLAYERS + 1];
+static float m_vecStartArea[MAXPLAYERS + 1][3];
 static int m_iTankTarget[MAXPLAYERS + 1];
 static int m_iTeleporterTarget[MAXPLAYERS + 1];
 static float m_vecPointDefendArea[MAXPLAYERS + 1][3];
@@ -92,6 +95,7 @@ void ResetNextBot(int client)
 	m_iSapTarget[client] = -1;
 	m_iPlayerSapTarget[client] = -1;
 	m_flSapperCooldown[client] = 0.0;
+	m_vecStartArea[client] = NULL_VECTOR;
 	m_iTankTarget[client] = -1;
 	m_iTeleporterTarget[client] = -1;
 	m_vecPointDefendArea[client] = NULL_VECTOR;
@@ -361,7 +365,28 @@ public Action CTFBotMainAction_SelectTargetPoint(BehaviorAction action, INextBot
 					return Plugin_Changed;
 				}
 				
-				//For sniper rifles, TFBots always aim at the entity's eye position
+				//For sniper rifles, TFBots always try to aim at the entity's eye position on harder difficulties
+			}
+			case TF_WEAPON_REVOLVER:
+			{
+				//Try to aim for the head with ambassador
+				if (CanRevolverHeadshot(myWeapon))
+				{
+					int bone = LookupBone(entity, "bip_head");
+					
+					if (bone != -1)
+					{
+						float vecEmpty[3];
+						GetBonePosition(entity, bone, vec, vecEmpty);
+						vec[2] += 3.0;
+						
+						return Plugin_Changed;
+					}
+					
+					vec = GetEyePosition(entity);
+					
+					return Plugin_Changed;
+				}
 			}
 			/* case TF_WEAPON_FLAMETHROWER:
 			{
@@ -445,6 +470,14 @@ public Action CTFBotMedicHeal_UpdatePost(BehaviorAction action, int actor, float
 		if (StrEqual(name, "FetchFlag"))
 			return action.SuspendFor(CTFBotDefenderAttack(), "Stop the bomb");
 	}
+	
+	int secondary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Secondary);
+	
+	if (secondary == -1)
+		return action.SuspendFor(CTFBotDefenderAttack(), "No medigun");
+	
+	if (CTFBotAttackUber_IsPossible(actor, secondary))
+		return action.SuspendFor(CTFBotAttackUber(), "Seek uber");
 	
 	if (CTFBotMedicRevive_IsPossible(actor))
 		return action.SuspendFor(CTFBotMedicRevive(), "Revive teammate");
@@ -578,16 +611,22 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 		}
 		case TFClass_Medic:
 		{
-			for (int i = 1; i <= MaxClients; i++)
+			//Make sure we have our medigun before we even think about leaving this action
+			int secondary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Secondary);
+			
+			if (secondary != -1)
 			{
-				if (IsClientInGame(i) && GetClientTeam(i) == GetClientTeam(actor) && IsPlayerAlive(i))
+				for (int i = 1; i <= MaxClients; i++)
 				{
-					TFClassType class = TF2_GetPlayerClass(i);
-					
-					if (class != TFClass_Medic && class != TFClass_Sniper && class != TFClass_Engineer && class != TFClass_Spy)
+					if (IsClientInGame(i) && GetClientTeam(i) == GetClientTeam(actor) && IsPlayerAlive(i))
 					{
-						//We have someone we'd prefer to heal
-						return action.Done("I have patient");
+						TFClassType class = TF2_GetPlayerClass(i);
+						
+						if (class != TFClass_Medic && class != TFClass_Sniper && class != TFClass_Engineer && class != TFClass_Spy)
+						{
+							//We have someone we'd prefer to heal
+							return action.Done("I have patient");
+						}
 					}
 				}
 			}
@@ -2372,6 +2411,93 @@ public Action CTFBotMedicRevive_OnInjured(BehaviorAction action, int actor, Addr
 		VS_PressAltFireButton(actor);
 	
 	return action.Continue();
+}
+
+BehaviorAction CTFBotAttackUber()
+{
+	BehaviorAction action = ActionsManager.Create("DefenderAttackUber");
+	
+	action.OnStart = CTFBotAttackUber_OnStart;
+	action.Update = CTFBotAttackUber_Update;
+	action.OnEnd = CTFBotAttackUber_OnEnd;
+	
+	return action;
+}
+
+public Action CTFBotAttackUber_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+{
+	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
+	
+	GetClientAbsOrigin(actor, m_vecStartArea[actor]);
+	
+	return action.Continue();
+}
+
+public Action CTFBotAttackUber_Update(BehaviorAction action, int actor, float interval, ActionResult result)
+{
+	if (GetClientHealth(actor) < MEDIC_ATTACK_UBER_LOW_HEALTH)
+		return action.Done("Low health");
+	
+	int secondary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Secondary);
+	
+	if (secondary == -1 || TF2Util_GetWeaponID(secondary) != TF_WEAPON_MEDIGUN)
+		return action.Done("No medigun");
+	
+	float myChargeLevel = GetEntPropFloat(secondary, Prop_Send, "m_flChargeLevel");
+	
+	if (myChargeLevel >= 1.0)
+		return action.Done("Full uber");
+	
+	int melee = GetPlayerWeaponSlot(actor, TFWeaponSlot_Melee);
+	
+	if (melee == -1)
+		return action.Done("No melee");
+	
+	TF2Util_SetPlayerActiveWeapon(actor, melee);
+	
+	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
+	
+	//Let's not stray too far from the patient
+	if (myBot.IsRangeGreaterThanEx(m_vecStartArea[actor], MEDIC_ATTACK_UBER_SEEK_RANGE))
+		return action.Done("Too far from home");
+	
+	int target = FindEnemyNearestToMe(actor, MEDIC_ATTACK_UBER_SEEK_RANGE, _, true);
+	
+	if (target == -1)
+		return action.Done("Nobody near me");
+	
+	if (myBot.IsRangeLessThan(target, TFBOT_MELEE_ATTACK_RANGE))
+	{
+		SnapViewToPosition(actor, WorldSpaceCenter(target));
+		
+		if (myChargeLevel < 0.5 && myBot.IsRangeLessThan(target, 100.0) && !IsPlayerMoving(target))
+		{
+			//Attempt to do a taunt kill on them for the full uber
+			if (!TF2_IsTaunting(actor))
+				VS_PressAltFireButton(actor);
+			else
+				return action.Continue();
+		}
+		else
+		{
+			VS_PressFireButton(actor);
+		}
+	}
+	
+	if (m_flRepathTime[actor] <= GetGameTime())
+	{
+		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.3, 1.0);
+		m_pPath[actor].ComputeToTarget(myBot, target);
+	}
+	
+	m_pPath[actor].Update(myBot);
+	
+	return action.Continue();
+}
+
+public void CTFBotAttackUber_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+{
+	m_vecStartArea[actor] = NULL_VECTOR;
 }
 
 BehaviorAction CTFBotEvadeBuster()
@@ -5011,6 +5137,42 @@ void UtilizeCompressionBlast(int client, INextBot bot, const CKnownEntity threat
 			}
 		}
 	}
+}
+
+bool CTFBotAttackUber_IsPossible(int client, int medigun)
+{
+	//Health is too low
+	if (GetClientHealth(client) < MEDIC_ATTACK_UBER_LOW_HEALTH)
+		return false;
+	
+	//I should be healing someone first
+	if (GetEntPropEnt(medigun, Prop_Send, "m_hHealingTarget") == -1)
+		return false;
+	
+	//It's already full
+	if (GetEntPropFloat(medigun, Prop_Send, "m_flChargeLevel") >= 1.0)
+		return false;
+	
+	//We are already using ubercharge
+	if (GetEntProp(medigun, Prop_Send, "m_bChargeRelease") == 1)
+		return false;
+	
+	int melee = GetPlayerWeaponSlot(client, TFWeaponSlot_Melee);
+	
+	if (melee == -1)
+		return false;
+	
+	if (!CanWeaponAddUberOnHit(melee))
+		return false;
+	
+	//Too dangerous
+	if (GetNearestEnemyCount(client, 500.0) > 3)
+		return false;
+	
+	if (FindEnemyNearestToMe(client, MEDIC_ATTACK_UBER_SEEK_RANGE, _, true) == -1)
+		return false;
+	
+	return true;
 }
 
 bool CTFBotMedicRevive_IsPossible(int client)

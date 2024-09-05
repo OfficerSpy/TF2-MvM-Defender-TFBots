@@ -485,7 +485,8 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				if (threat)
 				{
 					//Exclude certain things for scenarios where aim shouldn't be altered
-					if (IsCombatWeapon(client, myWeapon) && weaponID != TF_WEAPON_KNIFE && TF2_GetPlayerClass(client) != TFClass_Engineer)
+					//TODO: replace this with a variable to control this
+					if (IsCombatWeapon(client, myWeapon) && weaponID != TF_WEAPON_KNIFE && TF2_GetPlayerClass(client) != TFClass_Engineer && weaponID != TF_WEAPON_BONESAW)
 					{
 						int iThreat = threat.GetEntity();
 						
