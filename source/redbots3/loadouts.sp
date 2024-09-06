@@ -218,13 +218,17 @@ public Action Timer_GiveCustomLoadout(Handle timer, int client)
 	/* Certain weapons or upgrades may have changed our health and ammo
 	so we must refill them completely to the max, though health
 	may get reduced if max health was lowered by a weapon's attribute */
+	for (int i = TF_AMMO_PRIMARY; i < TF_AMMO_COUNT; i++)
+		GivePlayerAmmo(client, 1000, i, true);
+	
+	//For players, this is calculated max health
 	int maxHealth = TF2Util_GetEntityMaxHealth(client);
 	
 	if (GetClientHealth(client) != maxHealth)
+	{
+		BaseEntity_SetMaxHealth(client, maxHealth);
 		BaseEntity_SetHealth(client, maxHealth);
-	
-	for (int i = TF_AMMO_PRIMARY; i < TF_AMMO_COUNT; i++)
-		GivePlayerAmmo(client, 1000, i, true);
+	}
 	
 	PostInventoryApplication(client);
 	

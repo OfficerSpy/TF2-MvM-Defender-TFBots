@@ -2435,7 +2435,7 @@ public Action CTFBotAttackUber_OnStart(BehaviorAction action, int actor, Behavio
 
 public Action CTFBotAttackUber_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
-	if (GetClientHealth(actor) < MEDIC_ATTACK_UBER_LOW_HEALTH)
+	if (GetClientHealth(actor) < MEDIC_ATTACK_UBER_LOW_HEALTH && !TF2_IsInvulnerable(actor))
 		return action.Done("Low health");
 	
 	int secondary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Secondary);
@@ -5141,8 +5141,10 @@ void UtilizeCompressionBlast(int client, INextBot bot, const CKnownEntity threat
 
 bool CTFBotAttackUber_IsPossible(int client, int medigun)
 {
+	bool isUbered = TF2_IsInvulnerable(client);
+	
 	//Health is too low
-	if (GetClientHealth(client) < MEDIC_ATTACK_UBER_LOW_HEALTH)
+	if (!isUbered && GetClientHealth(client) < MEDIC_ATTACK_UBER_LOW_HEALTH)
 		return false;
 	
 	//I should be healing someone first
@@ -5166,7 +5168,7 @@ bool CTFBotAttackUber_IsPossible(int client, int medigun)
 		return false;
 	
 	//Too dangerous
-	if (GetNearestEnemyCount(client, 500.0) > 3)
+	if (!isUbered && GetNearestEnemyCount(client, 1000.0) > 2)
 		return false;
 	
 	if (FindEnemyNearestToMe(client, MEDIC_ATTACK_UBER_SEEK_RANGE, _, true) == -1)

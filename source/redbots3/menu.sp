@@ -1,5 +1,6 @@
 Menu g_hBotPreferenceMenu;
 static Menu m_hWeaponPrefClassMenu;
+static int m_iBotsLeftToChoose;
 
 static char m_sSelectedClass[MAXPLAYERS + 1][16];
 static char m_sSelectedWeaponSlot[MAXPLAYERS + 1][10];
@@ -22,6 +23,60 @@ bool StartBotVote(int callerClient)
 			players[total++] = i;
 	
 	return VoteMenu(vMenu, players, total, 15);
+}
+
+void ShowDefenderBotTeamSetupMenu(int client, int itemPosition = 0, bool bInitialize = false, int numBotsToAdd = 0)
+{
+	if (bInitialize)
+	{
+		g_adtChosenBotClasses.Clear();
+		m_iBotsLeftToChoose = numBotsToAdd;
+	}
+	
+	Menu hMenu = new Menu(MenuHandler_DefenderBotTeamSetup);
+	hMenu.SetTitle("Create Your Team (%d)", m_iBotsLeftToChoose);
+	hMenu.AddItem("0", "Scout");
+	hMenu.AddItem("1", "Soldier");
+	hMenu.AddItem("2", "Pyro");
+	hMenu.AddItem("3", "Demoman");
+	hMenu.AddItem("4", "Heavy");
+	hMenu.AddItem("5", "Engineer");
+	hMenu.AddItem("6", "Medic");
+	hMenu.AddItem("7", "Sniper");
+	hMenu.AddItem("8", "Spy");
+	hMenu.DisplayAt(client, itemPosition, MENU_TIME_FOREVER);
+	
+	if (bInitialize)
+		g_bChoosingBotClasses[client] = true;
+}
+
+void ShowDefenderBotTeamConfirmationMenu(int client)
+{
+	Menu hMenu = new Menu(MenuHandler_DefenderBotTeamConfirmation);
+	
+	char botClassesList[PLATFORM_MAX_PATH];
+	char className[13];
+	
+	for (int i = 0; i < g_adtChosenBotClasses.Length; i++)
+	{
+		if (i == 0)
+		{
+			//First one is just set as the name directly
+			g_adtChosenBotClasses.GetString(i, botClassesList, sizeof(botClassesList));
+		}
+		else
+		{
+			//Append to it on the others after the first element
+			g_adtChosenBotClasses.GetString(i, className, sizeof(className));
+			StrCat(botClassesList, sizeof(botClassesList), ", ");
+			StrCat(botClassesList, sizeof(botClassesList), className);
+		}
+	}
+	
+	hMenu.SetTitle("Your chosen team is %s\nDo you accept?", botClassesList);
+	hMenu.AddItem("0", "Yes");
+	hMenu.AddItem("1", "No");
+	hMenu.Display(client, MENU_TIME_FOREVER);
 }
 
 void CreateBotPreferenceMenu()
@@ -595,6 +650,119 @@ static int MenuHandler_BotVote(Menu menu, MenuAction action, int param1, int par
 				ManageDefenderBots(true);
 			else if (param1 == 1)
 				PrintToChatAll("%s Bot vote was unsuccessful!", PLUGIN_PREFIX);
+		}
+	}
+	
+	return 0;
+}
+
+static int MenuHandler_DefenderBotTeamSetup(Menu menu, MenuAction action, int param1, int param2)
+{
+	switch (action)
+	{
+		case MenuAction_Select:
+		{
+			switch (param2)
+			{
+				case 0:
+				{
+					g_adtChosenBotClasses.PushString("scout");
+					PrintToChat(param1, "You have chosen Scout");
+				}
+				case 1:
+				{
+					g_adtChosenBotClasses.PushString("soldier");
+					PrintToChat(param1, "You have chosen Soldier");
+				}
+				case 2:
+				{
+					g_adtChosenBotClasses.PushString("pyro");
+					PrintToChat(param1, "You have chosen Pyro");
+				}
+				case 3:
+				{
+					g_adtChosenBotClasses.PushString("demoman");
+					PrintToChat(param1, "You have chosen Demoman");
+				}
+				case 4:
+				{
+					g_adtChosenBotClasses.PushString("heavyweapons");
+					PrintToChat(param1, "You have chosen Heavy");
+				}
+				case 5:
+				{
+					g_adtChosenBotClasses.PushString("engineer");
+					PrintToChat(param1, "You have chosen Engineer");
+				}
+				case 6:
+				{
+					g_adtChosenBotClasses.PushString("medic");
+					PrintToChat(param1, "You have chosen Medic");
+				}
+				case 7:
+				{
+					g_adtChosenBotClasses.PushString("sniper");
+					PrintToChat(param1, "You have chosen Sniper");
+				}
+				case 8:
+				{
+					g_adtChosenBotClasses.PushString("spy");
+					PrintToChat(param1, "You have chosen Spy");
+				}
+			}
+			
+			m_iBotsLeftToChoose--;
+			
+			if (m_iBotsLeftToChoose == 0)
+			{
+				ShowDefenderBotTeamConfirmationMenu(param1);
+				return 0;
+			}
+			
+			ShowDefenderBotTeamSetupMenu(param1, GetMenuSelectionPosition());
+		}
+		case MenuAction_Cancel:
+		{
+			g_bChoosingBotClasses[param1] = false;
+			UpdateChosenBotTeamComposition();
+		}
+		case MenuAction_End:
+		{
+			delete menu;
+		}
+	}
+	
+	return 0;
+}
+
+static int MenuHandler_DefenderBotTeamConfirmation(Menu menu, MenuAction action, int param1, int param2)
+{
+	switch (action)
+	{
+		case MenuAction_Select:
+		{
+			switch (param2)
+			{
+				case 0:
+				{
+					g_bChoosingBotClasses[param1] = false;
+					g_bBotClassesLocked = true;
+					PrintToChat(param1, "%s Very well. Start the game to use this lineup.", PLUGIN_PREFIX);
+				}
+				case 1:
+				{
+					ShowDefenderBotTeamSetupMenu(param1, _, true, redbots_manager_defender_team_size.IntValue - GetHumanAndDefenderBotCount(TFTeam_Red));
+				}
+			}
+		}
+		case MenuAction_Cancel:
+		{
+			g_bChoosingBotClasses[param1] = false;
+			UpdateChosenBotTeamComposition();
+		}
+		case MenuAction_End:
+		{
+			delete menu;
 		}
 	}
 	

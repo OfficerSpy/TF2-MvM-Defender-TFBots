@@ -50,6 +50,7 @@ bool g_bBotsEnabled;
 float g_flNextReadyTime;
 int g_iDetonatingPlayer = -1;
 ArrayList g_adtChosenBotClasses;
+bool g_bBotClassesLocked;
 
 //For defender bots
 bool g_bIsDefenderBot[MAXPLAYERS + 1];
@@ -72,6 +73,8 @@ static float m_flNextRollTime[MAXPLAYERS + 1];
 #endif
 
 //For other players
+bool g_bChoosingBotClasses[MAXPLAYERS + 1];
+
 #if defined CHANGETEAM_RESTRICTIONS
 float g_flEnableBotsCooldown[MAXPLAYERS + 1];
 #endif
@@ -188,6 +191,8 @@ public void OnPluginStart()
 	RegConsoleCmd("sm_rollbots", Command_RerollNewBotTeamComposition);
 	RegConsoleCmd("sm_playwithbots", Command_JoinBluePlayWithBots);
 	RegConsoleCmd("sm_requestbot", Command_RequestExtraBot);
+	RegConsoleCmd("sm_choosebotteam", Command_ChooseBotClasses);
+	RegConsoleCmd("sm_cbt", Command_ChooseBotClasses);
 	
 #if defined TESTING_ONLY
 	RegConsoleCmd("sm_bots_start_now", Command_BotsReadyNow);
@@ -273,6 +278,7 @@ public void OnMapStart()
 {
 	g_bBotsEnabled = false;
 	g_flNextReadyTime = 0.0;
+	g_bBotClassesLocked = false;
 	
 	Config_LoadBotNames();
 	CreateBotPreferenceMenu();
@@ -297,6 +303,8 @@ public void OnConfigsExecuted()
 public void OnClientDisconnect(int client)
 {
 	g_bIsDefenderBot[client] = false;
+	
+	g_bChoosingBotClasses[client] = false;
 	
 	ResetLoadouts(client);
 }
@@ -608,6 +616,18 @@ public Action Command_Votebots(int client, int args)
 		return Plugin_Handled;
 	}
 	
+	if (g_bChoosingBotClasses[client])
+	{
+		PrintToChat(client, "%s You are already choosing the next team lineup.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	if (GetCountOfPlayersChoosingBotClasses() > 0)
+	{
+		PrintToChat(client, "%s Someone is currently choosing the next team lineup.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
 	switch (TF2_GetClientTeam(client))
 	{
 		case TFTeam_Red:
@@ -673,7 +693,7 @@ public Action Command_RerollNewBotTeamComposition(int client, int args)
 	}
 #endif
 	
-	UpdateChosenBotTeamComposition();
+	UpdateChosenBotTeamComposition(client);
 	CreateDisplayPanelBotTeamComposition(client);
 	
 	return Plugin_Handled;
@@ -736,6 +756,52 @@ public Action Command_RequestExtraBot(int client, int args)
 	
 	AddBotsBasedOnPreferences(1);
 	PrintToChatAll("%s %N requested an additional unit.", PLUGIN_PREFIX, client);
+	
+	return Plugin_Handled;
+}
+
+public Action Command_ChooseBotClasses(int client, int args)
+{
+	if (g_bBotsEnabled)
+	{
+		PrintToChat(client, "%s Bots are already enabled.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	if (TF2_GetClientTeam(client) != TFTeam_Red)
+	{
+		PrintToChat(client, "%s Your team is not allowed to use this.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	if (g_bBotClassesLocked)
+	{
+		PrintToChat(client, "%s Someone has already chosen the lineup for the next game.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	if (g_bChoosingBotClasses[client])
+	{
+		PrintToChat(client, "%s You are already choosing the next team lineup.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	if (GetCountOfPlayersChoosingBotClasses() > 0)
+	{
+		PrintToChat(client, "%s Someone is currently choosing the next team lineup.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	int redTeamCount = GetHumanAndDefenderBotCount(TFTeam_Red);
+	
+	if (redTeamCount > 1)
+	{
+		PrintToChat(client, "%s You are not solo.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	//Should only be able to call this while solo, so current team count should always be 1
+	ShowDefenderBotTeamSetupMenu(client, _, true, redbots_manager_defender_team_size.IntValue - redTeamCount);
 	
 	return Plugin_Handled;
 }
@@ -939,6 +1005,12 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 					return Plugin_Handled;
 				}
 #endif
+				
+				if (GetCountOfPlayersChoosingBotClasses() > 0)
+				{
+					PrintToChat(client, "%s Someone is currently choosing the next team lineup.", PLUGIN_PREFIX);
+					return Plugin_Handled;
+				}
 				
 				if (m_flLastReadyInputTime[client] <= GetGameTime())
 				{
@@ -1170,6 +1242,17 @@ int GetHumanAndDefenderBotCount(TFTeam team)
 	return count;
 }
 
+int GetCountOfPlayersChoosingBotClasses()
+{
+	int count = 0;
+	
+	for (int i = 1; i <= MaxClients; i++)
+		if (IsClientInGame(i) && g_bChoosingBotClasses[i])
+			count++;
+	
+	return count;
+}
+
 /* Used to check players last command input
 Usually for preventing palyers from sending a command multiple times in a single frame */
 bool ShouldProcessCommand(int client)
@@ -1298,8 +1381,26 @@ void SetupSniperSpotHints()
 	}
 }
 
-void UpdateChosenBotTeamComposition()
+void UpdateChosenBotTeamComposition(int caller = -1)
 {
+	//A player has already chosen their team, don't let it change
+	if (g_bBotClassesLocked)
+	{
+		if (caller != -1)
+			PrintToChat(caller, "%s Bot team lineup is locked for the next game.");
+		
+		return;
+	}
+	
+	//If someone is selecting the team, don't change it
+	if (GetCountOfPlayersChoosingBotClasses() > 0)
+	{
+		if (caller != -1)
+			PrintToChat(caller, "%s Someone is currently choosing the bot team lineup.");
+		
+		return;
+	}
+	
 	g_adtChosenBotClasses.Clear();
 	
 	int newBotsToAdd = redbots_manager_defender_team_size.IntValue - GetHumanAndDefenderBotCount(TFTeam_Red);
@@ -1330,9 +1431,10 @@ void UpdateChosenBotTeamComposition()
 	
 	delete adtClassPref;
 	
-#if defined TESTING_ONLY
-	PrintToChatAll("[UpdateChosenBotTeamComposition] Bot lineup changed");
-#endif
+	if (caller != -1)
+		PrintToChatAll("%s %N changed the bot team lineup", PLUGIN_PREFIX, caller);
+	else
+		PrintToChatAll("%s Bot lineup changed", PLUGIN_PREFIX);
 }
 
 void AddBotsFromChosenTeamComposition()
@@ -1344,6 +1446,9 @@ void AddBotsFromChosenTeamComposition()
 		g_adtChosenBotClasses.GetString(i, class, sizeof(class));
 		AddDefenderTFBot(1, class, "red", "expert");
 	}
+	
+	//Once we add them it's not locked anymore
+	g_bBotClassesLocked = false;
 	
 	PrintToChatAll("%s Added %d bot(s).", PLUGIN_PREFIX, g_adtChosenBotClasses.Length);
 }
