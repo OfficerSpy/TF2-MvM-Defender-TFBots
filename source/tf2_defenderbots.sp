@@ -20,7 +20,7 @@ Author: ★ Officer Spy ★
 #pragma semicolon 1
 #pragma newdecls required
 
-// #define TESTING_ONLY
+#define TESTING_ONLY
 
 #define MOD_REQUEST_CREDITS
 #define MOD_CUSTOM_ATTRIBUTES
@@ -140,7 +140,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.3.9",
+	version = "1.4.0",
 	url = "https://github.com/OfficerSpy/TF2-MvM-Defender-TFBots"
 };
 

@@ -85,7 +85,7 @@ void DHooks_DefenderBot(int client)
 		LogError("DHooks_DefenderBot: IVision is NULL! Bot vision will not be hooked.");
 	}
 	
-	Address loco = view_as<Address>(bot.GetLocomotionInterface());
+	/* Address loco = view_as<Address>(bot.GetLocomotionInterface());
 	
 	if (loco != Address_Null)
 	{
@@ -95,7 +95,7 @@ void DHooks_DefenderBot(int client)
 	else
 	{
 		LogError("DHooks_DefenderBot: ILocomotion is NULL! Bot locomotion will not be hooked.");
-	}
+	} */
 }
 
 static MRESReturn DHookCallback_LoadUpgradesFile_Post(Address pThis)
