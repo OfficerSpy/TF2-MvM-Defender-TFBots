@@ -713,7 +713,7 @@ static int MenuHandler_DefenderBotTeamSetup(Menu menu, MenuAction action, int pa
 			
 			m_iBotsLeftToChoose--;
 			
-			if (m_iBotsLeftToChoose == 0)
+			if (m_iBotsLeftToChoose <= 0)
 			{
 				ShowDefenderBotTeamConfirmationMenu(param1);
 				return 0;
