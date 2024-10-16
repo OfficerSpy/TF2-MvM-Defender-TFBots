@@ -1,0 +1,27 @@
+[[dependency]]
+url = "https://github.com/FlaminSarge/tf2attributes/blob/master/scripting/include/tf2attributes.inc"
+path = "."
+
+[[dependency]]
+url = "https://github.com/nosoop/SM-TFEconData/blob/master/scripting/include/tf_econ_data.inc"
+path = "."
+
+[[dependency]]
+url = "https://github.com/nosoop/SM-TFUtils/blob/master/scripting/include/tf2utils.inc"
+path = "."
+
+[[dependency]]
+url = "https://github.com/TF2-DMB/CBaseNPC/tree/master/scripting/include"
+path = "."
+
+[[dependency]]
+url = "https://github.com/Vinillia/actions.ext/tree/master/sourcemod/include"
+path = "."
+
+[[dependency]]
+url = "https://github.com/ErikMinekus/sm-ripext/tree/main/pawn/scripting/include"
+path = "."
+
+[[dependency]]
+url = "https://github.com/OfficerSpy/SM_Stock_OfficerSpy"
+path = "."
