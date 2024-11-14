@@ -746,7 +746,7 @@ int FindEnemyNearestToMe(int client, const float max_distance, bool bGiantsOnly 
 		if (class > TFClass_Unknown && TF2_GetPlayerClass(i) != class)
 			continue;
 		
-		if (TF2_IsStealthed(i) && TF2_GetPercentInvisible(i) >= 0.75)
+		if (TF2_IsStealthed(i) && !IsCloakedPlayerExposed(i))
 			continue;
 		
 		float distance = GetVectorDistance(WorldSpaceCenter(i), origin);
@@ -952,7 +952,7 @@ int GetNearestEnemyCount(int client, const float max_distance, bool bIgnoreUber 
 		if (bIgnoreUber && TF2_IsInvulnerable(i))
 			continue;
 		
-		if (TF2_IsStealthed(i) && TF2_GetPercentInvisible(i) >= 0.75)
+		if (TF2_IsStealthed(i) && !IsCloakedPlayerExposed(i))
 			continue;
 		
 		if (GetVectorDistance(WorldSpaceCenter(i), origin) <= max_distance)
@@ -1268,6 +1268,29 @@ bool IsPlayerMoving(int client)
 bool CanWeaponAddUberOnHit(int weapon)
 {
 	return TF2Attrib_HookValueFloat(0.0, "add_onhit_ubercharge", weapon) > 0.0;
+}
+
+bool IsCloakedPlayerExposed(int client)
+{
+	if (TF2_IsPlayerInCondition(client, TFCond_OnFire))
+		return true;
+	
+	if (TF2_IsPlayerInCondition(client, TFCond_Jarated))
+		return true;
+	
+	if (TF2_IsPlayerInCondition(client, TFCond_CloakFlicker))
+		return true;
+	
+	if (TF2_IsPlayerInCondition(client, TFCond_Bleeding))
+		return true;
+	
+	if (TF2_IsPlayerInCondition(client, TFCond_Milked))
+		return true;
+	
+	if (TF2_IsPlayerInCondition(client, TFCond_Gas))
+		return true;
+	
+	return false;
 }
 
 int GetNearestCurrencyPack(int client, const float max_distance = 999999.0)

@@ -23,7 +23,7 @@ Author: ★ Officer Spy ★
 // #define TESTING_ONLY
 
 #define MOD_REQUEST_CREDITS
-// #define MOD_CUSTOM_ATTRIBUTES
+#define MOD_CUSTOM_ATTRIBUTES
 #define MOD_ROLL_THE_DICE_REVAMPED
 
 #define METHOD_MVM_UPGRADES
@@ -140,7 +140,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.4.1",
+	version = "1.4.2",
 	url = "https://github.com/OfficerSpy/TF2-MvM-Defender-TFBots"
 };
 
