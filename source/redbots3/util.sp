@@ -1293,6 +1293,24 @@ bool IsCloakedPlayerExposed(int client)
 	return false;
 }
 
+int GetHealerOfPlayer(int client, bool bPlayerOnly = false)
+{
+	for (int i = 0; i < TF2_GetNumHealers(client); i++)
+	{
+		int healer = TF2Util_GetPlayerHealer(client, i);
+		
+		if (healer != -1)
+		{
+			if (bPlayerOnly && !BaseEntity_IsPlayer(healer))
+				continue;
+			
+			return healer;
+		}
+	}
+	
+	return -1;
+}
+
 int GetNearestCurrencyPack(int client, const float max_distance = 999999.0)
 {
 	float origin[3]; GetClientAbsOrigin(client, origin);

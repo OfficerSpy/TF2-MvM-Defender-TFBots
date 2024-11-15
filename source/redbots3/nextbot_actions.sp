@@ -3056,6 +3056,12 @@ bool CTFBotDefenderAttack_SelectTarget(int actor, bool bBombCarrierOnly = false)
 	//Found a valid target, update
 	if (target != -1)
 	{
+		//Go after the healer first
+		int healer = GetHealerOfPlayer(target, true);
+		
+		if (healer != -1)
+			target = healer;
+		
 		m_iAttackTarget[actor] = target;
 		return true;
 	}
@@ -5499,32 +5505,4 @@ void GetFlameThrowerAimForTank(int tank, float aimPos[3])
 {
 	aimPos = WorldSpaceCenter(tank);
 	aimPos[2] += 90.0;
-}
-
-bool IsImmediateThreat(int client, const CKnownEntity threat)
-{
-	if (!threat.IsVisibleRecently())
-		return false;
-	
-	int iThreat = threat.GetEntity();
-	
-	if (!TF2_IsLineOfFireClear4(client, iThreat))
-		return false;
-	
-	float myAbsOrigin[3]; GetClientAbsOrigin(client, myAbsOrigin);
-	float lastKnownPos[3]; threat.GetLastKnownPosition(lastKnownPos);
-	
-	float to[3]; SubtractVectors(myAbsOrigin, lastKnownPos, to);
-	float threatRange = NormalizeVector(to, to);
-	
-	const float nearbyRange = 500.0;
-	
-	//Nearby threats are always dangerous
-	if (threatRange < nearbyRange)
-		return true;
-	
-	if (!BaseEntity_IsPlayer(iThreat))
-		return false;
-	
-	return false;
 }

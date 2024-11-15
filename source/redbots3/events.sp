@@ -92,6 +92,10 @@ static void Event_MvmWaveBegin(Event event, const char[] name, bool dontBroadcas
 	{
 		if (IsClientInGame(i) && g_bIsDefenderBot[i] && IsPlayerAlive(i))
 		{
+			//Looking for sniping spots, don't disturb
+			if (ActionsManager.GetAction(i, "SniperLurk") != INVALID_ACTION)
+				continue;
+			
 			//Rethink what we're supposed to do
 			ResetIntentionInterface(i);
 		}
@@ -227,7 +231,8 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 #endif
 		
 #if defined MOD_CUSTOM_ATTRIBUTES
-		TF2Attrib_SetByName(data, "cannot be sapped", 1.0);
+		if (TF2Attrib_IsValidAttributeName("cannot be sapped"))
+			TF2Attrib_SetByName(data, "cannot be sapped", 1.0);
 #endif
 		
 		SetRandomNameOnBot(data);

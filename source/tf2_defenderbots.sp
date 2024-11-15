@@ -286,13 +286,26 @@ public void OnMapStart()
 
 public void OnConfigsExecuted()
 {
-	tf_bot_path_lookahead_range = FindConVar("tf_bot_path_lookahead_range");
-	tf_bot_health_critical_ratio = FindConVar("tf_bot_health_critical_ratio");
-	tf_bot_health_ok_ratio = FindConVar("tf_bot_health_ok_ratio");
-	tf_bot_ammo_search_range = FindConVar("tf_bot_ammo_search_range");
-	tf_bot_health_search_far_range = FindConVar("tf_bot_health_search_far_range");
-	tf_bot_health_search_near_range = FindConVar("tf_bot_health_search_near_range");
-	tf_bot_suicide_bomb_range = FindConVar("tf_bot_suicide_bomb_range");
+	if (!tf_bot_path_lookahead_range)
+		tf_bot_path_lookahead_range = FindConVar("tf_bot_path_lookahead_range");
+	
+	if (!tf_bot_health_critical_ratio)
+		tf_bot_health_critical_ratio = FindConVar("tf_bot_health_critical_ratio");
+	
+	if (!tf_bot_health_ok_ratio)
+		tf_bot_health_ok_ratio = FindConVar("tf_bot_health_ok_ratio");
+	
+	if (!tf_bot_ammo_search_range)
+		tf_bot_ammo_search_range = FindConVar("tf_bot_ammo_search_range");
+	
+	if (!tf_bot_health_search_far_range)
+		tf_bot_health_search_far_range = FindConVar("tf_bot_health_search_far_range");
+	
+	if (!tf_bot_health_search_near_range)
+		tf_bot_health_search_near_range = FindConVar("tf_bot_health_search_near_range");
+	
+	if (!tf_bot_suicide_bomb_range)
+		tf_bot_suicide_bomb_range = FindConVar("tf_bot_suicide_bomb_range");
 }
 
 /* public void OnMapEnd()
@@ -1034,26 +1047,32 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 
 public Action SoundHook_General(int clients[MAXPLAYERS], int &numClients, char sample[PLATFORM_MAX_PATH], int &entity, int &channel, float &volume, int &level, int &pitch, int &flags, char soundEntry[PLATFORM_MAX_PATH], int &seed)
 {
-	if (channel == SNDCHAN_VOICE && volume > 0.0 && BaseEntity_IsPlayer(entity) && TF2_IsPlayerInCondition(entity, TFCond_Disguised) && !TF2_IsStealthed(entity))
+	if (channel == SNDCHAN_VOICE && volume > 0.0 && BaseEntity_IsPlayer(entity))
 	{
-		//Robots have robotic voices even when disguised
-		//Any defender bot that can see him right now will call him out
-		for (int i = 1; i <= MaxClients; i++)
+		if (StrContains(sample, "spy_mvm_LaughShort", false) != -1)
 		{
-			if (i == entity)
-				continue;
-			
-			if (!IsClientInGame(i))
-				continue;
-			
-			if (g_bIsDefenderBot[i] == false)
-				continue;
-			
-			if (GetClientTeam(entity) == GetClientTeam(i))
-				continue;
-			
-			if (TF2_IsLineOfFireClear4(i, entity))
-				RealizeSpy(i, entity);
+			if (TF2_IsPlayerInCondition(entity, TFCond_Disguised) && !TF2_IsStealthed(entity))
+			{
+				/* Robots have robotic voices even when disguised so any
+				defender bot that can see him right now will call him out */
+				for (int i = 1; i <= MaxClients; i++)
+				{
+					if (i == entity)
+						continue;
+					
+					if (!IsClientInGame(i))
+						continue;
+					
+					if (g_bIsDefenderBot[i] == false)
+						continue;
+					
+					if (GetClientTeam(entity) == GetClientTeam(i))
+						continue;
+					
+					if (TF2_IsLineOfFireClear4(i, entity))
+						RealizeSpy(i, entity);
+				}
+			}
 		}
 	}
 	
