@@ -5120,6 +5120,12 @@ void UtilizeCompressionBlast(int client, INextBot bot, const CKnownEntity threat
 	if (threat == NULL_KNOWN_ENTITY)
 		return;
 	
+	if (redbots_manager_bot_reflect_skill.IntValue < 1)
+		return;
+	
+	if (redbots_manager_bot_reflect_chance.FloatValue < 100.0 && TransientlyConsistentRandomValue(client, 1.0) > redbots_manager_bot_reflect_chance.FloatValue / 100.0)
+		return;
+	
 	int iThreat = threat.GetEntity();
 	
 	if (BaseEntity_IsPlayer(iThreat))
@@ -5155,31 +5161,31 @@ void UtilizeCompressionBlast(int client, INextBot bot, const CKnownEntity threat
 		}
 	}
 	
+	if (redbots_manager_bot_reflect_skill.IntValue < 2)
+		return;
+	
 	//Enhanced projectile airblast
-	if (enhancedStage > 0)
+	int myTeam = GetClientTeam(client);
+	float myEyePos[3]; GetClientEyePosition(client, myEyePos);
+	int ent = -1;
+	
+	while ((ent = FindEntityByClassname(ent, "tf_projectile_*")) != -1)
 	{
-		int myTeam = GetClientTeam(client);
-		float myEyePos[3]; GetClientEyePosition(client, myEyePos);
-		int ent = -1;
+		if (BaseEntity_GetTeamNumber(ent) == myTeam)
+			continue;
 		
-		while ((ent = FindEntityByClassname(ent, "tf_projectile_*")) != -1)
+		if (!CanBeReflected(ent))
+			continue;
+		
+		float origin[3]; BaseEntity_GetLocalOrigin(ent, origin);
+		float vec[3]; MakeVectorFromPoints(origin, myEyePos, vec);
+		
+		//Airblast the projectile if we are actually facing towards it
+		if (GetVectorLength(vec) < 150.0)
 		{
-			if (BaseEntity_GetTeamNumber(ent) == myTeam)
-				continue;
-			
-			if (!CanBeReflected(ent))
-				continue;
-			
-			float origin[3]; BaseEntity_GetLocalOrigin(ent, origin);
-			float vec[3]; MakeVectorFromPoints(origin, myEyePos, vec);
-			
-			//Airblast the projectile if we are actually facing towards it
-			if (GetVectorLength(vec) < 150.0)
-			{
-				g_iSubtractiveButtons[client] |= IN_ATTACK;
-				VS_PressAltFireButton(client);
-				return;
-			}
+			g_iSubtractiveButtons[client] |= IN_ATTACK;
+			VS_PressAltFireButton(client);
+			return;
 		}
 	}
 }
@@ -5429,7 +5435,7 @@ bool CanBuyUpgradesNow(int client)
 	return true;
 }
 
-/* float TransientlyConsistentRandomValue(int client, float period = 10.0, int seedValue = 0)
+float TransientlyConsistentRandomValue(int client, float period = 10.0, int seedValue = 0)
 {
 	CNavArea area = CBaseCombatCharacter(client).GetLastKnownArea();
 	
@@ -5439,7 +5445,7 @@ bool CanBuyUpgradesNow(int client)
 	int timeMod = RoundToFloor(GetGameTime() / period) + 1;
 	
 	return FloatAbs(Cosine(float(seedValue + (client * area.GetID() * timeMod))));
-} */
+}
 
 bool IsFailureImminent(int client)
 {

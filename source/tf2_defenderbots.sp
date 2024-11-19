@@ -101,6 +101,10 @@ ConVar redbots_manager_bot_use_upgrades;
 ConVar redbots_manager_bot_buyback_chance;
 ConVar redbots_manager_bot_buy_upgrades_chance;
 ConVar redbots_manager_bot_max_tank_attackers;
+ConVar redbots_manager_bot_aim_skill;
+ConVar redbots_manager_bot_reflect_skill;
+ConVar redbots_manager_bot_reflect_chance;
+ConVar redbots_manager_bot_hear_spy_range;
 ConVar redbots_manager_extra_bots;
 
 #if defined MOD_REQUEST_CREDITS
@@ -140,7 +144,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.4.2",
+	version = "1.4.3",
 	url = "https://github.com/OfficerSpy/TF2-MvM-Defender-TFBots"
 };
 
@@ -166,6 +170,10 @@ public void OnPluginStart()
 	redbots_manager_bot_buyback_chance = CreateConVar("sm_redbots_manager_bot_buyback_chance", "5", "Chance for bots to buyback into the game.", FCVAR_NOTIFY);
 	redbots_manager_bot_buy_upgrades_chance = CreateConVar("sm_redbots_manager_bot_buy_upgrades_chance", "50", "Chance for bots to buy upgrades in the middle of a game.", FCVAR_NOTIFY);
 	redbots_manager_bot_max_tank_attackers = CreateConVar("sm_redbots_manager_bot_max_tank_attackers", "3", _, FCVAR_NOTIFY);
+	redbots_manager_bot_aim_skill = CreateConVar("sm_redbots_manager_bot_aim_skill", "2", _, FCVAR_NOTIFY);
+	redbots_manager_bot_reflect_skill = CreateConVar("sm_redbots_manager_bot_reflect_skill", "2", _, FCVAR_NOTIFY);
+	redbots_manager_bot_reflect_chance = CreateConVar("redbots_manager_bot_reflect_chance", "100.0", _, FCVAR_NOTIFY);
+	redbots_manager_bot_hear_spy_range = CreateConVar("sm_redbots_manager_bot_hear_spy_range", "3000.0", _, FCVAR_NOTIFY);
 	redbots_manager_extra_bots = CreateConVar("sm_redbots_manager_extra_bots", "1", "How many more bots we are allowed to request beyond the team size", FCVAR_NOTIFY);
 	
 #if defined MOD_REQUEST_CREDITS
@@ -479,20 +487,35 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			{
 				if (TF2_IsPlayerInCondition(client, TFCond_Zoomed))
 				{
-					//TODO: this needs to be more precise with actually getting our current m_lookAtSubject in PlayerBody as this can cause jittery aim
-					if (threat && TF2_IsLineOfFireClear4(client, threat.GetEntity()))
+					if (redbots_manager_bot_aim_skill.IntValue >= 1)
 					{
-						//Help aim towards the desired target point
-						float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(threat.GetEntity(), aimPos);
-						SnapViewToPosition(client, aimPos);
-						
-						if (m_flNextSnipeFireTime[client] <= GetGameTime())
-							VS_PressFireButton(client);
+						//TODO: this needs to be more precise with actually getting our current m_lookAtSubject in PlayerBody as this can cause jittery aim
+						if (threat && TF2_IsLineOfFireClear4(client, threat.GetEntity()))
+						{
+							//Help aim towards the desired target point
+							float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(threat.GetEntity(), aimPos);
+							SnapViewToPosition(client, aimPos);
+							
+							if (m_flNextSnipeFireTime[client] <= GetGameTime())
+								VS_PressFireButton(client);
+						}
+						else
+						{
+							//Delay to give a reaction time the next time we can see a threat
+							m_flNextSnipeFireTime[client] = GetGameTime() + SNIPER_REACTION_TIME;
+						}
 					}
 					else
 					{
-						//Delay to give a reaction time the next time we can see a threat
-						m_flNextSnipeFireTime[client] = GetGameTime() + SNIPER_REACTION_TIME;
+						if (threat && myBot.GetBodyInterface().IsHeadAimingOnTarget())
+						{
+							if (m_flNextSnipeFireTime[client] <= GetGameTime())
+								VS_PressFireButton(client);
+						}
+						else
+						{
+							m_flNextSnipeFireTime[client] = GetGameTime() + SNIPER_REACTION_TIME;
+						}
 					}
 				}
 				else
@@ -511,25 +534,56 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 					{
 						int iThreat = threat.GetEntity();
 						
-						if (!threat.IsVisibleInFOVNow() && TF2_IsLineOfFireClear4(client, iThreat))
+						if (redbots_manager_bot_aim_skill.IntValue >= 2)
 						{
-							//We're not currently facing our threat, so let's quickly turn towards them
-							float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
-							SnapViewToPosition(client, aimPos);
+							if (!threat.IsVisibleInFOVNow() && TF2_IsLineOfFireClear4(client, iThreat))
+							{
+								//We're not currently facing our threat, so let's quickly turn towards them
+								float aimPos[3];
+								
+								/* NOTE: this used to be handled in CTFBotMainAction_SelectTargetPoint, but it seems that function doesn't always get called when the bot is up close to it
+								The bot will look up, but then start looking towards the center again and stop firing before going to look up and fire again
+								It then just repeats this process over and over unless it gets away from the tank */
+								if (weaponID == TF_WEAPON_FLAMETHROWER && IsBaseBoss(iThreat) && myBot.IsRangeLessThan(iThreat, FLAMETHROWER_REACH_RANGE))
+								{
+									GetFlameThrowerAimForTank(iThreat, aimPos);
+									buttons |= IN_ATTACK;
+								}
+								else
+								{
+									myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
+								}
+								
+								SnapViewToPosition(client, aimPos);
+							}
+						}
+						else if (redbots_manager_bot_aim_skill.IntValue == 1)
+						{
+							if (!threat.IsVisibleRecently() && TF2_IsLineOfFireClear4(client, iThreat))
+							{
+								float aimPos[3];
+								
+								if (weaponID == TF_WEAPON_FLAMETHROWER && IsBaseBoss(iThreat) && myBot.IsRangeLessThan(iThreat, FLAMETHROWER_REACH_RANGE))
+								{
+									GetFlameThrowerAimForTank(iThreat, aimPos);
+									buttons |= IN_ATTACK;
+								}
+								else
+								{
+									myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
+								}
+								
+								SnapViewToPosition(client, aimPos);
+							}
 						}
 						else
 						{
-							/* NOTE: this used to be handled in CTFBotMainAction_SelectTargetPoint, but it seems that function doesn't always get called when the bot is up close to it
-							The bot will look up, but then start looking towards the center again and stop firing before going to look up and fire again
-							It then just repeats this process over and over unless it gets away from the tank */
-							if (weaponID == TF_WEAPON_FLAMETHROWER)
+							if (weaponID == TF_WEAPON_FLAMETHROWER && IsBaseBoss(iThreat) && myBot.IsRangeLessThan(iThreat, FLAMETHROWER_REACH_RANGE))
 							{
-								if (IsBaseBoss(iThreat) && myBot.IsRangeLessThan(iThreat, FLAMETHROWER_REACH_RANGE))
-								{
-									float aimPos[3]; GetFlameThrowerAimForTank(iThreat, aimPos);
-									SnapViewToPosition(client, aimPos);
-									buttons |= IN_ATTACK;
-								}
+								float aimPos[3];
+								GetFlameThrowerAimForTank(iThreat, aimPos);
+								SnapViewToPosition(client, aimPos); //TODO: replace with AimHeadTowards
+								buttons |= IN_ATTACK;
 							}
 						}
 					}
@@ -1067,6 +1121,9 @@ public Action SoundHook_General(int clients[MAXPLAYERS], int &numClients, char s
 						continue;
 					
 					if (GetClientTeam(entity) == GetClientTeam(i))
+						continue;
+					
+					if (GetVectorDistance(GetAbsOrigin(i), WorldSpaceCenter(entity)) > redbots_manager_bot_hear_spy_range.FloatValue)
 						continue;
 					
 					if (TF2_IsLineOfFireClear4(i, entity))
