@@ -5,6 +5,7 @@
 #include <stocklib_officerspy/tf/stocklib_extra_vscript>
 #include <stocklib_officerspy/econ_item_view>
 #include <stocklib_officerspy/tf/tf_weaponbase>
+#include <stocklib_officerspy/tf/entity_capture_flag>
 
 #define SENTRY_MAX_RANGE 1100.0
 
@@ -454,14 +455,9 @@ int FindBombNearestToHatch()
 	
 	while ((iEnt = FindEntityByClassname(iEnt, "item_teamflag")) != -1)
 	{
-		//Ignore bombs not in play
-		if (GetEntProp(iEnt, Prop_Send, "m_nFlagStatus") == 0)
+		if (CaptureFlag_IsHome(iEnt))
 			continue;
 		
-		//Ignore bombs not on blue team.
-		if (GetEntProp(iEnt, Prop_Send, "m_iTeamNum") != view_as<int>(TFTeam_Blue))
-			continue;
-	
 		float flDistance = GetVectorDistance(flOrigin, WorldSpaceCenter(iEnt));
 		
 		if (flDistance <= flBestDistance)
@@ -528,7 +524,7 @@ bool IsHealedByMedic(int client)
 		int iHealerIndex = TF2Util_GetPlayerHealer(client, i);
 		
 		//Not a player.
-		if (!IsValidClientIndex(iHealerIndex))
+		if (!BaseEntity_IsPlayer(iHealerIndex))
 			continue;
 		
 		return true;
@@ -1311,6 +1307,37 @@ int GetHealerOfPlayer(int client, bool bPlayerOnly = false)
 	return -1;
 }
 
+bool IsHealedByObject(int client)
+{
+	for (int i = 0; i < TF2_GetNumHealers(client); i++)
+	{
+		int healer = TF2Util_GetPlayerHealer(client, i);
+		
+		if (!BaseEntity_IsBaseObject(healer))
+			continue;
+		
+		return true;
+	}
+	
+	return false;
+}
+
+//Return the only entity we can see, -2 if we can see them both
+int FindOnlyOneVisibleEntity(int client, int ent1, int ent2)
+{
+	if (!TF2_IsLineOfFireClear4(client, ent1))
+	{
+		return ent2;
+	}
+	
+	if (!TF2_IsLineOfFireClear4(client, ent2))
+	{
+		return ent1;
+	}
+	
+	return -2;
+}
+
 int GetNearestCurrencyPack(int client, const float max_distance = 999999.0)
 {
 	float origin[3]; GetClientAbsOrigin(client, origin);
@@ -1580,4 +1607,10 @@ stock int GetTeamHumanClientCount(int team)
 			count++;
 	
 	return count;
+}
+
+//From stocksoup/memory.inc
+stock Address DereferencePointer(Address addr) {
+	// maybe someday we'll do 64-bit addresses
+	return view_as<Address>(LoadFromAddress(addr, NumberType_Int32));
 }

@@ -10,7 +10,7 @@ enum //CEconItemAttributeDefinition
 {
 	m_pKVAttribute = 0,
 	m_nDefIndex = 4
-};
+}
 
 methodmap CEconItemAttributeDefinition
 {
@@ -30,7 +30,7 @@ methodmap CEconItemAttributeDefinition
 	}
 }
 
-public CEconItemAttributeDefinition CEIAD_GetAttributeDefinitionByName(const char[] szAttribute) 
+public CEconItemAttributeDefinition CEIAD_GetAttributeDefinitionByName(const char[] szAttribute)
 {
 	Address CEconItemSchema = GEconItemSchema();
 	
@@ -56,7 +56,7 @@ enum //CMannVsMachineUpgradeManager
 	m_Upgrades = 12, //0x000C
 	
 	CMannVsMachineUpgradeManager_Size = 28
-}; //Size=0x001C
+} //Size=0x001C
 
 methodmap CMannVsMachineUpgrades
 {
@@ -70,6 +70,8 @@ methodmap CMannVsMachineUpgrades
 	
 	public char[] m_szAttribute()
 	{
+		//szAttrib is located at 0, no need to add its offset here
+		
 		char attribute[MAX_ATTRIBUTE_DESCRIPTION_LENGTH];
 		
 		for (int i = 0; i < sizeof(attribute); i++)
@@ -98,8 +100,8 @@ methodmap CMannVsMachineUpgradeManager < CMannVsMachineUpgrades
 	
 	public CMannVsMachineUpgrades GetUpgradeByIndex(int index)
 	{
-		Address Upgrades = this.Address + view_as<Address>(m_Upgrades);
-		Address pUpgrades = view_as<Address>(LoadFromAddress(Upgrades, NumberType_Int32));
+		Address rawUpgrades = this.Address + view_as<Address>(m_Upgrades);
+		Address pUpgrades = DereferencePointer(rawUpgrades);
 		
 		return view_as<CMannVsMachineUpgrades>(pUpgrades + view_as<Address>(index * CMannVsMachineUpgrades_Size));
 	}
@@ -129,4 +131,48 @@ void InitMvMUpgrades(GameData hGamedata)
 	LogMessage("InitMvMUpgrades: Size of CMannVsMachineUpgrades = %d", CMannVsMachineUpgrades_Size);
 #endif
 }
+
+/* TECHNICAL DATA FOR REFERENCE
+class CEconItemAttributeDefinition
+{
+	KeyValues	*m_pKVAttribute;
+	attrib_definition_index_t	m_nDefIndex;
+	const class ISchemaAttributeType *m_pAttrType;
+	bool		m_bHidden;
+	bool		m_bWebSchemaOutputForced;
+	bool		m_bStoredAsInteger;
+	bool		m_bInstanceData;
+	EAssetClassAttrExportRule_t	m_eAssetClassAttrExportRule;
+	uint32		m_unAssetClassBucket;
+	bool		m_bIsSetBonus;
+	int			m_iUserGenerationType;
+	attrib_effect_types_t m_iEffectType;
+	int			m_iDescriptionFormat;
+	const char	*m_pszDescriptionString;
+	const char	*m_pszArmoryDesc;
+	const char	*m_pszDefinitionName;
+	const char	*m_pszAttributeClass;
+	bool		m_bCanAffectMarketName;
+	bool		m_bCanAffectRecipeComponentName;
+	econ_tag_handle_t	m_ItemDefinitionTag;
+	mutable string_t	m_iszAttributeClass;
+}
+
+class CMannVsMachineUpgrades
+{
+	char szAttrib[ MAX_ATTRIBUTE_DESCRIPTION_LENGTH ];
+	char szIcon[ MAX_PATH ];
+	float flIncrement;
+	float flCap;
+	int nCost;
+	int nUIGroup;
+	int nQuality;
+	int nTier;
+}
+
+class CMannVsMachineUpgradeManager
+{
+	CUtlVector< CMannVsMachineUpgrades > m_Upgrades;
+	CUtlMap< const char*, int > m_AttribMap;
+} */
 #endif

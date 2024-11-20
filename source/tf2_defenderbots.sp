@@ -536,43 +536,33 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 						
 						if (redbots_manager_bot_aim_skill.IntValue >= 2)
 						{
-							if (!threat.IsVisibleInFOVNow() && TF2_IsLineOfFireClear4(client, iThreat))
+							/* NOTE: this used to be handled in CTFBotMainAction_SelectTargetPoint, but it seems that function doesn't always get called when the bot is up close to it
+							The bot will look up, but then start looking towards the center again and stop firing before going to look up and fire again
+							It then just repeats this process over and over unless it gets away from the tank */
+							if (weaponID == TF_WEAPON_FLAMETHROWER && IsBaseBoss(iThreat) && myBot.IsRangeLessThan(iThreat, FLAMETHROWER_REACH_RANGE))
+							{
+								float aimPos[3]; GetFlameThrowerAimForTank(iThreat, aimPos);
+								SnapViewToPosition(client, aimPos);
+								buttons |= IN_ATTACK;
+							}
+							else if (!threat.IsVisibleInFOVNow() && TF2_IsLineOfFireClear4(client, iThreat))
 							{
 								//We're not currently facing our threat, so let's quickly turn towards them
-								float aimPos[3];
-								
-								/* NOTE: this used to be handled in CTFBotMainAction_SelectTargetPoint, but it seems that function doesn't always get called when the bot is up close to it
-								The bot will look up, but then start looking towards the center again and stop firing before going to look up and fire again
-								It then just repeats this process over and over unless it gets away from the tank */
-								if (weaponID == TF_WEAPON_FLAMETHROWER && IsBaseBoss(iThreat) && myBot.IsRangeLessThan(iThreat, FLAMETHROWER_REACH_RANGE))
-								{
-									GetFlameThrowerAimForTank(iThreat, aimPos);
-									buttons |= IN_ATTACK;
-								}
-								else
-								{
-									myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
-								}
-								
+								float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
 								SnapViewToPosition(client, aimPos);
 							}
 						}
 						else if (redbots_manager_bot_aim_skill.IntValue == 1)
 						{
-							if (!threat.IsVisibleRecently() && TF2_IsLineOfFireClear4(client, iThreat))
+							if (weaponID == TF_WEAPON_FLAMETHROWER && IsBaseBoss(iThreat) && myBot.IsRangeLessThan(iThreat, FLAMETHROWER_REACH_RANGE))
 							{
-								float aimPos[3];
-								
-								if (weaponID == TF_WEAPON_FLAMETHROWER && IsBaseBoss(iThreat) && myBot.IsRangeLessThan(iThreat, FLAMETHROWER_REACH_RANGE))
-								{
-									GetFlameThrowerAimForTank(iThreat, aimPos);
-									buttons |= IN_ATTACK;
-								}
-								else
-								{
-									myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
-								}
-								
+								float aimPos[3]; GetFlameThrowerAimForTank(iThreat, aimPos);
+								SnapViewToPosition(client, aimPos);
+								buttons |= IN_ATTACK;
+							}
+							else if (!threat.IsVisibleRecently() && TF2_IsLineOfFireClear4(client, iThreat))
+							{
+								float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
 								SnapViewToPosition(client, aimPos);
 							}
 						}
