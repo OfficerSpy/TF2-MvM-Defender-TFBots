@@ -4962,22 +4962,22 @@ void EquipBestTankWeapon(int client)
 	TF2Util_SetPlayerActiveWeapon(client, best_weapon);
 }
 
-//Get the medic healing this threat
-//If we don't know about him yet or he has no healer, then we return the original threat
+/* Get the medic healing this threat only if we know about him and he's in our FOV
+otherwise return the original threat if there is no known healer right now */
 CKnownEntity GetHealerOfThreat(INextBot bot, const CKnownEntity threat)
 {
 	if (!threat)
 		return NULL_KNOWN_ENTITY;
 	
-	int threatEnt = threat.GetEntity();
+	int playerThreat = threat.GetEntity();
 	
-	for (int i = 0; i < TF2_GetNumHealers(threatEnt); i++)
+	for (int i = 0; i < TF2_GetNumHealers(playerThreat); i++)
 	{
-		int healer = TF2Util_GetPlayerHealer(threatEnt, i);
+		int playerHealer = TF2Util_GetPlayerHealer(playerThreat, i);
 		
-		if (healer != -1 && BaseEntity_IsPlayer(healer))
+		if (playerHealer != -1 && BaseEntity_IsPlayer(playerHealer))
 		{
-			CKnownEntity knownHealer = bot.GetVisionInterface().GetKnown(threatEnt);
+			CKnownEntity knownHealer = bot.GetVisionInterface().GetKnown(playerHealer);
 			
 			if (knownHealer && knownHealer.IsVisibleInFOVNow())
 				return knownHealer;
