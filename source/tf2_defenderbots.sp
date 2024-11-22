@@ -1353,10 +1353,9 @@ static int m_iFindNameTries[MAXPLAYERS + 1];
 void SetRandomNameOnBot(int client)
 {
 	char newName[MAX_NAME_LENGTH]; GetRandomDefenderBotName(newName, sizeof(newName));
-	
 	const int maxTries = 10;
 	
-	if (DoesAnyPlayerUseThisName(newName) && m_iFindNameTries[client] < maxTries)
+	if (m_adtBotNames.Length > 0 && DoesAnyPlayerUseThisName(newName) && m_iFindNameTries[client] < maxTries)
 	{
 		m_iFindNameTries[client]++;
 		
@@ -1375,7 +1374,8 @@ void GetRandomDefenderBotName(char[] buffer, int maxlen)
 {
 	if (m_adtBotNames.Length == 0)
 	{
-		LogError("GetRandomDefenderBotName: No bot names were ever parsed!");
+		// LogError("GetRandomDefenderBotName: No bot names were ever parsed!");
+		strcopy(buffer, maxlen, "You forgot to give me a name!");
 		return;
 	}
 	
@@ -1576,7 +1576,7 @@ eMissionDifficulty GetMissionDifficulty()
 
 void Config_LoadBotNames()
 {
-	char filePath[PLATFORM_MAX_PATH]; BuildPath(Path_SM, filePath, sizeof(filePath), "configs/defender_bots_manager/bot_names.txt");
+	char filePath[PLATFORM_MAX_PATH]; BuildPath(Path_SM, filePath, sizeof(filePath), "configs/defenderbots/bot_names.txt");
 	File hConfigFile = OpenFile(filePath, "r");
 	char currentLine[MAX_NAME_LENGTH + 1];
 	

@@ -95,11 +95,11 @@ char g_sPlayerUseMyNameResponse[][] =
 char g_sMissionDifficultyFilePaths[][] =
 {
 	"",
-	"configs/defender_bots_manager/mission/mission_normal.txt",
-	"configs/defender_bots_manager/mission/mission_intermediate.txt",
-	"configs/defender_bots_manager/mission/mission_advanced.txt",
-	"configs/defender_bots_manager/mission/mission_expert.txt",
-	"configs/defender_bots_manager/mission/mission_nightmare.txt"
+	"configs/defenderbots/mission/mission_normal.txt",
+	"configs/defenderbots/mission/mission_intermediate.txt",
+	"configs/defenderbots/mission/mission_advanced.txt",
+	"configs/defenderbots/mission/mission_expert.txt",
+	"configs/defenderbots/mission/mission_nightmare.txt"
 };
 
 char g_sBotTeamCompositions[][][] =
