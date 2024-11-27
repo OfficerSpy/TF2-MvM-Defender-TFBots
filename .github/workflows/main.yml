@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        sm-version: [ '1.11.x', '1.12.7165', '1.13.7165' ]
+        sm-version: [ '1.11.x', '1.12.7164', '1.13.7165' ]
     permissions:
       contents: write
 
