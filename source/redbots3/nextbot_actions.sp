@@ -178,6 +178,7 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 		}
 		else if (StrEqual(name, "SniperLurk"))
 		{
+			action.Update = CTFBotSniperLurk_Update;
 			action.SelectMoreDangerousThreat = CTFBotSniperLurk_SelectMoreDangerousThreat;
 		}
 		else if (StrEqual(name, "SpyLeaveSpawnRoom"))
@@ -531,6 +532,20 @@ public Action CTFBotMvMEngineerIdle_OnStart(BehaviorAction action, int actor, Be
 	return action.Done();
 }
 
+public Action CTFBotSniperLurk_Update(BehaviorAction action, int actor, float interval, ActionResult result)
+{
+	if (g_bIsDefenderBot[actor] == false)
+		return Plugin_Continue;
+	
+	if (!CanUsePrimayWeapon(actor))
+	{
+		//Where did my gun go?
+		return action.SuspendFor(CTFBotDefenderAttack(), "Lost my rifle");
+	}
+	
+	return Plugin_Continue;
+}
+
 public Action CTFBotSniperLurk_SelectMoreDangerousThreat(BehaviorAction action, INextBot nextbot, int entity, CKnownEntity threat1, CKnownEntity threat2, CKnownEntity& knownEntity)
 {
 	int me = action.Actor;
@@ -631,6 +646,15 @@ public Action CTFBotDefenderAttack_OnStart(BehaviorAction action, int actor, Beh
 
 public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
+	if (TF2_GetPlayerClass(actor) == TFClass_Sniper && GetTFBotMission(actor) == CTFBot_MISSION_SNIPER)
+	{
+		if (CanUsePrimayWeapon(actor))
+		{
+			//We can snipe again
+			return action.Done("I have gun");
+		}
+	}
+	
 	if (CTFBotCampBomb_IsPossible(actor))
 		return action.ChangeTo(CTFBotCampBomb(), "Camp bomb");
 	
@@ -2879,6 +2903,15 @@ public Action CTFBotGuardPoint_Update(BehaviorAction action, int actor, float in
 	// if (IsZeroVector(m_vecPointDefendArea[actor]))
 		// return action.ChangeTo(CTFBotDefenderAttack(), "Defend area is NULL");
 	
+	switch (TF2_GetPlayerClass(actor))
+	{
+		case TFClass_Soldier, TFClass_Pyro, TFClass_DemoMan:
+		{
+			if (CTFBotAttackTank_SelectTarget(actor))
+				return action.ChangeTo(CTFBotAttackTank(), "Tank priority");
+		}
+	}
+	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 	CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
 	
@@ -2942,6 +2975,53 @@ public Action CTFBotGuardPoint_OnTerritoryLost(BehaviorAction action, int actor,
 	
 	//We lost the point, give up
 	return action.TryChangeTo(CTFBotDefenderAttack(), RESULT_CRITICAL, "Point lost");
+}
+
+BehaviorAction CTFBotCollectNearMoney()
+{
+	BehaviorAction action = ActionsManager.Create("DefenderCollectNearMoney");
+	
+	action.OnStart = CTFBotCollectNearMoney_OnStart;
+	action.Update = CTFBotCollectNearMoney_Update;
+	action.OnEnd = CTFBotCollectNearMoney_OnEnd;
+	
+	return action;
+}
+
+public Action CTFBotCollectNearMoney_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+{
+	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
+	
+	//NOTE: we pick a money pack before entering this action
+	
+	return action.Continue();
+}
+
+public Action CTFBotCollectNearMoney_Update(BehaviorAction action, int actor, float interval, ActionResult result)
+{
+	if (!IsValidCurrencyPack(m_iCurrencyPack[actor])) 
+		return action.Done("No money");
+	
+	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
+	CKnownEntity threat = myBot.GetVisionInterface().GetPrimaryKnownThreat(false);
+	
+	if (threat)
+		return action.Done("I see a threat");
+	
+	if (m_flRepathTime[actor] <= GetGameTime())
+	{
+		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.3, 1.0);
+		m_pPath[actor].ComputeToPos(myBot, WorldSpaceCenter(m_iCurrencyPack[actor]));
+	}
+	
+	m_pPath[actor].Update(myBot);
+	
+	return action.Continue();
+}
+
+public void CTFBotCollectNearMoney_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+{
+	m_iCurrencyPack[actor] = -1;
 }
 
 Action GetDesiredBotAction(int client, BehaviorAction action)
@@ -3024,8 +3104,8 @@ Action GetDesiredBotAction(int client, BehaviorAction action)
 					return action.SuspendFor(CTFBotDefenderAttack(), "CTFBotAttack_IsPossible");
 				else if (CTFBotAttackTank_SelectTarget(client))
 					return action.SuspendFor(CTFBotAttackTank(), "Attacking tank");
-				else if (CTFBotCollectMoney_IsPossible(client))
-					return action.SuspendFor(CTFBotCollectMoney(), "CTFBotCollectMoney_IsPossible"); //TODO: replace this with an action to collect nearby money
+				else if (CTFBotCollectNearMoney_SelectTarget(client))
+					return action.SuspendFor(CTFBotCollectNearMoney(), "Nearby money");
 			}
 			case TFClass_Soldier, TFClass_Pyro, TFClass_DemoMan:
 			{
@@ -3033,8 +3113,8 @@ Action GetDesiredBotAction(int client, BehaviorAction action)
 					return action.SuspendFor(CTFBotAttackTank(), "Attacking tank");
 				else if (CTFBotDefenderAttack_SelectTarget(client))
 					return action.SuspendFor(CTFBotDefenderAttack(), "CTFBotAttack_IsPossible");
-				else if (CTFBotCollectMoney_IsPossible(client))
-					return action.SuspendFor(CTFBotCollectMoney(), "CTFBotCollectMoney_IsPossible");
+				else if (CTFBotCollectNearMoney_SelectTarget(client))
+					return action.SuspendFor(CTFBotCollectNearMoney(), "Nearby money");
 			}
 		}
 	}
@@ -5549,6 +5629,19 @@ bool CTFBotGuardPoint_IsPossible(int client)
 		return false;
 	
 	return true;
+}
+
+bool CTFBotCollectNearMoney_SelectTarget(int client)
+{
+	CKnownEntity threat = CBaseNPC_GetNextBotOfEntity(client).GetVisionInterface().GetPrimaryKnownThreat(false);
+	
+	//Not with an active threat around
+	if (threat)
+		return false;
+	
+	m_iCurrencyPack[client] = GetNearestCurrencyPack(client, 5000.0);
+	
+	return m_iCurrencyPack[client] != -1;
 }
 
 //Since March 28 2018 update, flamethrower damage is calculated based on the oldest particles

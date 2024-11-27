@@ -84,6 +84,7 @@ static float m_flLastReadyInputTime[MAXPLAYERS + 1];
 
 //Config
 static ArrayList m_adtBotNames;
+static ArrayList m_adtSniperHints;
 
 //Global entities
 int g_iPopulationManager = -1;
@@ -144,7 +145,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.4.3",
+	version = "1.4.4",
 	url = "https://github.com/OfficerSpy/TF2-MvM-Defender-TFBots"
 };
 
@@ -262,6 +263,7 @@ public void OnPluginStart()
 	
 	g_adtChosenBotClasses = new ArrayList(TF2_CLASS_MAX_NAME_LENGTH);
 	m_adtBotNames = new ArrayList(MAX_NAME_LENGTH);
+	m_adtSniperHints = new ArrayList(3);
 	
 	InitNextBotPathing();
 	
@@ -288,6 +290,7 @@ public void OnMapStart()
 	g_flNextReadyTime = 0.0;
 	g_bBotClassesLocked = false;
 	
+	Config_LoadMap();
 	Config_LoadBotNames();
 	CreateBotPreferenceMenu();
 }
@@ -1438,13 +1441,32 @@ void AddBotsWithPresetTeamComp(int count = 6, int teamType = 0)
 
 void SetupSniperSpotHints()
 {
-	//TODO: replace this with our own hints to be spawned from config file
-	
-	int ent = -1;
-	
-	while ((ent = FindEntityByClassname(ent, "func_tfbot_hint")) != -1)
+	if (m_adtSniperHints.Length > 0)
 	{
-		DispatchKeyValue(ent, "team", "0");
+		for (int i = 0; i < m_adtSniperHints.Length; i++)
+		{
+			float vec[3]; m_adtSniperHints.GetArray(i, vec);
+			int ent = CreateEntityByName("func_tfbot_hint");
+			
+			if (ent != -1)
+			{
+				DispatchKeyValueVector(ent, "origin", vec);
+				// DispatchKeyValue(ent, "targetname", "db_sniper");
+				DispatchKeyValue(ent, "team", "2");
+				DispatchKeyValue(ent, "hint", "0");
+				DispatchSpawn(ent);
+			}
+		}
+	}
+	else
+	{
+		//No custom hints specified, so we'll just override any existing ones
+		int ent = -1;
+		
+		while ((ent = FindEntityByClassname(ent, "func_tfbot_hint")) != -1)
+			DispatchKeyValue(ent, "team", "0");
+		
+		LogError("SetupSniperSpotHints: No hints specified by configuration, overriding other hint entities!");
 	}
 }
 
@@ -1572,6 +1594,40 @@ eMissionDifficulty GetMissionDifficulty()
 		PrintToChatAll("GetMissionDifficulty: Current difficulty is %d", type);
 	
 	return type;
+}
+
+void Config_LoadMap()
+{
+	m_adtSniperHints.Clear();
+	
+	char mapName[PLATFORM_MAX_PATH]; GetCurrentMap(mapName, sizeof(mapName));
+	char filePath[PLATFORM_MAX_PATH]; BuildPath(Path_SM, filePath, sizeof(filePath), "configs/defenderbots/map/%s.cfg", mapName);
+	
+	KeyValues kv = new KeyValues("MapConfig");
+	
+	if (!kv.ImportFromFile(filePath))
+	{
+		CloseHandle(kv);
+		LogError("Config_LoadMap: File not found (%s)", filePath);
+		return;
+	}
+	
+	if (kv.JumpToKey("SniperHint"))
+	{
+		do
+		{
+			float vec[3]; kv.GetVector("origin", vec);
+			m_adtSniperHints.PushArray(vec);
+		} while (kv.GotoNextKey(false));
+		
+		kv.GoBack();
+	}
+	
+	CloseHandle(kv);
+	
+#if defined TESTING_ONLY
+	LogMessage("Config_LoadMap: Found %d locations for SniperHint", m_adtSniperHints.Length);
+#endif
 }
 
 void Config_LoadBotNames()

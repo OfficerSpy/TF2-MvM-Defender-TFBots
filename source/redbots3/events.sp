@@ -9,6 +9,7 @@ void InitGameEventHooks()
 	HookEvent("player_used_powerup_bottle", Event_PlayerUsedPowerupBottle);
 	HookEvent("post_inventory_application", Event_PostInventoryApplication);
 	HookEvent("mvm_mission_update", Event_MvmMissionUpdate, EventHookMode_Pre);
+	HookEvent("teamplay_round_start", Event_TeamplayRoundStart);
 }
 
 static void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast)
@@ -37,8 +38,6 @@ static void Event_MvmWaveFailed(Event event, const char[] name, bool dontBroadca
 		CreateTimer(0.1, Timer_UpdateChosenBotTeamComposition, _, TIMER_FLAG_NO_MAPCHANGE);
 		PrintToChatAll("%s Use command !viewbotlineup to view the next bot team composition", PLUGIN_PREFIX);
 	}
-	
-	SetupSniperSpotHints();
 	
 	if (redbots_manager_mode.IntValue == MANAGER_MODE_READY_BOTS)
 	{
@@ -157,11 +156,22 @@ static void Event_PostInventoryApplication(Event event, const char[] name, bool 
 		SetSapperCooldown(client, 0.0);
 }
 
-static void Event_MvmMissionUpdate(Event event, const char[] name, bool dontBroadcast)
+static Action Event_MvmMissionUpdate(Event event, const char[] name, bool dontBroadcast)
 {
 	//TFBot spies fire this event on death, so block it when a defender bot dies
 	if (g_bSpyKilled)
-		event.BroadcastDisabled = true;
+		return Plugin_Handled;
+	
+	return Plugin_Continue;
+}
+
+static void Event_TeamplayRoundStart(Event event, const char[] name, bool dontBroadcast)
+{
+	//Was the map reset?
+	if (event.GetBool("full_reset"))
+	{
+		SetupSniperSpotHints();
+	}
 }
 
 static Action Timer_PlayerSpawn(Handle timer, any data)

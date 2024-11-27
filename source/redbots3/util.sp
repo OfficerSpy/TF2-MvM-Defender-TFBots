@@ -1368,6 +1368,17 @@ int GetNearestCurrencyPack(int client, const float max_distance = 999999.0)
 	return bestEnt;
 }
 
+bool CanUsePrimayWeapon(int client)
+{
+	if (GetPlayerWeaponSlot(client, TFWeaponSlot_Primary) == -1)
+		return false;
+	
+	if (TF2_IsPlayerInCondition(client, TFCond_MeleeOnly))
+		return false;
+	
+	return true;
+}
+
 stock bool DoesAnyPlayerUseThisName(const char[] name)
 {
 	char playerName[MAX_NAME_LENGTH];
