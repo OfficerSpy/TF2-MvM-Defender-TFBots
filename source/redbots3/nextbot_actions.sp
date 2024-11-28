@@ -208,7 +208,7 @@ public Action CTFBotMainAction_SelectMoreDangerousThreat(BehaviorAction action, 
 	int iThreat2 = threat2.GetEntity();
 	
 	//If we can only see one threat, then it's our best target
-	/* int oneVisible = FindOnlyOneVisibleEntity(me, iThreat1, iThreat2);
+	int oneVisible = FindOnlyOneVisibleEntity(me, iThreat1, iThreat2);
 	
 	if (oneVisible == iThreat1)
 	{
@@ -220,7 +220,7 @@ public Action CTFBotMainAction_SelectMoreDangerousThreat(BehaviorAction action, 
 	{
 		knownEntity = threat2;
 		return Plugin_Changed;
-	} */
+	}
 	
 	if (myWeapon != -1 && TF2Util_GetWeaponID(myWeapon) == TF_WEAPON_MINIGUN)
 	{
@@ -4269,7 +4269,7 @@ float GetDesiredAttackRange(int client)
 	if (IsMeleeWeapon(weapon) || weaponID == TF_WEAPON_FLAMETHROWER)
 		return 100.0;
 	
-	if (HasSniperRifle(client))
+	if (WeaponID_IsSniperRifle(weaponID))
 		return FLT_MAX;
 	
 	if (weaponID == TF_WEAPON_ROCKETLAUNCHER)
@@ -5639,7 +5639,7 @@ bool CTFBotCollectNearMoney_SelectTarget(int client)
 	if (threat)
 		return false;
 	
-	m_iCurrencyPack[client] = GetNearestCurrencyPack(client, 5000.0);
+	m_iCurrencyPack[client] = GetNearestCurrencyPack(client, 6000.0);
 	
 	return m_iCurrencyPack[client] != -1;
 }

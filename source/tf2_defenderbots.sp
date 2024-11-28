@@ -84,7 +84,7 @@ static float m_flLastReadyInputTime[MAXPLAYERS + 1];
 
 //Config
 static ArrayList m_adtBotNames;
-static ArrayList m_adtSniperHints;
+static ArrayList m_adtSniperSpots;
 
 //Global entities
 int g_iPopulationManager = -1;
@@ -263,7 +263,7 @@ public void OnPluginStart()
 	
 	g_adtChosenBotClasses = new ArrayList(TF2_CLASS_MAX_NAME_LENGTH);
 	m_adtBotNames = new ArrayList(MAX_NAME_LENGTH);
-	m_adtSniperHints = new ArrayList(3);
+	m_adtSniperSpots = new ArrayList(3);
 	
 	InitNextBotPathing();
 	
@@ -462,6 +462,19 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 						if (IsPlayingHorn(myWeapon))
 							buttons &= ~IN_ATTACK;
 					}
+					case TF_WEAPON_REVOLVER:
+					{
+						if (CanRevolverHeadshot(myWeapon))
+						{
+							//Don;t fire if our shot won't be very accurate
+							//TODO: use the offset of m_flLastAccuracyCheck?
+							if (m_flNextSnipeFireTime[client] > GetGameTime())
+								buttons &= ~IN_ATTACK;
+							
+							if (buttons & IN_ATTACK)
+								m_flNextSnipeFireTime[client] = GetGameTime() + REVOLVER_ACCURACY_CHECK_COOLDOWN;
+						}
+					}
 				}
 			}
 			
@@ -510,7 +523,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 					}
 					else
 					{
-						if (threat && myBot.GetBodyInterface().IsHeadAimingOnTarget())
+						if (threat && threat.IsVisibleInFOVNow() && myBot.GetBodyInterface().IsHeadAimingOnTarget())
 						{
 							if (m_flNextSnipeFireTime[client] <= GetGameTime())
 								VS_PressFireButton(client);
@@ -1441,11 +1454,11 @@ void AddBotsWithPresetTeamComp(int count = 6, int teamType = 0)
 
 void SetupSniperSpotHints()
 {
-	if (m_adtSniperHints.Length > 0)
+	if (m_adtSniperSpots.Length > 0)
 	{
-		for (int i = 0; i < m_adtSniperHints.Length; i++)
+		for (int i = 0; i < m_adtSniperSpots.Length; i++)
 		{
-			float vec[3]; m_adtSniperHints.GetArray(i, vec);
+			float vec[3]; m_adtSniperSpots.GetArray(i, vec);
 			int ent = CreateEntityByName("func_tfbot_hint");
 			
 			if (ent != -1)
@@ -1598,7 +1611,7 @@ eMissionDifficulty GetMissionDifficulty()
 
 void Config_LoadMap()
 {
-	m_adtSniperHints.Clear();
+	m_adtSniperSpots.Clear();
 	
 	char mapName[PLATFORM_MAX_PATH]; GetCurrentMap(mapName, sizeof(mapName));
 	char filePath[PLATFORM_MAX_PATH]; BuildPath(Path_SM, filePath, sizeof(filePath), "configs/defenderbots/map/%s.cfg", mapName);
@@ -1612,12 +1625,12 @@ void Config_LoadMap()
 		return;
 	}
 	
-	if (kv.JumpToKey("SniperHint"))
+	if (kv.JumpToKey("SniperSpot"))
 	{
 		do
 		{
 			float vec[3]; kv.GetVector("origin", vec);
-			m_adtSniperHints.PushArray(vec);
+			m_adtSniperSpots.PushArray(vec);
 		} while (kv.GotoNextKey(false));
 		
 		kv.GoBack();
@@ -1626,7 +1639,7 @@ void Config_LoadMap()
 	CloseHandle(kv);
 	
 #if defined TESTING_ONLY
-	LogMessage("Config_LoadMap: Found %d locations for SniperHint", m_adtSniperHints.Length);
+	LogMessage("Config_LoadMap: Found %d locations for SniperSpot", m_adtSniperSpots.Length);
 #endif
 }
 

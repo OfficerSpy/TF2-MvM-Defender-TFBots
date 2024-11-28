@@ -24,6 +24,9 @@
 //Raw value found in CTFBotMainAction::FireWeaponAtEnemy
 #define TFBOT_MELEE_ATTACK_RANGE	250.0
 
+//Raw value checked in CTFRevolver::GetDamageType
+#define REVOLVER_ACCURACY_CHECK_COOLDOWN	1.0
+
 #define SNIPER_REACTION_TIME	0.5
 
 enum //medigun_resist_types_t
