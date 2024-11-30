@@ -1627,11 +1627,14 @@ void Config_LoadMap()
 	
 	if (kv.JumpToKey("SniperSpot"))
 	{
-		do
+		if (kv.GotoFirstSubKey(false))
 		{
-			float vec[3]; kv.GetVector("origin", vec);
-			m_adtSniperSpots.PushArray(vec);
-		} while (kv.GotoNextKey(false));
+			do
+			{
+				float vec[3]; kv.GetVector("origin", vec);
+				m_adtSniperSpots.PushArray(vec);
+			} while (kv.GotoNextKey(false));
+		}
 		
 		kv.GoBack();
 	}
