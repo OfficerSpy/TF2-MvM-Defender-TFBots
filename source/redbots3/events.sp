@@ -256,6 +256,11 @@ static Action Timer_WaveFailure(Handle timer)
 	if (GameRules_GetRoundState() != RoundState_BetweenRounds)
 		return Plugin_Stop;
 	
+	//Don't refund if we wanna keep them
+	//TODO: how we gonna do this for custom loadouts?
+	if (redbots_manager_keep_bot_upgrades.BoolValue)
+		return Plugin_Stop;
+	
 	for (int i = 1; i <= MaxClients; i++)
 	{
 		if (IsClientInGame(i) && g_bIsDefenderBot[i])

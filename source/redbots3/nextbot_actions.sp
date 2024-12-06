@@ -5249,9 +5249,6 @@ void UtilizeCompressionBlast(int client, INextBot bot, const CKnownEntity threat
 	if (redbots_manager_bot_reflect_skill.IntValue < 1)
 		return;
 	
-	if (redbots_manager_bot_reflect_chance.FloatValue < 100.0 && TransientlyConsistentRandomValue(client, 1.0) > redbots_manager_bot_reflect_chance.FloatValue / 100.0)
-		return;
-	
 	int iThreat = threat.GetEntity();
 	
 	if (BaseEntity_IsPlayer(iThreat))
@@ -5288,6 +5285,9 @@ void UtilizeCompressionBlast(int client, INextBot bot, const CKnownEntity threat
 	}
 	
 	if (redbots_manager_bot_reflect_skill.IntValue < 2)
+		return;
+	
+	if (redbots_manager_bot_reflect_chance.FloatValue < 100.0 && TransientlyConsistentRandomValue(client, 1.0) > redbots_manager_bot_reflect_chance.FloatValue / 100.0)
 		return;
 	
 	//Enhanced projectile airblast
