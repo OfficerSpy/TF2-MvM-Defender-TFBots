@@ -210,6 +210,8 @@ public void OnPluginStart()
 #endif
 	
 	RegAdminCmd("sm_addbots", Command_AddBots, ADMFLAG_GENERIC);
+	RegAdminCmd("sm_purgebots", Command_RemoveAllBots, ADMFLAG_GENERIC);
+	RegAdminCmd("sm_botmanager_stop", Command_StopManagingBots, ADMFLAG_GENERIC);
 	RegAdminCmd("sm_view_bot_upgrades", Command_ViewBotUpgrades, ADMFLAG_GENERIC);
 	
 	AddCommandListener(Listener_TournamentPlayerReadystate, "tournament_player_readystate");
@@ -914,6 +916,22 @@ public Action Command_AddBots(int client, int args)
 	}
 	
 	CreateDisplayMenuAddDefenderBots(client);
+	return Plugin_Handled;
+}
+
+public Action Command_RemoveAllBots(int client, int args)
+{
+	RemoveAllDefenderBots("Admin request");
+	ShowActivity2(client, "[SM] ", "%N purged all bots", client);
+	
+	return Plugin_Handled;
+}
+
+public Action Command_StopManagingBots(int client, int args)
+{
+	ManageDefenderBots(false);
+	ReplyToCommand(client, "Stopped manaing bots.");
+	
 	return Plugin_Handled;
 }
 
