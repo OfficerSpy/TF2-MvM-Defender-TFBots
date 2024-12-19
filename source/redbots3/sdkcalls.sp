@@ -1,7 +1,7 @@
 static Handle m_hPostInventoryApplication;
 static Handle m_hSetMission;
 static Handle m_hGetMaxAmmo;
-static Handle m_hGetNextThink;
+// static Handle m_hGetNextThink;
 static Handle m_hRealizeSpy;
 static Handle m_hLookupBone;
 static Handle m_hGetBonePosition;
@@ -57,7 +57,7 @@ bool InitSDKCalls(GameData hGamedata)
 		failCount++;
 	}
 	
-	StartPrepSDKCall(SDKCall_Entity);
+	/* StartPrepSDKCall(SDKCall_Entity);
 	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Signature, "CBaseEntity::GetNextThink");
 	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
 	PrepSDKCall_SetReturnInfo(SDKType_Float, SDKPass_Plain);
@@ -65,7 +65,7 @@ bool InitSDKCalls(GameData hGamedata)
 	{
 		LogError("Failed to create SDKCall for CBaseEntity::GetNextThink!");
 		failCount++;
-	}
+	} */
 	
 	StartPrepSDKCall(SDKCall_Player);
 	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Signature, "CTFBot::RealizeSpy");
@@ -251,10 +251,10 @@ int GetMaxAmmo(int client, int iAmmoIndex, int iClassIndex = -1)
 	return SDKCall(m_hGetMaxAmmo, client, iAmmoIndex, iClassIndex);
 }
 
-float GetNextThink(int entity, const char[] szContext = "")
+/* float GetNextThink(int entity, const char[] szContext = "")
 {
 	return SDKCall(m_hGetNextThink, entity, szContext);
-}
+} */
 
 void RealizeSpy(int client, int pPlayer)
 {

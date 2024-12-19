@@ -3273,7 +3273,7 @@ bool CTFBotMarkGiant_IsPossible(int actor)
 
 float GetTimeUntilRemoved(int powerup)
 {
-	return GetNextThink(powerup, "PowerupRemoveThink") - GetGameTime();
+	return CBaseEntity(powerup).GetNextThink("PowerupRemoveThink") - GetGameTime();
 }
 
 int SelectCurrencyPack(int actor)
