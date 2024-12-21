@@ -15,3 +15,4 @@
 - Internal PluginBot based on C++ code from [PathFollower](https://github.com/Pelipoika/PathFollower).
 - Certain functions have functionality based on Valve's own code from the game.
 - Tank Weapon Score System based on C++ code from mvm defender bots behavior from [sigsegv MvM](https://github.com/sigsegv-mvm/sigsegv-mvm).
+- Custom Sniper spots for various maps by Us_le.
