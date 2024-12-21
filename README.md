@@ -10,7 +10,7 @@
 - [REST in Pawn](https://github.com/ErikMinekus/sm-ripext)
 ## Compilation Only
 - [stocklib_officerspy](https://github.com/OfficerSpy/SM_Stock_OfficerSpy)
-# Credits
+# Notes
 - Initial AI code is a port over from [[TF2] MvM AFK Bot](https://github.com/Pelipoika/TF2_Idlebot) AI code.
 - Internal PluginBot based on C++ code from [PathFollower](https://github.com/Pelipoika/PathFollower).
 - Certain functions have functionality based on Valve's own code from the game.
