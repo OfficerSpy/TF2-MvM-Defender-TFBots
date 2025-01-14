@@ -4,6 +4,8 @@ on:
   push:
     branches:
       main
+    paths:
+      car.txt
 
 env:
   PLUGIN_NAME: tf2_defenderbots
