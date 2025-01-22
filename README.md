@@ -1,5 +1,6 @@
-# TF2 MvM Defender TFBots
- TFBots that can play Mann vs Machine
+# MvM Defender TFBots
+TFBots that can play Mann vs Machine.
+<p>This is a constant work-in-progress. Expect many things to change down the line.
 
 # Requirements
 - [[TF2] TF2Attributes](https://github.com/FlaminSarge/tf2attributes)
