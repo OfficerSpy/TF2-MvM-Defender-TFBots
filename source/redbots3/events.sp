@@ -1,3 +1,5 @@
+static int m_iWaveFailCounterTick;
+
 void InitGameEventHooks()
 {
 	HookEvent("player_spawn", Event_PlayerSpawn);
@@ -31,6 +33,8 @@ static void Event_PlayerSpawn(Event event, const char[] name, bool dontBroadcast
 
 static void Event_MvmWaveFailed(Event event, const char[] name, bool dontBroadcast)
 {
+	m_iWaveFailCounterTick++;
+	
 	if (redbots_manager_kick_bots.BoolValue)
 	{
 		RemoveAllDefenderBots("BotManager3: Wave failed!");
@@ -43,6 +47,18 @@ static void Event_MvmWaveFailed(Event event, const char[] name, bool dontBroadca
 	{
 		//Global cooldown before players can ready up again
 		g_flNextReadyTime = GetGameTime() + redbots_manager_ready_cooldown.FloatValue;
+		
+		if (m_iWaveFailCounterTick > 3)
+		{
+			//Mission restarted or changed, don't have a cooldown here
+			g_flNextReadyTime = 0.0;
+		}
+	}
+	
+	if (redbots_manager_bot_lineup_mode.IntValue == BOT_LINEUP_MODE_CHOOSE)
+	{
+		//In case the mission changed, let players pick the bot team
+		FreeChosenBotTeam();
 	}
 	
 	CreateTimer(0.1, Timer_WaveFailure, _, TIMER_FLAG_NO_MAPCHANGE);
@@ -117,8 +133,16 @@ static void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		- red player disconnected
 		- player joined red
 		- player left red */
-		if ((isDisconnect && oldTeam == TFTeam_Red) || team == TFTeam_Red || oldTeam == TFTeam_Red)
+		if ((isDisconnect && oldTeam == TFTeam_Red) || (!isDisconnect && (team == TFTeam_Red || oldTeam == TFTeam_Red)))
+		{
+			if (redbots_manager_bot_lineup_mode.IntValue >= BOT_LINEUP_MODE_CHOOSE)
+			{
+				//Allow the classes to be picked again, but don't clear current list
+				g_bBotClassesLocked = false;
+			}
+			
 			CreateTimer(0.1, Timer_UpdateChosenBotTeamComposition, _, TIMER_FLAG_NO_MAPCHANGE);
+		}
 		
 #if defined CHANGETEAM_RESTRICTIONS
 		if (!isDisconnect && team == TFTeam_Red && oldTeam == TFTeam_Blue && !CheckCommandAccess(client, NULL_STRING, ADMFLAG_GENERIC, true))
@@ -253,6 +277,8 @@ static Action Timer_PlayerSpawn(Handle timer, any data)
 
 static Action Timer_WaveFailure(Handle timer)
 {
+	m_iWaveFailCounterTick = 0;
+	
 	if (GameRules_GetRoundState() != RoundState_BetweenRounds)
 		return Plugin_Stop;
 	
@@ -283,6 +309,10 @@ static Action Timer_WaveFailure(Handle timer)
 
 static Action Timer_UpdateChosenBotTeamComposition(Handle timer)
 {
+	//These modes use their own way of composing a bot team
+	if (redbots_manager_bot_lineup_mode.IntValue >= BOT_LINEUP_MODE_CHOOSE)
+		return Plugin_Stop;
+	
 	UpdateChosenBotTeamComposition();
 	
 	return Plugin_Stop;

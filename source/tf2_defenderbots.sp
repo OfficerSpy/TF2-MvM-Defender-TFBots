@@ -42,7 +42,15 @@ enum
 	MANAGER_MODE_MANUAL_BOTS = 0,
 	MANAGER_MODE_READY_BOTS,
 	MANAGER_MODE_AUTO_BOTS
-};
+}
+
+enum
+{
+	BOT_LINEUP_MODE_RANDOM,
+	BOT_LINEUP_MODE_PREFERENCE,
+	BOT_LINEUP_MODE_CHOOSE,
+	BOT_LINEUP_MODE_PREFERENCE_OR_CHOOSE
+}
 
 //Globals
 bool g_bLateLoad;
@@ -92,6 +100,7 @@ int g_iPopulationManager = -1;
 ConVar redbots_manager_debug;
 ConVar redbots_manager_debug_actions;
 ConVar redbots_manager_mode;
+ConVar redbots_manager_bot_lineup_mode;
 ConVar redbots_manager_use_custom_loadouts;
 ConVar redbots_manager_kick_bots;
 ConVar redbots_manager_min_players;
@@ -146,22 +155,23 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.4.7",
+	version = "1.4.8",
 	url = "https://github.com/OfficerSpy/TF2-MvM-Defender-TFBots"
 };
 
 public void OnPluginStart()
 {
 #if defined TESTING_ONLY
-	BuildPath(Path_SM, g_sPlayerPrefPath, PLATFORM_MAX_PATH, "data/testing/bot_prefs.txt");
+	BuildPath(Path_SM, g_sPlayerPrefPath, PLATFORM_MAX_PATH, "data/testing/db_botpref.txt");
 	PrintToServer("[BOTS MANAGER] DEBUG BUILD: FOR DEV USE ONLY");
 #else
-	BuildPath(Path_SM, g_sPlayerPrefPath, PLATFORM_MAX_PATH, "data/bot_prefs.txt");
+	BuildPath(Path_SM, g_sPlayerPrefPath, PLATFORM_MAX_PATH, "data/db_botpref.txt");
 #endif
 	
 	redbots_manager_debug = CreateConVar("sm_redbots_manager_debug", "0", _, FCVAR_NONE);
 	redbots_manager_debug_actions = CreateConVar("sm_redbots_manager_debug_actions", "0", _, FCVAR_NONE);
 	redbots_manager_mode = CreateConVar("sm_redbots_manager_mode", "0", "What mode of the mod the use.", FCVAR_NOTIFY);
+	redbots_manager_bot_lineup_mode = CreateConVar("redbots_manager_bot_lineup_mode", "0", "How bot team composition is decided.", FCVAR_NOTIFY);
 	redbots_manager_use_custom_loadouts = CreateConVar("sm_redbots_manager_use_custom_loadouts", "0", "Let's bots use different weapons.", FCVAR_NOTIFY);
 	redbots_manager_kick_bots = CreateConVar("sm_redbots_manager_kick_bots", "1", "Kick bots on wave failure/completion.", FCVAR_NOTIFY);
 	redbots_manager_min_players = CreateConVar("sm_redbots_manager_min_players", "3", "Minimum players for normal missions. Other difficulties are adjusted based on this value. Set to -1 to disable entirely.", FCVAR_NOTIFY, true, -1.0, true, float(MAXPLAYERS));
@@ -188,6 +198,7 @@ public void OnPluginStart()
 #endif
 	
 	HookConVarChange(redbots_manager_mode, ConVarChanged_ManagerMode);
+	HookConVarChange(redbots_manager_bot_lineup_mode, ConVarChanged_BotLineupMode);
 	
 	RegConsoleCmd("sm_votebots", Command_Votebots);
 	RegConsoleCmd("sm_vb", Command_Votebots);
@@ -675,6 +686,12 @@ public Action Command_Votebots(int client, int args)
 		return Plugin_Handled;
 	}
 	
+	if (g_flNextReadyTime > GetGameTime())
+	{
+		ReplyToCommand(client, "%s You're going too fast!", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
 	if (IsServerFull())
 	{
 		ReplyToCommand(client, "%s Server is at max capacity.", PLUGIN_PREFIX);
@@ -693,16 +710,25 @@ public Action Command_Votebots(int client, int args)
 		return Plugin_Handled;
 	}
 	
-	if (g_bChoosingBotClasses[client])
+	if (redbots_manager_bot_lineup_mode.IntValue == BOT_LINEUP_MODE_CHOOSE)
 	{
-		ReplyToCommand(client, "%s You are already choosing the next team lineup.", PLUGIN_PREFIX);
-		return Plugin_Handled;
-	}
-	
-	if (GetCountOfPlayersChoosingBotClasses() > 0)
-	{
-		ReplyToCommand(client, "%s Someone is currently choosing the next team lineup.", PLUGIN_PREFIX);
-		return Plugin_Handled;
+		if (!HavePlayersChosenBotTeam())
+		{
+			if (g_bChoosingBotClasses[client])
+			{
+				ReplyToCommand(client, "%s You are already choosing the next team lineup.", PLUGIN_PREFIX);
+				return Plugin_Handled;
+			}
+			
+			if (GetCountOfPlayersChoosingBotClasses() > 0)
+			{
+				ReplyToCommand(client, "%s Someone is currently choosing the next team lineup.", PLUGIN_PREFIX);
+				return Plugin_Handled;
+			}
+			
+			ReplyToCommand(client, "%s Choose your bot team lineup first! Use command !choosebotteam/!cbt", PLUGIN_PREFIX);
+			return Plugin_BadLoad;
+		}
 	}
 	
 	switch (TF2_GetClientTeam(client))
@@ -837,7 +863,7 @@ public Action Command_RequestExtraBot(int client, int args)
 		return Plugin_Handled;
 	}
 	
-	AddBotsBasedOnPreferences(1);
+	AddBotsBasedOnLineupMode(1);
 	PrintToChatAll("%s %N requested an additional bot.", PLUGIN_PREFIX, client);
 	
 	return Plugin_Handled;
@@ -848,6 +874,12 @@ public Action Command_ChooseBotClasses(int client, int args)
 	if (g_bBotsEnabled)
 	{
 		ReplyToCommand(client, "%s Bots are already enabled.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	if (redbots_manager_bot_lineup_mode.IntValue != BOT_LINEUP_MODE_CHOOSE)
+	{
+		ReplyToCommand(client, "%s Not allowed in the current manager lineup mode.", PLUGIN_PREFIX);
 		return Plugin_Handled;
 	}
 	
@@ -910,7 +942,7 @@ public Action Command_AddBots(int client, int args)
 	{
 		char arg1[3]; GetCmdArg(1, arg1, sizeof(arg1));
 		int amount = StringToInt(arg1);
-		AddBotsBasedOnPreferences(amount);
+		AddBotsBasedOnLineupMode(amount);
 		
 		return Plugin_Handled;
 	}
@@ -984,6 +1016,13 @@ public void ConVarChanged_ManagerMode(ConVar convar, const char[] oldValue, cons
 	
 	//TODO: really only here for legacy reasons
 	//Catch all cases of everything!
+}
+
+public void ConVarChanged_BotLineupMode(ConVar convar, const char[] oldValue, const char[] newValue)
+{
+	int mode = StringToInt(newValue);
+	
+	//TODO: adjust bot team composition appropriately based on mode changes!
 }
 
 public Action Listener_TournamentPlayerReadystate(int client, const char[] command, int argc)
@@ -1106,10 +1145,19 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 				}
 #endif
 				
-				if (GetCountOfPlayersChoosingBotClasses() > 0)
+				if (redbots_manager_bot_lineup_mode.IntValue == BOT_LINEUP_MODE_CHOOSE)
 				{
-					PrintToChat(client, "%s Someone is currently choosing the next team lineup.", PLUGIN_PREFIX);
-					return Plugin_Handled;
+					if (!HavePlayersChosenBotTeam())
+					{
+						if (GetCountOfPlayersChoosingBotClasses() > 0)
+						{
+							PrintToChat(client, "%s Someone is currently choosing the next team lineup.", PLUGIN_PREFIX);
+							return Plugin_Handled;
+						}
+						
+						PrintToChat(client, "%s Choose your bot team lineup first! Use command !choosebotteam/!cbt", PLUGIN_PREFIX);
+						return Plugin_BadLoad;
+					}
 				}
 				
 				if (m_flLastReadyInputTime[client] <= GetGameTime())
@@ -1186,7 +1234,7 @@ public Action Timer_CheckBotImbalance(Handle timer)
 			if (defenderCount < redbots_manager_defender_team_size.IntValue)
 			{
 				int amount = redbots_manager_defender_team_size.IntValue - defenderCount;
-				AddBotsBasedOnPreferences(amount);
+				AddBotsBasedOnLineupMode(amount);
 			}
 		}
 		case MANAGER_MODE_AUTO_BOTS:
@@ -1200,7 +1248,7 @@ public Action Timer_CheckBotImbalance(Handle timer)
 			if (defenderCount < redbots_manager_defender_team_size.IntValue)
 			{
 				int amount = redbots_manager_defender_team_size.IntValue - defenderCount;
-				AddBotsBasedOnPreferences(amount);
+				AddBotsBasedOnLineupMode(amount);
 			}
 		}
 	}
@@ -1444,6 +1492,21 @@ void ManageDefenderBots(bool bManage, bool bAddBots = true)
 	}
 }
 
+void AddBotsBasedOnLineupMode(int count)
+{
+	switch (redbots_manager_bot_lineup_mode.IntValue)
+	{
+		case BOT_LINEUP_MODE_RANDOM:
+		{
+			AddRandomDefenderBots(count);
+		}
+		case BOT_LINEUP_MODE_PREFERENCE:
+		{
+			AddBotsBasedOnPreferences(count);
+		}
+	}
+}
+
 void AddDefenderTFBot(int count, char[] class, char[] team, char[] difficulty, bool quotaManaged = false)
 {
 	//Send command as many times as needed because custom names aren't supported when adding multiple
@@ -1509,6 +1572,26 @@ void SetupSniperSpotHints()
 	}
 }
 
+bool HavePlayersChosenBotTeam()
+{
+	//If someone is choosing the lineup right now, we're not ready yet
+	if (GetCountOfPlayersChoosingBotClasses() > 0)
+		return false;
+	
+	/* If strictly requiring a chosen lineup, the list will only ever be made up of classes picked by a player
+	If it is empty, no one chose anything yet */
+	return g_adtChosenBotClasses.Length > 0;
+}
+
+void FreeChosenBotTeam(bool bAnnounce = false)
+{
+	g_adtChosenBotClasses.Clear();
+	g_bBotClassesLocked = false;
+	
+	if (bAnnounce)
+		PrintToChatAll("%s Bot team lineup can now be changed.", PLUGIN_PREFIX);
+}
+
 void UpdateChosenBotTeamComposition(int caller = -1)
 {
 	//A player has already chosen their team, don't let it change
@@ -1554,7 +1637,7 @@ void UpdateChosenBotTeamComposition(int caller = -1)
 	{
 		//No prefernces, the lineup is random
 		for (int i = 1; i <= newBotsToAdd; i++)
-			g_adtChosenBotClasses.PushString(g_sRawPlayerClassNames[GetRandomInt(1, 9)]);
+			g_adtChosenBotClasses.PushString(g_sRawPlayerClassNames[GetRandomInt(TFClass_Scout, TFClass_Engineer)]);
 	}
 	
 	delete adtClassPref;

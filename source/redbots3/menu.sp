@@ -1,3 +1,6 @@
+#define CHOOSE_BOT_CLASSES_TIME	30
+#define CHOOSE_BOT_CLASSES_TIME_SHORT	15
+
 Menu g_hBotPreferenceMenu;
 static Menu m_hWeaponPrefClassMenu;
 static int m_iBotsLeftToChoose;
@@ -44,7 +47,7 @@ void ShowDefenderBotTeamSetupMenu(int client, int itemPosition = 0, bool bInitia
 	hMenu.AddItem("6", "Medic");
 	hMenu.AddItem("7", "Sniper");
 	hMenu.AddItem("8", "Spy");
-	hMenu.DisplayAt(client, itemPosition, MENU_TIME_FOREVER);
+	hMenu.DisplayAt(client, itemPosition, CHOOSE_BOT_CLASSES_TIME);
 	
 	if (bInitialize)
 		g_bChoosingBotClasses[client] = true;
@@ -76,7 +79,7 @@ void ShowDefenderBotTeamConfirmationMenu(int client)
 	hMenu.SetTitle("Your chosen team is %s\nDo you accept?", botClassesList);
 	hMenu.AddItem("0", "Yes");
 	hMenu.AddItem("1", "No");
-	hMenu.Display(client, MENU_TIME_FOREVER);
+	hMenu.Display(client, CHOOSE_BOT_CLASSES_TIME_SHORT);
 }
 
 void CreateBotPreferenceMenu()
@@ -724,7 +727,11 @@ static int MenuHandler_DefenderBotTeamSetup(Menu menu, MenuAction action, int pa
 		case MenuAction_Cancel:
 		{
 			g_bChoosingBotClasses[param1] = false;
-			UpdateChosenBotTeamComposition();
+			
+			if (redbots_manager_bot_lineup_mode.IntValue == BOT_LINEUP_MODE_PREFERENCE_OR_CHOOSE)
+				UpdateChosenBotTeamComposition();
+			
+			PrintToChatAll("%s %N is no longer selecting the bot team.", PLUGIN_PREFIX, param1);
 		}
 		case MenuAction_End:
 		{
@@ -758,7 +765,11 @@ static int MenuHandler_DefenderBotTeamConfirmation(Menu menu, MenuAction action,
 		case MenuAction_Cancel:
 		{
 			g_bChoosingBotClasses[param1] = false;
-			UpdateChosenBotTeamComposition();
+			
+			if (redbots_manager_bot_lineup_mode.IntValue == BOT_LINEUP_MODE_PREFERENCE_OR_CHOOSE)
+				UpdateChosenBotTeamComposition();
+			
+			PrintToChatAll("%s %N is no longer selecting the bot team.", PLUGIN_PREFIX, param1);
 		}
 		case MenuAction_End:
 		{
