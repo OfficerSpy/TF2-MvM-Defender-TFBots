@@ -942,7 +942,7 @@ public Action Command_AddBots(int client, int args)
 	{
 		char arg1[3]; GetCmdArg(1, arg1, sizeof(arg1));
 		int amount = StringToInt(arg1);
-		AddBotsBasedOnLineupMode(amount);
+		AddBotsBasedOnLineupMode(amount, false);
 		
 		return Plugin_Handled;
 	}
@@ -1492,7 +1492,7 @@ void ManageDefenderBots(bool bManage, bool bAddBots = true)
 	}
 }
 
-void AddBotsBasedOnLineupMode(int count)
+void AddBotsBasedOnLineupMode(int count, bool bAdjustTime = true)
 {
 	switch (redbots_manager_bot_lineup_mode.IntValue)
 	{
@@ -1503,6 +1503,82 @@ void AddBotsBasedOnLineupMode(int count)
 		case BOT_LINEUP_MODE_PREFERENCE:
 		{
 			AddBotsBasedOnPreferences(count);
+		}
+	}
+	
+	if (bAdjustTime)
+	{
+		float restartRoundTime = GameRules_GetPropFloat("m_flRestartRoundTime");
+		
+		if (restartRoundTime > 0)
+		{
+			if (restartRoundTime - GetGameTime() <= BUY_UPGRADES_MAX_TIME)
+			{
+				//Add a little more time for the new bot to ready
+				GameRules_SetPropFloat("m_flRestartRoundTime", restartRoundTime + BUY_UPGRADES_MAX_TIME);
+			}
+		}
+	}
+}
+
+/* Decide what to do when a player decides to change their team
+This is to prevent abuse of the system by leaving RED players with unfavorable teams */
+void HandleTeamPlayerCountChanged(TFTeam team, int iWhoChanging = -1)
+{
+	if (!g_bBotsEnabled)
+		return;
+	
+	if (GameRules_GetRoundState() != RoundState_BetweenRounds)
+		return;
+	
+	int whoToUnready = -1;
+	int readyCount = 0;
+	int memberCount = 0;
+	
+	for (int i = 1; i <= MaxClients; i++)
+	{
+		//Whoever is changing teams won't count to the team count
+		if (i == iWhoChanging)
+			continue;
+		
+		if (!IsClientInGame(i))
+			continue;
+		
+		if (TF2_GetClientTeam(i) != team)
+			continue;
+		
+		if (IsPlayerReady(i))
+		{
+			if (whoToUnready != -1)
+			{
+				if (g_bIsDefenderBot[whoToUnready])
+				{
+					//Always prefer to unready human players first
+					if (!g_bIsDefenderBot[i])
+						whoToUnready = i;
+				}
+			}
+			else
+			{
+				whoToUnready = i;
+			}
+			
+			readyCount++;
+		}
+		
+		memberCount++;
+	}
+	
+	//Are all remaining members of the team ready?
+	if (readyCount == memberCount)
+	{
+		//Unready one member to prevent starting the game and allow another bot to enter
+		SetPlayerReady(whoToUnready, false);
+		
+		if (g_bIsDefenderBot[whoToUnready])
+		{
+			//Ready up the bot again after some time
+			CreateTimer(0.2, Timer_ReadyPlayer, whoToUnready, TIMER_FLAG_NO_MAPCHANGE);
 		}
 	}
 }

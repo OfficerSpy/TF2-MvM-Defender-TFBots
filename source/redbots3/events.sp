@@ -142,6 +142,11 @@ static void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 			}
 			
 			CreateTimer(0.1, Timer_UpdateChosenBotTeamComposition, _, TIMER_FLAG_NO_MAPCHANGE);
+			
+			if (oldTeam == TFTeam_Red)
+			{
+				HandleTeamPlayerCountChanged(TFTeam_Red, client);
+			}
 		}
 		
 #if defined CHANGETEAM_RESTRICTIONS
