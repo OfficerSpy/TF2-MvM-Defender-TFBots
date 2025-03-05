@@ -99,7 +99,7 @@ int GetWeaponPreference(int client, const char[] class, const char[] slot)
 	m_kvPlayerPrefData.JumpToKey(steamID, true);
 	m_kvPlayerPrefData.JumpToKey("loadout", true);
 	m_kvPlayerPrefData.JumpToKey(class, true);
-	weaponIndex = m_kvPlayerPrefData.GetNum(slot, ITEMDEF_DEFAULT);
+	weaponIndex = m_kvPlayerPrefData.GetNum(slot, TF_ITEMDEF_DEFAULT);
 	m_kvPlayerPrefData.Rewind();
 	
 	return weaponIndex;
@@ -116,7 +116,7 @@ int GetPreferredWeaponForClass(const char[] class, const char[] slot)
 		{
 			int prefWeapon = GetWeaponPreference(i, class, slot);
 			
-			if (prefWeapon != ITEMDEF_DEFAULT)
+			if (prefWeapon != TF_ITEMDEF_DEFAULT)
 				adtWeaponPref.Push(prefWeapon);
 		}
 	}

@@ -1268,6 +1268,14 @@ public Action Timer_ForgetDetonatingPlayer(Handle timer, any data)
 	return Plugin_Stop;
 }
 
+public void Timer_ReadyPlayer(Handle timer, int data)
+{
+	if (!IsClientInGame(data))
+		return;
+	
+	SetPlayerReady(data, true);
+}
+
 public void DefenderBot_TouchPost(int entity, int other)
 {
 	//Call out enemy spies upon contact
