@@ -2,7 +2,6 @@ static Handle m_hPostInventoryApplication;
 static Handle m_hSetMission;
 static Handle m_hGetMaxAmmo;
 // static Handle m_hGetNextThink;
-static Handle m_hRealizeSpy;
 static Handle m_hLookupBone;
 static Handle m_hGetBonePosition;
 static Handle m_hHasAmmo;
@@ -66,15 +65,6 @@ bool InitSDKCalls(GameData hGamedata)
 		LogError("Failed to create SDKCall for CBaseEntity::GetNextThink!");
 		failCount++;
 	} */
-	
-	StartPrepSDKCall(SDKCall_Player);
-	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Signature, "CTFBot::RealizeSpy");
-	PrepSDKCall_AddParameter(SDKType_CBasePlayer, SDKPass_Pointer);
-	if ((m_hRealizeSpy = EndPrepSDKCall()) == null)
-	{
-		LogError("Failed to create SDKCall for CTFBot::RealizeSpy!");
-		failCount++;
-	}
 	
 	StartPrepSDKCall(SDKCall_Entity);
 	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Signature, "CBaseAnimating::LookupBone");
@@ -255,11 +245,6 @@ int GetMaxAmmo(int client, int iAmmoIndex, int iClassIndex = -1)
 {
 	return SDKCall(m_hGetNextThink, entity, szContext);
 } */
-
-void RealizeSpy(int client, int pPlayer)
-{
-	SDKCall(m_hRealizeSpy, client, pPlayer);
-}
 
 int LookupBone(int entity, const char[] szName)
 {
