@@ -118,6 +118,9 @@ static void Event_MvmWaveBegin(Event event, const char[] name, bool dontBroadcas
 	
 	if (redbots_manager_mode.IntValue == MANAGER_MODE_AUTO_BOTS)
 		ManageDefenderBots(true);
+	
+	//At this point the bots should already be here, so clear up the lineup that was used
+	FreeChosenBotTeam();
 }
 
 static void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
@@ -135,12 +138,6 @@ static void Event_PlayerTeam(Event event, const char[] name, bool dontBroadcast)
 		- player left red */
 		if ((isDisconnect && oldTeam == TFTeam_Red) || (!isDisconnect && (team == TFTeam_Red || oldTeam == TFTeam_Red)))
 		{
-			if (redbots_manager_bot_lineup_mode.IntValue >= BOT_LINEUP_MODE_CHOOSE)
-			{
-				//Allow the classes to be picked again, but don't clear current list
-				g_bBotClassesLocked = false;
-			}
-			
 			CreateTimer(0.1, Timer_UpdateChosenBotTeamComposition, _, TIMER_FLAG_NO_MAPCHANGE);
 			
 			if (oldTeam == TFTeam_Red)
@@ -315,7 +312,7 @@ static Action Timer_WaveFailure(Handle timer)
 static Action Timer_UpdateChosenBotTeamComposition(Handle timer)
 {
 	//These modes use their own way of composing a bot team
-	if (redbots_manager_bot_lineup_mode.IntValue >= BOT_LINEUP_MODE_CHOOSE)
+	if (redbots_manager_bot_lineup_mode.IntValue == BOT_LINEUP_MODE_CHOOSE)
 		return Plugin_Stop;
 	
 	UpdateChosenBotTeamComposition();

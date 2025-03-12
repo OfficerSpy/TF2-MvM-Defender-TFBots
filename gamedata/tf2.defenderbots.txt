@@ -65,11 +65,6 @@
 				"windows"	"\x55\x8B\xEC\x8B\x45\x08\x56\x8B\xF1\x85\xC0\x75\x2A\x8B\x86\xD0\x00\x00\x00\x89\x45\x08"
 				"linux"		"@_ZN11CBaseEntity12GetNextThinkEPKc"
 			}
-			"CTFBot::RealizeSpy"
-			{
-				"windows"	"\x55\x8B\xEC\x83\xEC\x30\x53\x8B\x5D\x2A\x57\x8B\xF9\x53"
-				"linux"		"@_ZN6CTFBot10RealizeSpyEP9CTFPlayer"
-			}
 			"CBaseAnimating::LookupBone"
 			{
 				"windows"	"\x55\x8B\xEC\x56\x8B\xF1\x80\xBE\x2A\x2A\x2A\x2A\x00\x75\x2A\x83\xBE\x2A\x2A\x2A\x2A\x00\x75\x2A\xE8\x2A\x2A\x2A\x2A\x85\xC0\x74\x2A\x8B\xCE\xE8\x2A\x2A\x2A\x2A\x8B\x86\x2A\x2A\x2A\x2A\x85\xC0\x74\x2A\x83\x38\x00\x74\x2A\xFF\x75\x2A\x50\xE8\x2A\x2A\x2A\x2A\x83\xC4\x08\x5E"
@@ -183,11 +178,6 @@
 			{
 				"windows"	"63"
 				"linux"		"64"
-			}
-			"ILocomotion::Approach"
-			{
-				"windows"	"47"
-				"linux"		"48"
 			}
 			//These numbers are used to calculate the actual offset based on the base netprop offset in the Keys section
 			//The calculation formula is base offset + this number
@@ -351,25 +341,6 @@
 					"subject"
 					{
 						"type"	"cbaseentity"
-					}
-				}
-			}
-			"ILocomotion::Approach"
-			{
-				"offset"	"ILocomotion::Approach"
-				"hooktype"	"raw"
-				"return"	"void"
-				"this"		"address"
-				"arguments"
-				{
-					"goalPos"
-					{
-						"type"	"vectorptr"
-						"flags"	"byref"
-					}
-					"goalWeight"
-					{
-						"type"	"float"
 					}
 				}
 			}

@@ -3,7 +3,6 @@ static DynamicHook m_hIsBot;
 static DynamicHook m_hEventKilled;
 static DynamicHook m_hIsVisibleEntityNoticed;
 static DynamicHook m_hIsIgnored;
-static DynamicHook m_hApproach;
 
 bool g_bSpyKilled;
 
@@ -44,9 +43,6 @@ bool InitDHooks(GameData hGamedata)
 	if (!RegisterHook(hGamedata, m_hIsIgnored, "IVision::IsIgnored"))
 		failCount++;
 	
-	if (!RegisterHook(hGamedata, m_hApproach, "ILocomotion::Approach"))
-		failCount++;
-	
 	if (failCount > 0)
 	{
 		LogError("InitDHooks: found %d problems with gamedata!", failCount);
@@ -84,18 +80,6 @@ void DHooks_DefenderBot(int client)
 	{
 		LogError("DHooks_DefenderBot: IVision is NULL! Bot vision will not be hooked.");
 	}
-	
-	/* Address loco = view_as<Address>(bot.GetLocomotionInterface());
-	
-	if (loco != Address_Null)
-	{
-		m_hApproach.HookRaw(Hook_Pre, loco, DHookCallback_Approach_Pre);
-		m_hApproach.HookRaw(Hook_Post, loco, DHookCallback_Approach_Post);
-	}
-	else
-	{
-		LogError("DHooks_DefenderBot: ILocomotion is NULL! Bot locomotion will not be hooked.");
-	} */
 }
 
 static MRESReturn DHookCallback_LoadUpgradesFile_Post(Address pThis)
