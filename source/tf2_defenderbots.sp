@@ -30,6 +30,8 @@ Author: ★ Officer Spy ★
 
 #define CHANGETEAM_RESTRICTIONS
 
+// #define TFBOT_CUSTOM_SPY_CONTACT
+
 // #define EXTRA_PLUGINBOT
 
 // #define IDLEBOT_AIMING
@@ -1428,11 +1430,15 @@ public void DefenderBot_TouchPost(int entity, int other)
 	//Call out enemy spies upon contact
 	if (BaseEntity_IsPlayer(other) && GetClientTeam(other) != GetClientTeam(entity) && TF2_IsPlayerInCondition(other, TFCond_Disguised))
 	{
+#if defined TFBOT_CUSTOM_SPY_CONTACT
 		DataPack pack;
 		CreateDataTimer(redbots_manager_bot_notice_spy_time.FloatValue, Timer_RealizeSpy, pack, TIMER_FLAG_NO_MAPCHANGE);
 		pack.WriteCell(GetClientUserId(entity));
 		pack.WriteCell(GetClientUserId(other));
 		pack.Reset();
+#else
+		TFBot_NoticeThreat(entity, other);
+#endif
 	}
 }
 
