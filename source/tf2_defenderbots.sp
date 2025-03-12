@@ -152,7 +152,7 @@ Address g_pMannVsMachineUpgrades;
 #include "redbots3/player_pref.sp"
 #include "redbots3/menu.sp"
 #include "redbots3/tf_upgrades.sp"
-#include "redbots3/nextbot_actions.sp"
+#include "redbots3/nextbot_behavior.sp"
 #include "redbots3/botaim.sp"
 
 public Plugin myinfo =
@@ -160,7 +160,7 @@ public Plugin myinfo =
 	name = "[TF2] TFBots (MVM) with Manager",
 	author = "Officer Spy",
 	description = "Bot Management",
-	version = "1.4.8",
+	version = "1.4.9",
 	url = "https://github.com/OfficerSpy/TF2-MvM-Defender-TFBots"
 };
 
