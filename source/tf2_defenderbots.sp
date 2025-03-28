@@ -860,6 +860,11 @@ public Action Command_RequestExtraBot(int client, int args)
 		return Plugin_Handled;
 	}
 	
+	if (!ShouldProcessCommand(client))
+	{
+		return Plugin_Handled;
+	}
+	
 	if (TF2_GetClientTeam(client) != TFTeam_Red)
 	{
 		ReplyToCommand(client, "%s Your team is not allowed to use this.", PLUGIN_PREFIX);
