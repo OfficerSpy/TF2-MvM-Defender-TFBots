@@ -183,14 +183,15 @@ public void OnPluginStart()
 	redbots_manager_defender_team_size = CreateConVar("sm_redbots_manager_defender_team_size", "6", _, FCVAR_NOTIFY);
 	redbots_manager_ready_cooldown = CreateConVar("sm_redbots_manager_ready_cooldown", "30.0", _, FCVAR_NOTIFY, true, 0.0);
 	redbots_manager_keep_bot_upgrades = CreateConVar("sm_redbots_manager_keep_bot_upgrades", "0", _, FCVAR_NOTIFY);
-	redbots_manager_bot_upgrade_interval = CreateConVar("sm_redbots_manager_bot_upgrade_interval", "-1", _, FCVAR_NOTIFY);
+	redbots_manager_bot_upgrade_interval = CreateConVar("sm_redbots_manager_bot_upgrade_interval", "0.1", _, FCVAR_NOTIFY);
 	redbots_manager_bot_use_upgrades = CreateConVar("sm_redbots_manager_bot_use_upgrades", "1", "Enable bots to buy upgrades.", FCVAR_NOTIFY);
 	redbots_manager_bot_buyback_chance = CreateConVar("sm_redbots_manager_bot_buyback_chance", "5", "Chance for bots to buyback into the game.", FCVAR_NOTIFY);
 	redbots_manager_bot_buy_upgrades_chance = CreateConVar("sm_redbots_manager_bot_buy_upgrades_chance", "50", "Chance for bots to buy upgrades in the middle of a game.", FCVAR_NOTIFY);
 	redbots_manager_bot_max_tank_attackers = CreateConVar("sm_redbots_manager_bot_max_tank_attackers", "3", _, FCVAR_NOTIFY);
 	redbots_manager_bot_aim_skill = CreateConVar("sm_redbots_manager_bot_aim_skill", "0", _, FCVAR_NOTIFY);
 	redbots_manager_bot_reflect_skill = CreateConVar("sm_redbots_manager_bot_reflect_skill", "1", _, FCVAR_NOTIFY);
-	redbots_manager_bot_reflect_chance = CreateConVar("redbots_manager_bot_reflect_chance", "100.0", _, FCVAR_NOTIFY);
+	redbots_manager_bot_reflect_chance = CreateConVar("sm_redbots_manager_bot_reflect_chance", "100.0", _, FCVAR_NOTIFY);
+	redbots_manager_bot_backstab_skill = CreateConVar("sm_redbots_manager_bot_backstab_skill", "0", _, FCVAR_NOTIFY);
 	redbots_manager_bot_hear_spy_range = CreateConVar("sm_redbots_manager_bot_hear_spy_range", "3000.0", _, FCVAR_NOTIFY);
 	redbots_manager_bot_notice_spy_time = CreateConVar("sm_redbots_manager_bot_notice_spy_time", "0.0", _, FCVAR_NOTIFY);
 	redbots_manager_extra_bots = CreateConVar("sm_redbots_manager_extra_bots", "1", "How many more bots we are allowed to request beyond the team size", FCVAR_NOTIFY);
@@ -885,6 +886,27 @@ public Action Command_RequestExtraBot(int client, int args)
 		return Plugin_Handled;
 	}
 	
+	if (args > 0)
+	{
+		char arg1[TF2_CLASS_MAX_NAME_LENGTH]; GetCmdArg(1, arg1, sizeof(arg1));
+		
+		if (strcmp(arg1, "random", false) == 0)
+		{
+			AddRandomDefenderBots(1);
+			return Plugin_Handled;
+		}
+		
+		TFClassType class = TF2_GetClassIndexFromString(arg1);
+		
+		if (class == TFClass_Unknown)
+		{
+			ReplyToCommand(client, "%s Invalid class specified: %s.", PLUGIN_PREFIX, arg1);
+			return Plugin_Handled;
+		}
+		
+		AddDefenderTFBot(1, arg1);
+	}
+	
 	AddBotsBasedOnLineupMode(1);
 	PrintToChatAll("%s %N requested an additional bot.", PLUGIN_PREFIX, client);
 	
@@ -1054,6 +1076,14 @@ public Action Command_AddBots(int client, int args)
 
 public Action Command_RemoveAllBots(int client, int args)
 {
+	if (args > 0)
+	{
+		char arg1[3]; GetCmdArg(1, arg1, sizeof(arg1));
+		
+		if (StringToInt(arg1) == 1)
+			ManageDefenderBots(false);
+	}
+	
 	RemoveAllDefenderBots("Admin request");
 	ShowActivity2(client, "[SM] ", "%N purged all bots", client);
 	
@@ -1795,7 +1825,7 @@ void HandleTeamPlayerCountChanged(TFTeam team, int iWhoChanging = -1)
 	}
 }
 
-void AddDefenderTFBot(int count, char[] class, char[] team, char[] difficulty, bool quotaManaged = false)
+void AddDefenderTFBot(int count, char[] class, char[] team = "red", char[] difficulty = "expert", bool quotaManaged = false)
 {
 	//Send command as many times as needed because custom names aren't supported when adding multiple
 	for (int i = 0; i < count; i++)

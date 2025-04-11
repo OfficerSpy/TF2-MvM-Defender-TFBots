@@ -15,28 +15,28 @@ float pb_vecPathGoal[MAXPLAYERS + 1][3];
 int pb_iPathGoalEntity[MAXPLAYERS + 1];
 #endif
 
-#include "redbots3/behavior/defenderattack.sp"
-#include "redbots3/behavior/markgiant.sp"
-#include "redbots3/behavior/collectmoney.sp"
-#include "redbots3/behavior/gotoupgrade.sp"
-#include "redbots3/behavior/upgrade.sp"
-#include "redbots3/behavior/getammo.sp"
-#include "redbots3/behavior/movetofront.sp"
-#include "redbots3/behavior/gethealth.sp"
-#include "redbots3/behavior/engineeridle.sp"
-#include "redbots3/behavior/engineerbuildsentrygun.sp"
-#include "redbots3/behavior/engineerbuilddispenser.sp"
-#include "redbots3/behavior/spylurk.sp"
-#include "redbots3/behavior/spysap.sp"
-#include "redbots3/behavior/spysapplayer.sp"
-#include "redbots3/behavior/medicrevive.sp"
-#include "redbots3/behavior/attackforuber.sp"
-#include "redbots3/behavior/evadebuster.sp"
-#include "redbots3/behavior/campbomb.sp"
-#include "redbots3/behavior/attacktank.sp"
-#include "redbots3/behavior/destroyteleporter.sp"
-#include "redbots3/behavior/guardpoint.sp"
-#include "redbots3/behavior/collectnearmoney.sp"
+#include "behavior/defenderattack.sp"
+#include "behavior/markgiant.sp"
+#include "behavior/collectmoney.sp"
+#include "behavior/gotoupgrade.sp"
+#include "behavior/upgrade.sp"
+#include "behavior/getammo.sp"
+#include "behavior/movetofront.sp"
+#include "behavior/gethealth.sp"
+#include "behavior/engineeridle.sp"
+#include "behavior/engineerbuildsentrygun.sp"
+#include "behavior/engineerbuilddispenser.sp"
+#include "behavior/spylurk.sp"
+#include "behavior/spysap.sp"
+#include "behavior/spysapplayer.sp"
+#include "behavior/medicrevive.sp"
+#include "behavior/attackforuber.sp"
+#include "behavior/evadebuster.sp"
+#include "behavior/campbomb.sp"
+#include "behavior/attacktank.sp"
+#include "behavior/destroyteleporter.sp"
+#include "behavior/guardpoint.sp"
+#include "behavior/collectnearmoney.sp"
 
 void InitNextBotPathing()
 {
@@ -126,6 +126,7 @@ public void OnActionCreated(BehaviorAction action, int actor, const char[] name)
 		{
 			// action.SelectMoreDangerousThreat = CTFBotMainAction_SelectMoreDangerousThreat;
 			action.SelectTargetPoint = CTFBotMainAction_SelectTargetPoint;
+			action.ShouldAttack = CTFBotMainAction_ShouldAttack;
 		}
 		else if (StrEqual(name, "TacticalMonitor"))
 		{
@@ -389,6 +390,18 @@ public Action CTFBotMainAction_SelectTargetPoint(BehaviorAction action, INextBot
 	
 	//Let the game do its default aiming
 	return Plugin_Continue;
+}
+
+static Action CTFBotMainAction_ShouldAttack(BehaviorAction action, INextBot nextbot, CKnownEntity knownEntity, QueryResultType& result)
+{
+	int me = action.Actor;
+	
+	if (g_bIsDefenderBot[me] == false)
+		return Plugin_Continue;
+	
+	//Always attack even in spawn room because we are not the invaders
+	result = ANSWER_YES;
+	return Plugin_Changed;
 }
 
 public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, float interval, ActionResult result)

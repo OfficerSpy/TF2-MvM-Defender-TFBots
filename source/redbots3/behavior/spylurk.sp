@@ -11,7 +11,7 @@ BehaviorAction CTFBotSpyLurkMvM()
 	return action;
 }
 
-public Action CTFBotSpyLurkMvM_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+static Action CTFBotSpyLurkMvM_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
 	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	m_pChasePath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
@@ -22,7 +22,7 @@ public Action CTFBotSpyLurkMvM_OnStart(BehaviorAction action, int actor, Behavio
 	return action.Continue();
 }
 
-public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float interval, ActionResult result)
+static Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
 	if (CTFBotSpySapPlayers_SelectTarget(actor))
 		return action.SuspendFor(CTFBotSpySapPlayers(), "Sapping player");
@@ -90,9 +90,18 @@ public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 			{
 				if (TF2_IsPlayerInCondition(actor, TFCond_Disguised))
 				{
-					//Attack if we think we can land a backstab
-					if (isBehindVictim || HasBackstabPotential(target))
-						VS_PressFireButton(actor);
+					if (redbots_manager_bot_backstab_skill.IntValue == 1)
+					{
+						//Attack if we know we can land a backstab
+						if (GetEntProp(melee, Prop_Send, "m_bReadyToBackstab"))
+							VS_PressFireButton(actor);
+					}
+					else
+					{
+						//Attack if we think we can land a backstab
+						if (isBehindVictim || HasBackstabPotential(target))
+							VS_PressFireButton(actor);
+					}
 				}
 				else
 				{
@@ -132,7 +141,7 @@ public Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 	return action.Continue();
 }
 
-public Action CTFBotSpyLurkMvM_ShouldAttack(BehaviorAction action, INextBot nextbot, CKnownEntity knownEntity, QueryResultType& result)
+static Action CTFBotSpyLurkMvM_ShouldAttack(BehaviorAction action, INextBot nextbot, CKnownEntity knownEntity, QueryResultType& result)
 {
 	/* int me = action.Actor;
 	int iThreat = knownEntity.GetEntity();
@@ -154,7 +163,7 @@ public Action CTFBotSpyLurkMvM_ShouldAttack(BehaviorAction action, INextBot next
 	return Plugin_Changed;
 }
 
-public Action CTFBotSpyLurkMvM_IsHindrance(BehaviorAction action, INextBot nextbot, int entity, QueryResultType& result)
+static Action CTFBotSpyLurkMvM_IsHindrance(BehaviorAction action, INextBot nextbot, int entity, QueryResultType& result)
 {
 	int me = action.Actor;
 	
@@ -169,7 +178,7 @@ public Action CTFBotSpyLurkMvM_IsHindrance(BehaviorAction action, INextBot nextb
 	return Plugin_Changed;
 }
 
-/* public Action CTFBotSpyLurkMvM_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
+/* static Action CTFBotSpyLurkMvM_SelectMoreDangerousThreat(BehaviorAction action, Address nextbot, int entity, Address threat1, Address threat2, Address& knownEntity)
 {
 	int iThreat1 = view_as<CKnownEntity>(threat1).GetEntity();
 	

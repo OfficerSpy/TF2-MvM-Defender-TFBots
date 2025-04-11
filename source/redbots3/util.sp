@@ -1620,13 +1620,8 @@ stock Address DereferencePointer(Address addr) {
 
 stock void TFBot_NoticeThreat(int tfbot, int threat)
 {
-	char sCode[PLATFORM_MAX_PATH];
-	
 	//UpdateDelayedThreatNotices is called in CTFBotTacticalMonitor::Update, but that behavior can be interrupted so we use it here to ensure he's noticed
-	FormatEx(sCode, sizeof(sCode), "self.DelayedThreatNotice(EntIndexToHScript(%d), 0.0); self.UpdateDelayedThreatNotices()", threat);
-	
-	SetVariantString(sCode);
-	AcceptEntityInput(tfbot, "RunScriptCode");
+	OSLib_RunScriptCode(tfbot, _, _, "self.DelayedThreatNotice(EntIndexToHScript(%d),0);self.UpdateDelayedThreatNotices()", threat);
 }
 
 stock void PrintToChatTeam(int team, const char[] format, any ...)
