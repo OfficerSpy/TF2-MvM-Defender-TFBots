@@ -200,7 +200,7 @@ static void Event_TeamplayRoundStart(Event event, const char[] name, bool dontBr
 	}
 }
 
-static Action Timer_PlayerSpawn(Handle timer, any data)
+static Action Timer_PlayerSpawn(Handle timer, int data)
 {
 	if (!IsClientInGame(data) || !IsTFBotPlayer(data) || TF2_GetClientTeam(data) != TFTeam_Red)
 		return Plugin_Stop;

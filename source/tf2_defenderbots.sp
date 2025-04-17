@@ -57,6 +57,7 @@ enum
 //Globals
 bool g_bLateLoad;
 bool g_bBotsEnabled;
+float g_flAddingBotTime;
 float g_flNextReadyTime;
 int g_iDetonatingPlayer = -1;
 ArrayList g_adtChosenBotClasses;
@@ -310,6 +311,7 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 public void OnMapStart()
 {
 	g_bBotsEnabled = false;
+	g_flAddingBotTime = 0.0;
 	g_flNextReadyTime = 0.0;
 	g_bBotClassesLocked = false;
 	g_bAllowBotTeamRedo = false;
@@ -624,7 +626,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 #if defined MOD_ROLL_THE_DICE_REVAMPED
 			if (redbots_manager_bot_rtd_variance.FloatValue >= COMMAND_MAX_RATE)
 			{
-				if (m_flNextRollTime[client] <= GetGameTime())
+				if (threat && m_flNextRollTime[client] <= GetGameTime())
 				{
 					m_flNextRollTime[client] = GetGameTime() + GetRandomFloat(COMMAND_MAX_RATE, redbots_manager_bot_rtd_variance.FloatValue);
 					FakeClientCommand(client, "sm_rtd");
@@ -861,7 +863,7 @@ public Action Command_RequestExtraBot(int client, int args)
 		return Plugin_Handled;
 	}
 	
-	if (!ShouldProcessCommand(client))
+	if (g_flAddingBotTime > GetGameTime())
 	{
 		return Plugin_Handled;
 	}
@@ -886,6 +888,8 @@ public Action Command_RequestExtraBot(int client, int args)
 		return Plugin_Handled;
 	}
 	
+	g_flAddingBotTime = GetGameTime() + 0.1;
+	
 	if (args > 0)
 	{
 		char arg1[TF2_CLASS_MAX_NAME_LENGTH]; GetCmdArg(1, arg1, sizeof(arg1));
@@ -905,6 +909,8 @@ public Action Command_RequestExtraBot(int client, int args)
 		}
 		
 		AddDefenderTFBot(1, arg1);
+		
+		return Plugin_Handled;
 	}
 	
 	AddBotsBasedOnLineupMode(1);

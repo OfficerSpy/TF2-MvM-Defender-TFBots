@@ -42,7 +42,14 @@ void LoadPreferencesData()
 
 int GetClassPreferencesFlags(int client)
 {
-	char steamID[MAX_AUTHID_LENGTH]; GetClientAuthId(client, AuthId_Steam3, steamID, sizeof(steamID));
+	char steamID[MAX_AUTHID_LENGTH];
+	
+	if (!GetClientAuthId(client, AuthId_Steam3, steamID, sizeof(steamID)))
+	{
+		LogError("GetClassPreferencesFlags: failed to get Steam ID for %L", client);
+		return PREF_FL_NONE;
+	}
+	
 	int flags = PREF_FL_NONE;
 	
 	m_kvPlayerPrefData.JumpToKey(steamID, true);
@@ -82,7 +89,13 @@ int GetClassPreferencesFlags(int client)
 
 void SetClassPreferences(int client, const char[] class, int value)
 {
-	char steamID[MAX_AUTHID_LENGTH]; GetClientAuthId(client, AuthId_Steam3, steamID, sizeof(steamID));
+	char steamID[MAX_AUTHID_LENGTH];
+	
+	if (!GetClientAuthId(client, AuthId_Steam3, steamID, sizeof(steamID)))
+	{
+		LogError("SetClassPreferences: failed to get Steam ID for %L", client);
+		return;
+	}
 	
 	m_kvPlayerPrefData.JumpToKey(steamID, true);
 	m_kvPlayerPrefData.JumpToKey("class", true);
@@ -93,7 +106,14 @@ void SetClassPreferences(int client, const char[] class, int value)
 //Return weapon def index
 int GetWeaponPreference(int client, const char[] class, const char[] slot)
 {
-	char steamID[MAX_AUTHID_LENGTH]; GetClientAuthId(client, AuthId_Steam3, steamID, sizeof(steamID));
+	char steamID[MAX_AUTHID_LENGTH];
+	
+	if (!GetClientAuthId(client, AuthId_Steam3, steamID, sizeof(steamID)))
+	{
+		LogError("GetWeaponPreference: failed to get Steam ID for %L", client);
+		return TF_ITEMDEF_DEFAULT;
+	}
+	
 	int weaponIndex;
 	
 	m_kvPlayerPrefData.JumpToKey(steamID, true);

@@ -1653,6 +1653,10 @@ bool ShouldBuybackIntoGame(int client)
 
 bool ShouldUpgradeMidRound(int client)
 {
+	//If we were revived, we should not bother
+	if (!TF2Util_IsPointInRespawnRoom(WorldSpaceCenter(client), client))
+		return false;
+	
 	//Based on our rolled number from spawn, decide to buy upgrades now
 	return g_iBuyUpgradesNumber[client] > 0 && g_iBuyUpgradesNumber[client] <= redbots_manager_bot_buy_upgrades_chance.IntValue;
 }
