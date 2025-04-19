@@ -116,11 +116,21 @@ bool CTFBotSpySapPlayers_SelectTarget(int actor)
 
 bool CanBuildSapper(int client)
 {
-	//Recently sapped a player
-	if (m_flSapperCooldown[client] > GetGameTime())
-		return false;
-	
-	return true;
+	//CTFWeaponBuilder uses ammo index TF_AMMO_GRENADES2 for its effect bar
+	return GetAmmoCount(client, TF_AMMO_GRENADES2) > 0;
+}
+
+void BuildSapperOnEntity(int client, int entity, int weapon)
+{
+	SpawnSapper(client, entity, weapon);
+	BaseCombatCharacter_RemoveAmmo(client, 1, TF_AMMO_GRENADES2);
+	StartBuilderEffectBarRegen(weapon);
+}
+
+void StartBuilderEffectBarRegen(int weapon)
+{
+	//When recharged, game will give us ammo TF_AMMO_GRENADES2 for the sapper
+	SetEntPropFloat(weapon, Prop_Send, "m_flEffectBarRegenTime", GetGameTime() + SAPPER_RECHARGE_TIME);
 }
 
 void SetSapperCooldown(int client, float duration)
