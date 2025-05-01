@@ -109,7 +109,7 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 	float myEyePos[3]; GetClientEyePosition(actor, myEyePos);
 	
 	//Path if out of range or cannot see target
-	if (myBot.IsRangeGreaterThanEx(targetOrigin, GetDesiredAttackRange(actor)) || !TF2_IsLineOfFireClear(actor, myEyePos, targetOrigin))
+	if (myBot.IsRangeGreaterThanEx(targetOrigin, GetDesiredAttackRange(actor)) || !IsLineOfFireClearPosition(actor, myEyePos, targetOrigin))
 	{
 		if (m_flRepathTime[actor] <= GetGameTime())
 		{

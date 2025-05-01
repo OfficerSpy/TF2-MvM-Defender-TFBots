@@ -532,7 +532,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 					if (redbots_manager_bot_aim_skill.IntValue >= 1)
 					{
 						//TODO: this needs to be more precise with actually getting our current m_lookAtSubject in PlayerBody as this can cause jittery aim
-						if (threat && TF2_IsLineOfFireClear4(client, threat.GetEntity()))
+						if (threat && IsLineOfFireClearEntity(client, GetEyePosition(client), threat.GetEntity()))
 						{
 							//Help aim towards the desired target point
 							float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(threat.GetEntity(), aimPos);
@@ -587,7 +587,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 								SnapViewToPosition(client, aimPos);
 								buttons |= IN_ATTACK;
 							}
-							else if (!threat.IsVisibleInFOVNow() && TF2_IsLineOfFireClear4(client, iThreat))
+							else if (!threat.IsVisibleInFOVNow() && IsLineOfFireClearEntity(client, GetEyePosition(client), iThreat))
 							{
 								//We're not currently facing our threat, so let's quickly turn towards them
 								float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
@@ -602,7 +602,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 								SnapViewToPosition(client, aimPos);
 								buttons |= IN_ATTACK;
 							}
-							else if (!threat.IsVisibleRecently() && TF2_IsLineOfFireClear4(client, iThreat))
+							else if (!threat.IsVisibleRecently() && IsLineOfFireClearEntity(client, GetEyePosition(client), iThreat))
 							{
 								float aimPos[3]; myBot.GetIntentionInterface().SelectTargetPoint(iThreat, aimPos);
 								SnapViewToPosition(client, aimPos);
@@ -1375,7 +1375,7 @@ public Action SoundHook_General(int clients[MAXPLAYERS], int &numClients, char s
 					if (GetVectorDistance(GetAbsOrigin(i), WorldSpaceCenter(entity)) > redbots_manager_bot_hear_spy_range.FloatValue)
 						continue;
 					
-					if (TF2_IsLineOfFireClear4(i, entity))
+					if (IsLineOfFireClearEntity(i, GetEyePosition(i), entity))
 					{
 						DataPack pack;
 						CreateDataTimer(redbots_manager_bot_notice_spy_time.FloatValue, Timer_RealizeSpy, pack, TIMER_FLAG_NO_MAPCHANGE);

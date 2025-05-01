@@ -68,7 +68,7 @@ public Action CTFBotCampBomb_Update(BehaviorAction action, int actor, float inte
 	}
 	
 	//Move towards the bomb's current area if we're too far or can't see it
-	if (myBot.IsRangeGreaterThanEx(bombPosition, BOMB_GUARD_RADIUS) || !TF2_IsLineOfFireClear2(actor, bombPosition))
+	if (myBot.IsRangeGreaterThanEx(bombPosition, BOMB_GUARD_RADIUS) || !IsLineOfFireClearPosition(actor, GetEyePosition(actor), bombPosition))
 	{
 		if (m_flRepathTime[actor] <= GetGameTime())
 		{

@@ -34,7 +34,7 @@ public Action CTFBotMedicRevive_Update(BehaviorAction action, int actor, float i
 	float markerPos[3]; markerPos = WorldSpaceCenter(marker);
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 	
-	if (myBot.IsRangeLessThanEx(markerPos, WEAPON_MEDIGUN_RANGE) && TF2_IsLineOfFireClear2(actor, markerPos))
+	if (myBot.IsRangeLessThanEx(markerPos, WEAPON_MEDIGUN_RANGE))
 	{
 		int healTarget = GetEntPropEnt(secondary, Prop_Send, "m_hHealingTarget");
 		
@@ -49,7 +49,9 @@ public Action CTFBotMedicRevive_Update(BehaviorAction action, int actor, float i
 			VS_PressFireButton(actor);
 		}
 		
-		return action.Continue();
+		//Do not path if we are healing our target
+		if (healTarget == marker)
+			return action.Continue();
 	}
 	
 	if (m_flRepathTime[actor] <= GetGameTime())

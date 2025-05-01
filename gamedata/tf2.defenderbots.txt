@@ -19,6 +19,16 @@
 		}
 		"Keys"
 		{
+			"CTFPlayer_BaseOffset"
+			{
+				"windows"	"m_flMvMLastDamageTime"
+				"linux"		"m_flMvMLastDamageTime"
+			}
+			"CBaseObject_BaseOffset"
+			{
+				"windows"	"m_iKills"
+				"linux"		"m_iKills"
+			}
 			"CTFBot_BaseOffset"
 			{
 				"windows"	"m_iPlayerSkinOverride"
@@ -37,8 +47,9 @@
 		}
 		"Signatures"
 		{
-			"CTFGameRules::SetCustomUpgradesFile" //Only used to get g_MannVsMachineUpgrades address on windows
+			"CTFGameRules::SetCustomUpgradesFile"
 			{
+				//Only used to get g_MannVsMachineUpgrades address on windows
 				"windows"	"\x55\x8B\xEC\x57\x8B\x3D\x2A\x2A\x2A\x2A\x85\xFF\x74\x2A\x8B\x4D\x2A\x83\xC1\x08\x56\x83\x79\x2A\x02\x75\x2A\x8B\x01\xBE\x2A\x2A\x2A\x2A\x85\xC0\x0F\x45\xF0\xEB\x2A\xE8\x2A\x2A\x2A\x2A\x8B\xF0\x56\xB9\x2A\x2A\x2A\x2A"
 			}
 			"g_MannVsMachineUpgrades"
@@ -105,8 +116,9 @@
 				"windows"	"\x55\x8B\xEC\x81\xEC\xD4\x01\x00\x00\x83\x7D\x2A\x00"
 				"linux"		"@_ZN12CTFGameRules20IsUpgradeTierEnabledEP9CTFPlayerii"
 			}
-			"CMannVsMachineUpgradeManager::LoadUpgradesFile" //Only used for detour if g_MannVsMachineUpgrades address lookup failed
+			"CMannVsMachineUpgradeManager::LoadUpgradesFile"
 			{
+				//Only used for detour if g_MannVsMachineUpgrades address lookup failed
 				"windows"	"\xA1\x2A\x2A\x2A\x2A\x53\x8B\xD9\x56\x8D\x90\xA4\x0C\x00\x00"
 				"linux"		"@_ZN28CMannVsMachineUpgradeManager16LoadUpgradesFileEv"
 			}
@@ -181,6 +193,16 @@
 			}
 			//These numbers are used to calculate the actual offset based on the base netprop offset in the Keys section
 			//The calculation formula is base offset + this number
+			"CTFPlayer::m_LastDamageType"
+			{
+				"windows"	"20" //build 9543365: 8988
+				"linux"		"20" //build 9543365: 8992
+			}
+			"CBaseObject::m_bPlacementOK"
+			{
+				"windows"	"-4" //build 9543365: 2888
+				"linux"		"-4" //build 9543365: 2912
+			}
 			"CTFBot::m_isLookingAroundForEnemies"
 			{
 				"windows"	"612" //build 8835751: 10336

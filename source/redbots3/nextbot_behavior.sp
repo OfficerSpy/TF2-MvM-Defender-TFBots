@@ -547,7 +547,7 @@ public Action CTFBotSniperLurk_SelectMoreDangerousThreat(BehaviorAction action, 
 	
 	int iThreat1 = threat1.GetEntity();
 	
-	if (BaseEntity_IsPlayer(iThreat1) && TF2_IsLineOfFireClear4(me, iThreat1))
+	if (BaseEntity_IsPlayer(iThreat1) && IsLineOfFireClearEntity(me, GetEyePosition(me), iThreat1))
 	{
 		int enemyWeapon = BaseCombatCharacter_GetActiveWeapon(iThreat1);
 		
@@ -575,7 +575,7 @@ public Action CTFBotSniperLurk_SelectMoreDangerousThreat(BehaviorAction action, 
 	
 	int iThreat2 = threat2.GetEntity();
 	
-	if (BaseEntity_IsPlayer(iThreat2) && TF2_IsLineOfFireClear4(me, iThreat2))
+	if (BaseEntity_IsPlayer(iThreat2) && IsLineOfFireClearEntity(me, GetEyePosition(me), iThreat2))
 	{
 		int enemyWeapon = BaseCombatCharacter_GetActiveWeapon(iThreat2);
 		
@@ -1048,7 +1048,7 @@ bool OpportunisticallyUsePowerupBottle(int client, int activeWeapon, INextBot bo
 			
 			int iThreat = threat.GetEntity();
 			
-			if (!TF2_IsLineOfFireClear4(client, iThreat))
+			if (!IsLineOfFireClearEntity(client, GetEyePosition(client), iThreat))
 				return false;
 			
 			int weaponID = TF2Util_GetWeaponID(activeWeapon);
@@ -1402,7 +1402,7 @@ void MonitorKnownEntities(int client, IVision vision)
 		When the known entity leaves the bot's FOV, it would eventually become obsolete after 10 seconds
 		And when it becomes obsolete, it gets removed from the list of known entities
 		So here we are basically expanding the functionality using our own line-of-sight of check */
-		if (TF2_IsLineOfFireClear4(client, i))
+		if (IsLineOfFireClearEntity(client, GetEyePosition(client), i))
 		{
 			CKnownEntity known = vision.GetKnown(i);
 			

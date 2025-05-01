@@ -54,10 +54,9 @@ public Action CTFBotAttackTank_Update(BehaviorAction action, int actor, float in
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 	
-	bool canSeeTarget = TF2_IsLineOfFireClear3(actor, myEyePos, m_iTankTarget[actor]);
 	float attackRange = GetIdealTankAttackRange(actor);
 	
-	if (!canSeeTarget || dist_to_tank > attackRange)
+	if (dist_to_tank > attackRange || !IsLineOfFireClearEntity(actor, myEyePos, m_iTankTarget[actor]))
 	{
 		if (m_flRepathTime[actor] <= GetGameTime())
 		{

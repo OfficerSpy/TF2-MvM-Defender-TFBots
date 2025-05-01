@@ -67,13 +67,13 @@ public Action CTFBotDestroyTeleporter_SelectMoreDangerousThreat(BehaviorAction a
 	}
 	
 	//Our most dangerous threat should be the teleporter
-	if (iThreat1 == m_iTeleporterTarget[me] && TF2_IsLineOfFireClear4(me, iThreat1))
+	if (iThreat1 == m_iTeleporterTarget[me] && IsLineOfFireClearEntity(me, GetEyePosition(me), iThreat1))
 	{
 		knownEntity = threat1;
 		return Plugin_Changed;
 	}
 	
-	if (iThreat2 == m_iTeleporterTarget[me] && TF2_IsLineOfFireClear4(me, iThreat2))
+	if (iThreat2 == m_iTeleporterTarget[me] && IsLineOfFireClearEntity(me, GetEyePosition(me), iThreat2))
 	{
 		knownEntity = threat2;
 		return Plugin_Changed;

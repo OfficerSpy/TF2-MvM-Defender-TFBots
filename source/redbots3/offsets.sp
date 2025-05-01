@@ -6,6 +6,8 @@ void InitOffsets(GameData hGamedata)
 {
 	m_adtOffsets = new StringMap();
 	
+	SetOffset(hGamedata, "CTFPlayer", "m_LastDamageType");
+	SetOffset(hGamedata, "CBaseObject", "m_bPlacementOK");
 	SetOffset(hGamedata, "CTFBot", "m_isLookingAroundForEnemies");
 	SetOffset(hGamedata, "CPopulationManager", "m_nStartingCurrency");
 	SetOffset(hGamedata, "CTFBot", "m_mission");
@@ -13,6 +15,8 @@ void InitOffsets(GameData hGamedata)
 	
 #if defined TESTING_ONLY
 	//Dump offsets
+	LogMessage("InitOffsets: CTFPlayer->m_LastDamageType = %d", GetOffset("CTFPlayer", "m_LastDamageType"));
+	LogMessage("InitOffsets: CBaseObject->m_bPlacementOK = %d", GetOffset("CBaseObject", "m_bPlacementOK"));
 	LogMessage("InitOffsets: CTFBot->m_isLookingAroundForEnemies = %d", GetOffset("CTFBot", "m_isLookingAroundForEnemies"));
 	LogMessage("InitOffsets: CPopulationManager->m_nStartingCurrency = %d", GetOffset("CPopulationManager", "m_nStartingCurrency"));
 	LogMessage("InitOffsets: CTFBot->m_mission = %d", GetOffset("CTFBot", "m_mission"));
@@ -62,7 +66,7 @@ static void SetOffset(GameData hGamedata, const char[] cls, const char[] prop)
 	}
 }
 
-static any GetOffset(const char[] cls, const char[] prop)
+static int GetOffset(const char[] cls, const char[] prop)
 {
 	char key[64];
 	Format(key, sizeof(key), "%s::%s", cls, prop);
@@ -74,6 +78,17 @@ static any GetOffset(const char[] cls, const char[] prop)
 	}
 	
 	return offset;
+}
+
+int GetLastDamageType(int client)
+{
+	// return ReadInt(GetEntityAddress(client) + view_as<Address>(offset));
+	return GetEntData(client, GetOffset("CTFPlayer", "m_LastDamageType"));
+}
+
+bool IsPlacementOK(int iObject)
+{
+	return view_as<bool>(GetEntData(iObject, GetOffset("CBaseObject", "m_bPlacementOK"), 1));
 }
 
 void SetLookingAroundForEnemies(int client, bool shouldLook)

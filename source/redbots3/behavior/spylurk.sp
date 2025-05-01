@@ -54,7 +54,7 @@ static Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 		bool isBehindVictim = GetVectorDotProduct(playerThreatForward, toPlayerThreat) > behindTolerance;
 		bool isMovingTowardsVictim = true;
 		
-		if (TF2_IsLineOfFireClear4(actor, target))
+		if (IsLineOfFireClearEntity(actor, GetEyePosition(actor), target))
 		{
 			const float circleStrafeRange = 250.0;
 			
