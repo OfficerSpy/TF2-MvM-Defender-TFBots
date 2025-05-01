@@ -23,6 +23,9 @@ static Handle m_hIsUpgradeTierEnabled;
 static Handle m_hGetProjectileGravity;
 #endif
 
+static Handle m_hWeaponCanSwitchTo;
+static Handle m_hShouldCollide;
+
 bool InitSDKCalls(GameData hGamedata)
 {
 	int failCount = 0;
@@ -217,6 +220,33 @@ bool InitSDKCalls(GameData hGamedata)
 	}
 #endif
 	
+	//SDKHooks gamedata
+	GameData hTempConf = new GameData("sdkhooks.games/engine.ep2v");
+	
+	//Really for CBaseCombatCharacter but we will only ever use this for players anyway
+	StartPrepSDKCall(SDKCall_Player);
+	PrepSDKCall_SetFromConf(hTempConf, SDKConf_Virtual, "Weapon_CanSwitchTo");
+	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
+	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_ByValue);
+	if ((m_hWeaponCanSwitchTo = EndPrepSDKCall()) == null)
+	{
+		LogError("Failed to create SDKCall for CBaseCombatCharacter::Weapon_CanSwitchTo!");
+		iFailCount++;
+	}
+	
+	StartPrepSDKCall(SDKCall_Entity);
+	PrepSDKCall_SetFromConf(hTempConf, SDKConf_Virtual, "ShouldCollide");
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_ByValue);
+	if ((m_hShouldCollide = EndPrepSDKCall()) == null)
+	{
+		LogError("Failed to create SDKCall for CBaseEntity::ShouldCollide!");
+		iFailCount++;
+	}
+	
+	hTempConf.Close();
+	
 	if (failCount > 0)
 	{
 		LogError("InitSDKCalls: GameData file has %d problems!", failCount);
@@ -319,3 +349,13 @@ float GetProjectileGravity(int weapon)
 	return SDKCall(m_hGetProjectileGravity, weapon);
 }
 #endif
+
+bool Weapon_CanSwitchTo(int actor, int weapon)
+{
+	return SDKCall(m_hWeaponCanSwitchTo, actor, weapon);
+}
+
+bool ShouldCollide(int entity, int collisionGroup, int contentsMask)
+{
+	return SDKCall(m_hShouldCollide, entity, collisionGroup, contentsMask);
+}

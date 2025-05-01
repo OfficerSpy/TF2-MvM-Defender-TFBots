@@ -129,6 +129,50 @@ char g_sRawPlayerClassNames[][] =
 	"random"
 };
 
+static bool TraceFilter_TFBot(int entity, int contentsMask, StringMap data)
+{
+	//NextBotTraceFilterIgnoreActors
+	if (CBaseEntity(entity).IsCombatCharacter())
+		return false;
+	
+	//CTraceFilterIgnoreFriendlyCombatItems
+	int iPassEnt = -1;
+	data.GetValue("m_pPassEnt", iPassEnt);
+	
+	int iCollisionGroup;
+	data.GetValue("m_collisionGroup", iCollisionGroup);
+	
+	int iIgnoreTeam;
+	data.GetValue("m_iIgnoreTeam", iIgnoreTeam);
+	
+	if (BaseEntity_IsCombatItem(entity))
+	{
+		if (BaseEntity_GetTeamNumber(entity) == iIgnoreTeam)
+			return false;
+		
+		//m_bCallerIsProjectile is false here
+	}
+	
+	//CTraceFilterSimple as BaseClass of CTraceFilterIgnoreFriendlyCombatItems
+	if (!StandardFilterRules(entity, contentsMask))
+		return false;
+	
+	if (iPassEnt != -1)
+	{
+		if (!PassServerEntityFilter(entity, iPassEnt))
+			return false;
+	}
+	
+	if (!ShouldCollide(entity, iCollisionGroup, contentsMask))
+		return false;
+	
+	if (!TFGameRules_ShouldCollide(iCollisionGroup, BaseEntity_GetCollisionGroup(entity)))
+		return false;
+	
+	//CTraceFilterChain checks if both filters are true
+	return true;
+}
+
 void RefundPlayerUpgrades(int client)
 {
 	KeyValues kv = new KeyValues("MVM_Respec");
@@ -1373,13 +1417,56 @@ int GetNearestCurrencyPack(int client, const float max_distance = 999999.0)
 
 bool CanUsePrimayWeapon(int client)
 {
-	if (GetPlayerWeaponSlot(client, TFWeaponSlot_Primary) == -1)
+	int weapon = GetPlayerWeaponSlot(client, TFWeaponSlot_Primary);
+	
+	if (weapon == -1)
 		return false;
 	
-	if (TF2_IsPlayerInCondition(client, TFCond_MeleeOnly))
+	return Weapon_CanSwitchTo(client, weapon);
+}
+
+//CTFPlayer::CanAttack
+bool CanPlayerAttack(int client)
+{
+	//NOTE: for now we are only doing the checks we actually need
+	
+	if ((TF2_GetStealthNoAttackExpireTime(client) > GetGameTime() && !TF2_IsPlayerInCondition(client, TFCond_Stealthed)) || TF2_IsPlayerInCondition(client, TFCond_Cloaked))
+	{
+		return false;
+	}
+	
+	if (TF2_IsFeignDeathReady(client))
 		return false;
 	
 	return true;
+}
+
+//bool CTFBot::IsLineOfFireClear( const Vector &from, const Vector &to ) const
+bool IsLineOfFireClearPosition(int client, const float from[3], const float to[3])
+{
+	StringMap adtProperties;
+	adtProperties.SetValue("m_pPassEnt", client);
+	adtProperties.SetValue("m_collisionGroup", COLLISION_GROUP_NONE);
+	adtProperties.SetValue("m_iIgnoreTeam", GetClientTeam(client));
+	
+	TR_TraceRayFilter(from, to, MASK_SOLID_BRUSHONLY, RayType_EndPoint, TraceFilter_TFBot, adtProperties);
+	adtProperties.Close();
+	
+	return !TR_DidHit();
+}
+
+//bool CTFBot::IsLineOfFireClear( const Vector &from, CBaseEntity *who ) const
+bool IsLineOfFireClearEntity(int client, const float from[3], int who)
+{
+	StringMap adtProperties;
+	adtProperties.SetValue("m_pPassEnt", client);
+	adtProperties.SetValue("m_collisionGroup", COLLISION_GROUP_NONE);
+	adtProperties.SetValue("m_iIgnoreTeam", GetClientTeam(client));
+	
+	TR_TraceRayFilter(from, WorldSpaceCenter(who), MASK_SOLID_BRUSHONLY, RayType_EndPoint, TraceFilter_TFBot, adtProperties);
+	adtProperties.Close();
+	
+	return !TR_DidHit() || TR_GetEntityIndex() == who;
 }
 
 stock bool DoesAnyPlayerUseThisName(const char[] name)

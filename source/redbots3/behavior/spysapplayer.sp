@@ -1,5 +1,4 @@
 int m_iPlayerSapTarget[MAXPLAYERS + 1];
-float m_flSapperCooldown[MAXPLAYERS + 1];
 
 BehaviorAction CTFBotSpySapPlayers()
 {
@@ -50,10 +49,9 @@ public Action CTFBotSpySapPlayers_Update(BehaviorAction action, int actor, float
 		SubtractVectors(origin, myOrigin, origin);
 		
 		//If we're close enough, build a sapper on them
-		if (GetVectorLength(origin) <= SAPPER_PLAYER_BUILD_ON_RANGE)
+		if (GetVectorLength(origin) <= SAPPER_PLAYER_BUILD_ON_RANGE && CanPlayerAttack(actor))
 		{
-			SpawnSapper(actor, m_iPlayerSapTarget[actor], mySapper);
-			SetSapperCooldown(actor, SAPPER_RECHARGE_TIME);
+			BuildSapperOnEntity(actor, m_iPlayerSapTarget[actor], mySapper);
 			
 			return action.Done("Sapped player");
 		}
@@ -116,13 +114,15 @@ bool CTFBotSpySapPlayers_SelectTarget(int actor)
 
 bool CanBuildSapper(int client)
 {
-	//CTFWeaponBuilder uses ammo index TF_AMMO_GRENADES2 for its effect bar
+	//Like CTFPlayer::CanBuild, only if we have ammo of TF_AMMO_GRENADES2
 	return GetAmmoCount(client, TF_AMMO_GRENADES2) > 0;
 }
 
 void BuildSapperOnEntity(int client, int entity, int weapon)
 {
 	SpawnSapper(client, entity, weapon);
+	
+	//CTFWeaponBuilder uses ammo index TF_AMMO_GRENADES2 for its effect bar
 	BaseCombatCharacter_RemoveAmmo(client, 1, TF_AMMO_GRENADES2);
 	StartBuilderEffectBarRegen(weapon);
 }
@@ -131,9 +131,4 @@ void StartBuilderEffectBarRegen(int weapon)
 {
 	//When recharged, game will give us ammo TF_AMMO_GRENADES2 for the sapper
 	SetEntPropFloat(weapon, Prop_Send, "m_flEffectBarRegenTime", GetGameTime() + SAPPER_RECHARGE_TIME);
-}
-
-void SetSapperCooldown(int client, float duration)
-{
-	m_flSapperCooldown[client] = duration <= 0.0 ? duration : GetGameTime() + duration;
 }
