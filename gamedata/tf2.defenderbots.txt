@@ -138,23 +138,23 @@
 			//These are virtual function offsets
 			"CBaseCombatWeapon::HasAmmo"
 			{
-				"windows"	"239"
-				"linux"		"245"
+				"windows"	"240"
+				"linux"		"246"
 			}
 			"CBaseCombatCharacter::GetAmmoCount"
 			{
-				"windows"	"265"		
-				"linux"		"266"
+				"windows"	"266"
+				"linux"		"267"
 			}
 			"CTFWeaponBase::Clip1"
 			{
-				"windows"	"344"
-				"linux"		"350"
+				"windows"	"345"
+				"linux"		"351"
 			}
 			"CTFWeaponBaseGun::GetProjectileSpeed"
 			{		
-				"windows"	"481"		
-				"linux"		"488"
+				"windows"	"483"
+				"linux"		"490"
 			}
 			"IBody::AimHeadTowards" //Overload 1
 			{
@@ -163,18 +163,18 @@
 			}
 			"CTFWeaponBaseGun::GetProjectileGravity"
 			{
-				"windows"	"482"
-				"linux"		"489"
+				"windows"	"484"
+				"linux"		"491"
 			}
 			"CItem::MyTouch"
 			{
-				"windows"	"228"
-				"linux"		"229"
+				"windows"	"229"
+				"linux"		"230"
 			}
 			"CBasePlayer::IsBot"
 			{
-				"windows"	"454"
-				"linux"		"455"
+				"windows"	"455"
+				"linux"		"456"
 			}
 			"CBaseEntity::Event_Killed"
 			{
