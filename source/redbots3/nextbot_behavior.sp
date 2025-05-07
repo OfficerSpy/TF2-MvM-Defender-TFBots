@@ -70,7 +70,6 @@ void ResetNextBot(int client)
 	m_vecNestArea[client] = NULL_VECTOR;
 	m_iSapTarget[client] = -1;
 	m_iPlayerSapTarget[client] = -1;
-	m_flSapperCooldown[client] = 0.0;
 	m_vecStartArea[client] = NULL_VECTOR;
 	m_iTankTarget[client] = -1;
 	m_iTeleporterTarget[client] = -1;

@@ -120,6 +120,7 @@ ConVar redbots_manager_bot_max_tank_attackers;
 ConVar redbots_manager_bot_aim_skill;
 ConVar redbots_manager_bot_reflect_skill;
 ConVar redbots_manager_bot_reflect_chance;
+ConVar redbots_manager_bot_backstab_skill;
 ConVar redbots_manager_bot_hear_spy_range;
 ConVar redbots_manager_bot_notice_spy_time;
 ConVar redbots_manager_extra_bots;
@@ -294,6 +295,8 @@ public void OnPluginStart()
 #if defined IDLEBOT_AIMING
 	InitTFBotAim();
 #endif
+	
+	FindGameConsoleVariables();
 }
 
 public void OnPluginEnd()
@@ -319,30 +322,6 @@ public void OnMapStart()
 	Config_LoadMap();
 	Config_LoadBotNames();
 	CreateBotPreferenceMenu();
-}
-
-public void OnConfigsExecuted()
-{
-	if (!tf_bot_path_lookahead_range)
-		tf_bot_path_lookahead_range = FindConVar("tf_bot_path_lookahead_range");
-	
-	if (!tf_bot_health_critical_ratio)
-		tf_bot_health_critical_ratio = FindConVar("tf_bot_health_critical_ratio");
-	
-	if (!tf_bot_health_ok_ratio)
-		tf_bot_health_ok_ratio = FindConVar("tf_bot_health_ok_ratio");
-	
-	if (!tf_bot_ammo_search_range)
-		tf_bot_ammo_search_range = FindConVar("tf_bot_ammo_search_range");
-	
-	if (!tf_bot_health_search_far_range)
-		tf_bot_health_search_far_range = FindConVar("tf_bot_health_search_far_range");
-	
-	if (!tf_bot_health_search_near_range)
-		tf_bot_health_search_near_range = FindConVar("tf_bot_health_search_near_range");
-	
-	if (!tf_bot_suicide_bomb_range)
-		tf_bot_suicide_bomb_range = FindConVar("tf_bot_suicide_bomb_range");
 }
 
 /* public void OnMapEnd()
@@ -1483,6 +1462,17 @@ public void DefenderBot_TouchPost(int entity, int other)
 	}
 }
 
+void FindGameConsoleVariables()
+{
+	tf_bot_path_lookahead_range = FindConVar("tf_bot_path_lookahead_range");
+	tf_bot_health_critical_ratio = FindConVar("tf_bot_health_critical_ratio");
+	tf_bot_health_ok_ratio = FindConVar("tf_bot_health_ok_ratio");
+	tf_bot_ammo_search_range = FindConVar("tf_bot_ammo_search_range");
+	tf_bot_health_search_far_range = FindConVar("tf_bot_health_search_far_range");
+	tf_bot_health_search_near_range = FindConVar("tf_bot_health_search_near_range");
+	tf_bot_suicide_bomb_range = FindConVar("tf_bot_suicide_bomb_range");
+}
+
 bool FakeClientCommandThrottled(int client, const char[] command)
 {
 	if (m_flLastCommandTime[client] > GetGameTime())
@@ -1779,9 +1769,9 @@ void HandleTeamPlayerCountChanged(TFTeam team, int iWhoChanging = -1)
 		PrintToChatTeam(team, "%s Use command !redobots to repick your bot team lineup.", PLUGIN_PREFIX);
 	}
 	
-	int whoToUnready = -1;
-	int readyCount = 0;
-	int memberCount = 0;
+	int iWhoToUnready = -1;
+	int iReadyCount = 0;
+	int iMemberCount = 0;
 	
 	for (int i = 1; i <= MaxClients; i++)
 	{
@@ -1797,36 +1787,36 @@ void HandleTeamPlayerCountChanged(TFTeam team, int iWhoChanging = -1)
 		
 		if (IsPlayerReady(i))
 		{
-			if (whoToUnready != -1)
+			if (iWhoToUnready != -1)
 			{
-				if (g_bIsDefenderBot[whoToUnready])
+				if (g_bIsDefenderBot[iWhoToUnready])
 				{
 					//Always prefer to unready human players first
 					if (!g_bIsDefenderBot[i])
-						whoToUnready = i;
+						iWhoToUnready = i;
 				}
 			}
 			else
 			{
-				whoToUnready = i;
+				iWhoToUnready = i;
 			}
 			
-			readyCount++;
+			iReadyCount++;
 		}
 		
-		memberCount++;
+		iMemberCount++;
 	}
 	
 	//Are all remaining members of the team ready?
-	if (readyCount == memberCount)
+	if (iReadyCount == iMemberCount)
 	{
 		//Unready one member to prevent starting the game and allow another bot to enter
-		SetPlayerReady(whoToUnready, false);
+		SetPlayerReady(iWhoToUnready, false);
 		
-		if (g_bIsDefenderBot[whoToUnready])
+		if (g_bIsDefenderBot[iWhoToUnready])
 		{
 			//Ready up the bot again after some time
-			CreateTimer(0.2, Timer_ReadyPlayer, whoToUnready, TIMER_FLAG_NO_MAPCHANGE);
+			CreateTimer(0.2, Timer_ReadyPlayer, iWhoToUnready, TIMER_FLAG_NO_MAPCHANGE);
 		}
 	}
 }

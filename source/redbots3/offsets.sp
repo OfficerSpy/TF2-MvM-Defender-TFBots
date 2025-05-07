@@ -12,6 +12,7 @@ void InitOffsets(GameData hGamedata)
 	SetOffset(hGamedata, "CPopulationManager", "m_nStartingCurrency");
 	SetOffset(hGamedata, "CTFBot", "m_mission");
 	SetOffset(hGamedata, "CTFBuffItem", "m_bPlayingHorn");
+	SetOffset(hGamedata, "CTFNavArea", "m_distanceToBombTarget");
 	
 #if defined TESTING_ONLY
 	//Dump offsets
@@ -21,6 +22,7 @@ void InitOffsets(GameData hGamedata)
 	LogMessage("InitOffsets: CPopulationManager->m_nStartingCurrency = %d", GetOffset("CPopulationManager", "m_nStartingCurrency"));
 	LogMessage("InitOffsets: CTFBot->m_mission = %d", GetOffset("CTFBot", "m_mission"));
 	LogMessage("InitOffsets: CTFBuffItem->m_bPlayingHorn = %d", GetOffset("CTFBuffItem", "m_bPlayingHorn"));
+	LogMessage("InitOffsets: CTFNavArea->m_distanceToBombTarget = %d", GetOffset("CTFNavArea", "m_distanceToBombTarget"));
 #endif
 }
 
@@ -66,7 +68,8 @@ static void SetOffset(GameData hGamedata, const char[] cls, const char[] prop)
 	}
 }
 
-static int GetOffset(const char[] cls, const char[] prop)
+//Explicitly interpreted as int
+static any GetOffset(const char[] cls, const char[] prop)
 {
 	char key[64];
 	Format(key, sizeof(key), "%s::%s", cls, prop);
@@ -110,4 +113,9 @@ int GetTFBotMission(int client)
 bool IsPlayingHorn(int weapon)
 {
 	return view_as<bool>(GetEntData(weapon, GetOffset("CTFBuffItem", "m_bPlayingHorn"), 1));
+}
+
+float GetTravelDistanceToBombTarget(CTFNavArea area)
+{
+	return LoadFromAddress(view_as<Address>(area) + GetOffset("CTFNavArea", "m_distanceToBombTarget"), NumberType_Int32);
 }

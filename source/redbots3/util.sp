@@ -6,6 +6,7 @@
 #include <stocklib_officerspy/econ_item_view>
 #include <stocklib_officerspy/tf/tf_weaponbase>
 #include <stocklib_officerspy/tf/entity_capture_flag>
+#include <stocklib_officerspy/shared/util_shared>
 
 #define SENTRY_MAX_RANGE 1100.0
 
@@ -1800,7 +1801,7 @@ stock void PrintToChatTeam(int team, const char[] format, any ...)
 		if (IsClientInGame(i) && GetClientTeam(i) == team)
 		{
 			SetGlobalTransTarget(i);
-			VFormat(buffer, sizeof(buffer), format, 2);
+			VFormat(buffer, sizeof(buffer), format, 3);
 			PrintToChat(i, "%s", buffer);
 		}
 	}

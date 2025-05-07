@@ -28,14 +28,14 @@ static Handle m_hShouldCollide;
 
 bool InitSDKCalls(GameData hGamedata)
 {
-	int failCount = 0;
+	int iFailCount = 0;
 	
 	StartPrepSDKCall(SDKCall_Player);
 	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Signature, "CTFPlayer::PostInventoryApplication");
 	if ((m_hPostInventoryApplication = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFPlayer::PostInventoryApplication!");
-		failCount++;
+		iFailCount++;
 	}
 	
 	StartPrepSDKCall(SDKCall_Player);
@@ -45,7 +45,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hSetMission = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFBot::SetMission!");
-		failCount++;
+		iFailCount++;
 	}
 	
 	StartPrepSDKCall(SDKCall_Player);
@@ -56,7 +56,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hGetMaxAmmo = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFPlayer::GetMaxAmmo!");
-		failCount++;
+		iFailCount++;
 	}
 	
 	/* StartPrepSDKCall(SDKCall_Entity);
@@ -66,7 +66,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hGetNextThink = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CBaseEntity::GetNextThink!");
-		failCount++;
+		iFailCount++;
 	} */
 	
 	StartPrepSDKCall(SDKCall_Entity);
@@ -76,7 +76,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hLookupBone = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CBaseAnimating::LookupBone!");
-		failCount++;
+		iFailCount++;
 	}
 	
 	StartPrepSDKCall(SDKCall_Entity);
@@ -87,7 +87,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hGetBonePosition = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CBaseAnimating::GetBonePosition!");
-		failCount++;
+		iFailCount++;
 	}
 	
 	StartPrepSDKCall(SDKCall_Entity);
@@ -96,7 +96,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hHasAmmo = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CBaseCombatWeapon::HasAmmo!");
-		failCount++;
+		iFailCount++;
 	}
 	
 	StartPrepSDKCall(SDKCall_Player);
@@ -106,7 +106,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hGetAmmoCount = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFPlayer::GetAmmoCount!");
-		failCount++;
+		iFailCount++;
 	}
 	
 	StartPrepSDKCall(SDKCall_Entity);
@@ -115,7 +115,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hClip1 = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFWeaponBase::Clip1!");
-		failCount++;
+		iFailCount++;
 	}
 	
 	StartPrepSDKCall(SDKCall_Entity);
@@ -124,7 +124,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hGetProjectileSpeed = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFWeaponBaseGun::GetProjectileSpeed!");
-		failCount++;
+		iFailCount++;
 	}
 	
 	StartPrepSDKCall(SDKCall_Raw);
@@ -137,7 +137,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hAimHeadTowards = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for IBody::AimHeadTowards!");
-		failCount++;
+		iFailCount++;
 	}
 	
 #if defined METHOD_MVM_UPGRADES
@@ -147,7 +147,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hGEconItemSchema = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for GEconItemSchema!");
-		failCount++;
+		iFailCount++;
 	}
 	
 	StartPrepSDKCall(SDKCall_Raw);
@@ -157,7 +157,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hGetAttributeDefinitionByName = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CEconItemSchema::GetAttributeDefinitionByName!");
-		failCount++;
+		iFailCount++;
 	}
 	
 	StartPrepSDKCall(SDKCall_GameRules);
@@ -170,7 +170,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hCanUpgradeWithAttrib = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFGameRules::CanUpgradeWithAttrib!");
-		failCount++;
+		iFailCount++;
 	}
 	
 	StartPrepSDKCall(SDKCall_GameRules);
@@ -183,7 +183,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hGetCostForUpgrade = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFGameRules::GetCostForUpgrade!");
-		failCount++;
+		iFailCount++;
 	}
 	
 	StartPrepSDKCall(SDKCall_GameRules);
@@ -193,7 +193,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hGetUpgradeTier = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFGameRules::GetUpgradeTier!");
-		failCount++;
+		iFailCount++;
 	}
 	
 	StartPrepSDKCall(SDKCall_GameRules);
@@ -205,7 +205,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hIsUpgradeTierEnabled = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFGameRules::IsUpgradeTierEnabled!");
-		failCount++;
+		iFailCount++;
 	}
 #endif
 	
@@ -216,7 +216,7 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hGetProjectileGravity = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFWeaponBaseGun::GetProjectileGravity!");
-		failCount++;
+		iFailCount++;
 	}
 #endif
 	
@@ -247,9 +247,9 @@ bool InitSDKCalls(GameData hGamedata)
 	
 	hTempConf.Close();
 	
-	if (failCount > 0)
+	if (iFailCount > 0)
 	{
-		LogError("InitSDKCalls: GameData file has %d problems!", failCount);
+		LogError("InitSDKCalls: GameData file has %d problems!", iFailCount);
 		return false;
 	}
 	
