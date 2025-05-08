@@ -159,9 +159,9 @@ Address g_pMannVsMachineUpgrades;
 
 public Plugin myinfo =
 {
-	name = "[TF2] TFBots (MVM) with Manager",
+	name = "Defender TFBots",
 	author = "Officer Spy",
-	description = "Bot Management",
+	description = "TFBots that play Mann vs. Machine",
 	version = "1.4.9",
 	url = "https://github.com/OfficerSpy/TF2-MvM-Defender-TFBots"
 };

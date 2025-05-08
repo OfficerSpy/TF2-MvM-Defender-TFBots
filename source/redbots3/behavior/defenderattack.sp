@@ -11,7 +11,7 @@ BehaviorAction CTFBotDefenderAttack()
 	return action;
 }
 
-public Action CTFBotDefenderAttack_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+static Action CTFBotDefenderAttack_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
 	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	
@@ -24,7 +24,7 @@ public Action CTFBotDefenderAttack_OnStart(BehaviorAction action, int actor, Beh
 	return action.Continue();
 }
 
-public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, float interval, ActionResult result)
+static Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
 	if (TF2_GetPlayerClass(actor) == TFClass_Sniper && GetTFBotMission(actor) == CTFBot_MISSION_SNIPER)
 	{
@@ -57,7 +57,7 @@ public Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 		m_flRevalidateTarget[actor] = GetGameTime() + 2.0;
 	
 		//Need new target.
-		if (/* TF2Util_IsPointInRespawnRoom(WorldSpaceCenter(m_iAttackTarget[actor])) || */ !IsPathToEntityPossible(actor, m_iAttackTarget[actor]))
+		if (!IsTargetEntityReachable(actor, m_iAttackTarget[actor]))
 			if (!CTFBotDefenderAttack_SelectTarget(actor))
 				return action.Done("Unreachable target");
 	}
@@ -155,4 +155,21 @@ bool CTFBotDefenderAttack_SelectTarget(int actor, bool bBombCarrierOnly = false)
 	}
 	
 	return false;
+}
+
+static bool IsTargetEntityReachable(int client, int target)
+{
+	CTFNavArea area = view_as<CTFNavArea>(CBaseCombatCharacter(target).GetLastKnownArea());
+	
+	if (area == NULL_AREA)
+		return false;
+	
+	if ((TF2_GetClientTeam(client) == TFTeam_Red && area.HasAttributeTF(BLUE_SPAWN_ROOM))
+	|| (TF2_GetClientTeam(client) == TFTeam_Blue && area.HasAttributeTF(RED_SPAWN_ROOM)))
+	{
+		//Usually cannot enter enemy spawns
+		return false;
+	}
+	
+	return true;
 }
