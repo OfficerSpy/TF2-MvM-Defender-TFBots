@@ -24,7 +24,7 @@
 				"windows"	"m_flMvMLastDamageTime"
 				"linux"		"m_flMvMLastDamageTime"
 			}
-			"CBaseObject_BaseOffset"
+			"CObjectSentrygun_BaseOffset"
 			{
 				"windows"	"m_iKills"
 				"linux"		"m_iKills"
@@ -198,7 +198,7 @@
 				"windows"	"20" //build 9543365: 8988
 				"linux"		"20" //build 9543365: 8992
 			}
-			"CBaseObject::m_bPlacementOK"
+			"CObjectSentrygun::m_bPlacementOK"
 			{
 				"windows"	"-4" //build 9543365: 2888
 				"linux"		"-4" //build 9543365: 2912
@@ -208,15 +208,15 @@
 				"windows"	"612" //build 8835751: 10336
 				"linux"		"604" //build 8835751: 10332
 			}
-			"CPopulationManager::m_nStartingCurrency"
-			{
-				"windows"	"628" //build 8835751: 1460
-				"linux"		"628" //build 8835751: 1484
-			}
 			"CTFBot::m_mission"
 			{
 				"windows"	"664" //build 8835751: 10388
 				"linux"		"656" //build 8835751: 10384
+			}
+			"CPopulationManager::m_nStartingCurrency"
+			{
+				"windows"	"628" //build 8835751: 1460
+				"linux"		"628" //build 8835751: 1484
 			}
 			"CTFBuffItem::m_bPlayingHorn"
 			{
@@ -224,6 +224,11 @@
 				"linux"		"40" //build 8835751: 2092
 			}
 			//These numbers are raw offsets and are not used for any calculations
+			"CTFNavArea::m_distanceToBombTarget"
+			{
+				"windows"	"548"
+				"linux"		"552"
+			}
 			"CMannVsMachineUpgrades::szAttrib"
 			{
 				"windows"	"0"

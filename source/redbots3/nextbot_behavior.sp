@@ -251,9 +251,9 @@ public Action CTFBotMainAction_SelectTargetPoint(BehaviorAction action, INextBot
 	{
 		switch (TF2Util_GetWeaponID(myWeapon))
 		{
-			//TFBots can't compensate their arc if projectile speed differs, so we do our own calculation here
 			case TF_WEAPON_GRENADELAUNCHER, TF_WEAPON_PIPEBOMBLAUNCHER:
 			{
+				//TFBots can't compensate their arc if projectile speed differs, so we do our own calculation here
 				float target_point[3];
 				
 				target_point = WorldSpaceCenter(entity);
@@ -298,9 +298,9 @@ public Action CTFBotMainAction_SelectTargetPoint(BehaviorAction action, INextBot
 				
 				return Plugin_Changed;
 			}
-			//TFBots won't do projectile prediciton with cow mangler 5000 since it's left out of the code, so we'll do it ourselves
 			case TF_WEAPON_PARTICLE_CANNON:
 			{
+				//TFBots won't do projectile prediciton with cow mangler 5000 since it's left out of the code, so we'll do it ourselves
 				float target_point[3];
 				
 				float vecTarget[3], vecActor[3];
@@ -319,7 +319,7 @@ public Action CTFBotMainAction_SelectTargetPoint(BehaviorAction action, INextBot
 					target_point[1] = vecTarget[1] + absVelocity[1] * distance;
 					target_point[2] = vecTarget[2] + absVelocity[2] * distance;
 					
-					if (!TF2_IsLineOfFireClear2(me, target_point))
+					if (!IsLineOfFireClearPosition(me, GetEyePosition(me), target_point))
 					{
 						vecTarget = WorldSpaceCenter(entity);
 						
@@ -344,8 +344,8 @@ public Action CTFBotMainAction_SelectTargetPoint(BehaviorAction action, INextBot
 				
 				if (bone != -1)
 				{
-					float vecEmpty[3];
-					GetBonePosition(entity, bone, vec, vecEmpty);
+					float vEmpty[3];
+					GetBonePosition(entity, bone, vec, vEmpty);
 					vec[2] += 3.0;
 					
 					return Plugin_Changed;
@@ -362,8 +362,8 @@ public Action CTFBotMainAction_SelectTargetPoint(BehaviorAction action, INextBot
 					
 					if (bone != -1)
 					{
-						float vecEmpty[3];
-						GetBonePosition(entity, bone, vec, vecEmpty);
+						float vEmpty[3];
+						GetBonePosition(entity, bone, vec, vEmpty);
 						vec[2] += 3.0;
 						
 						return Plugin_Changed;

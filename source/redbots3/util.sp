@@ -1369,12 +1369,12 @@ bool IsHealedByObject(int client)
 //Return the only entity we can see, -2 if we can see them both
 int FindOnlyOneVisibleEntity(int client, int ent1, int ent2)
 {
-	if (!IsLineOfFireClearEntity(client, ent1))
+	if (!IsLineOfFireClearEntity(client, GetEyePosition(client), ent1))
 	{
 		return ent2;
 	}
 	
-	if (!IsLineOfFireClearEntity(client, ent2))
+	if (!IsLineOfFireClearEntity(client, GetEyePosition(client), ent2))
 	{
 		return ent1;
 	}
@@ -1441,7 +1441,7 @@ bool CanPlayerAttack(int client)
 //bool CTFBot::IsLineOfFireClear( const Vector &from, const Vector &to ) const
 bool IsLineOfFireClearPosition(int client, const float from[3], const float to[3])
 {
-	StringMap adtProperties;
+	StringMap adtProperties = new StringMap();
 	adtProperties.SetValue("m_pPassEnt", client);
 	adtProperties.SetValue("m_collisionGroup", COLLISION_GROUP_NONE);
 	adtProperties.SetValue("m_iIgnoreTeam", GetClientTeam(client));
@@ -1455,7 +1455,7 @@ bool IsLineOfFireClearPosition(int client, const float from[3], const float to[3
 //bool CTFBot::IsLineOfFireClear( const Vector &from, CBaseEntity *who ) const
 bool IsLineOfFireClearEntity(int client, const float from[3], int who)
 {
-	StringMap adtProperties;
+	StringMap adtProperties = new StringMap();
 	adtProperties.SetValue("m_pPassEnt", client);
 	adtProperties.SetValue("m_collisionGroup", COLLISION_GROUP_NONE);
 	adtProperties.SetValue("m_iIgnoreTeam", GetClientTeam(client));
