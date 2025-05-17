@@ -153,8 +153,8 @@
 			}
 			"CTFWeaponBaseGun::GetProjectileSpeed"
 			{		
-				"windows"	"483"
-				"linux"		"490"
+				"windows"	"484"
+				"linux"		"491"
 			}
 			"IBody::AimHeadTowards" //Overload 1
 			{
@@ -163,8 +163,8 @@
 			}
 			"CTFWeaponBaseGun::GetProjectileGravity"
 			{
-				"windows"	"484"
-				"linux"		"491"
+				"windows"	"485"
+				"linux"		"492"
 			}
 			"CItem::MyTouch"
 			{
