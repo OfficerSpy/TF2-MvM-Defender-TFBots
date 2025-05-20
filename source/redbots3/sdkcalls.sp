@@ -1,11 +1,9 @@
 static Handle m_hPostInventoryApplication;
 static Handle m_hSetMission;
-static Handle m_hGetMaxAmmo;
 // static Handle m_hGetNextThink;
 static Handle m_hLookupBone;
 static Handle m_hGetBonePosition;
 static Handle m_hHasAmmo;
-static Handle m_hGetAmmoCount;
 static Handle m_hClip1;
 static Handle m_hGetProjectileSpeed;
 static Handle m_hAimHeadTowards;
@@ -23,7 +21,6 @@ static Handle m_hIsUpgradeTierEnabled;
 static Handle m_hGetProjectileGravity;
 #endif
 
-static Handle m_hWeaponCanSwitchTo;
 static Handle m_hShouldCollide;
 
 bool InitSDKCalls(GameData hGamedata)
@@ -45,17 +42,6 @@ bool InitSDKCalls(GameData hGamedata)
 	if ((m_hSetMission = EndPrepSDKCall()) == null)
 	{
 		LogError("Failed to create SDKCall for CTFBot::SetMission!");
-		iFailCount++;
-	}
-	
-	StartPrepSDKCall(SDKCall_Player);
-	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Signature, "CTFPlayer::GetMaxAmmo");
-	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
-	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
-	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	if ((m_hGetMaxAmmo = EndPrepSDKCall()) == null)
-	{
-		LogError("Failed to create SDKCall for CTFPlayer::GetMaxAmmo!");
 		iFailCount++;
 	}
 	
@@ -99,22 +85,12 @@ bool InitSDKCalls(GameData hGamedata)
 		iFailCount++;
 	}
 	
-	StartPrepSDKCall(SDKCall_Player);
-	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Virtual, "CBaseCombatCharacter::GetAmmoCount");
-	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
-	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
-	if ((m_hGetAmmoCount = EndPrepSDKCall()) == null)
-	{
-		LogError("Failed to create SDKCall for CTFPlayer::GetAmmoCount!");
-		iFailCount++;
-	}
-	
 	StartPrepSDKCall(SDKCall_Entity);
-	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Virtual, "CTFWeaponBase::Clip1");
+	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Virtual, "CBaseCombatWeapon::Clip1");
 	PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
 	if ((m_hClip1 = EndPrepSDKCall()) == null)
 	{
-		LogError("Failed to create SDKCall for CTFWeaponBase::Clip1!");
+		LogError("Failed to create SDKCall for CBaseCombatWeapon::Clip1!");
 		iFailCount++;
 	}
 	
@@ -221,18 +197,8 @@ bool InitSDKCalls(GameData hGamedata)
 #endif
 	
 	//SDKHooks gamedata
-	GameData hTempConf = new GameData("sdkhooks.games/engine.ep2v");
-	
-	//Really for CBaseCombatCharacter but we will only ever use this for players anyway
-	StartPrepSDKCall(SDKCall_Player);
-	PrepSDKCall_SetFromConf(hTempConf, SDKConf_Virtual, "Weapon_CanSwitchTo");
-	PrepSDKCall_AddParameter(SDKType_CBaseEntity, SDKPass_Pointer);
-	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_ByValue);
-	if ((m_hWeaponCanSwitchTo = EndPrepSDKCall()) == null)
-	{
-		LogError("Failed to create SDKCall for CBaseCombatCharacter::Weapon_CanSwitchTo!");
-		iFailCount++;
-	}
+	char sTempConfFileName[] = "sdkhooks.games/engine.ep2v";
+	GameData hTempConf = new GameData(sTempConfFileName);
 	
 	StartPrepSDKCall(SDKCall_Entity);
 	PrepSDKCall_SetFromConf(hTempConf, SDKConf_Virtual, "ShouldCollide");
@@ -241,7 +207,7 @@ bool InitSDKCalls(GameData hGamedata)
 	PrepSDKCall_SetReturnInfo(SDKType_Bool, SDKPass_ByValue);
 	if ((m_hShouldCollide = EndPrepSDKCall()) == null)
 	{
-		LogError("Failed to create SDKCall for CBaseEntity::ShouldCollide!");
+		LogError("Failed to create SDKCall for CBaseEntity::ShouldCollide from file %s.txt", sTempConfFileName);
 		iFailCount++;
 	}
 	
@@ -266,11 +232,6 @@ void SetMission(int client, int mission, bool resetBehaviorSystem = true)
 	SDKCall(m_hSetMission, client, mission, resetBehaviorSystem);
 }
 
-int GetMaxAmmo(int client, int iAmmoIndex, int iClassIndex = -1)
-{
-	return SDKCall(m_hGetMaxAmmo, client, iAmmoIndex, iClassIndex);
-}
-
 /* float GetNextThink(int entity, const char[] szContext = "")
 {
 	return SDKCall(m_hGetNextThink, entity, szContext);
@@ -289,11 +250,6 @@ void GetBonePosition(int entity, int iBone, float origin[3], float angles[3])
 bool HasAmmo(int weapon)
 {
 	return SDKCall(m_hHasAmmo, weapon);
-}
-
-int GetAmmoCount(int client, int iAmmoIndex)
-{
-	return SDKCall(m_hGetAmmoCount, client, iAmmoIndex);
 }
 
 int Clip1(int weapon)
@@ -349,11 +305,6 @@ float GetProjectileGravity(int weapon)
 	return SDKCall(m_hGetProjectileGravity, weapon);
 }
 #endif
-
-bool Weapon_CanSwitchTo(int actor, int weapon)
-{
-	return SDKCall(m_hWeaponCanSwitchTo, actor, weapon);
-}
 
 bool ShouldCollide(int entity, int collisionGroup, int contentsMask)
 {

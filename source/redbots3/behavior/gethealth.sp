@@ -19,7 +19,7 @@ public Action CTFBotGetHealth_OnStart(BehaviorAction action, int actor, Behavior
 	pb_bPath[actor] = false;
 #endif
 	
-	float health_ratio = float(GetClientHealth(actor)) / float(BaseEntity_GetMaxHealth(actor));
+	float health_ratio = float(GetClientHealth(actor)) / float(TEMP_GetPlayerMaxHealth(actor));
 	float ratio = ClampFloat((health_ratio - tf_bot_health_critical_ratio.FloatValue) / (tf_bot_health_ok_ratio.FloatValue - tf_bot_health_critical_ratio.FloatValue), 0.0, 1.0);
 	
 	//	if (TF2_IsPlayerInCondition(actor, TFCond_OnFire))
@@ -85,7 +85,7 @@ public Action CTFBotGetHealth_Update(BehaviorAction action, int actor, float int
 	if (IsHealedByMedic(actor))
 		return action.Done("A medic heals me");
 	
-	if (GetClientHealth(actor) >= BaseEntity_GetMaxHealth(actor))
+	if (GetClientHealth(actor) >= TEMP_GetPlayerMaxHealth(actor))
 		return action.Done("I am healed");
 	
 	if (TF2_IsCarryingObject(actor))
@@ -195,7 +195,7 @@ bool CTFBotGetHealth_IsPossible(int actor)
 	if (IsHealedByMedic(actor) || TF2_IsInvulnerable(actor))
 		return false;
 	
-	float health_ratio = float(GetClientHealth(actor)) / float(BaseEntity_GetMaxHealth(actor));
+	float health_ratio = float(GetClientHealth(actor)) / float(TEMP_GetPlayerMaxHealth(actor));
 	float ratio = ClampFloat((health_ratio - tf_bot_health_critical_ratio.FloatValue) / (tf_bot_health_ok_ratio.FloatValue - tf_bot_health_critical_ratio.FloatValue), 0.0, 1.0);
 	
 //	if (TF2_IsPlayerInCondition(actor, TFCond_OnFire))

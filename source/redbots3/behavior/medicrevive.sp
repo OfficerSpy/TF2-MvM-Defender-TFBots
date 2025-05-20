@@ -53,6 +53,14 @@ public Action CTFBotMedicRevive_Update(BehaviorAction action, int actor, float i
 		if (healTarget == marker)
 			return action.Continue();
 	}
+	else
+	{
+		//Fend off from enemies
+		int primary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Primary);
+		
+		if (primary != -1)
+			TF2Util_SetPlayerActiveWeapon(actor, primary);
+	}
 	
 	if (m_flRepathTime[actor] <= GetGameTime())
 	{
@@ -61,11 +69,6 @@ public Action CTFBotMedicRevive_Update(BehaviorAction action, int actor, float i
 	}
 	
 	m_pPath[actor].Update(myBot);
-	
-	int primary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Primary);
-	
-	if (primary != -1)
-		TF2Util_SetPlayerActiveWeapon(actor, primary);
 	
 	return action.Continue();
 }

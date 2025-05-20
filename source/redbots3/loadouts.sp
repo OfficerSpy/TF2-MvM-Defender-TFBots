@@ -236,7 +236,7 @@ public Action Timer_GiveCustomLoadout(Handle timer, int client)
 	PostInventoryApplication(client);
 	
 	if (redbots_manager_debug.BoolValue)
-		PrintToChatAll("[Timer_GiveCustomLoadout] %N's ammo: %d/%d", client, GetAmmoCount(client, TF_AMMO_PRIMARY), GetMaxAmmo(client, TF_AMMO_PRIMARY));
+		PrintToChatAll("[Timer_GiveCustomLoadout] %N's ammo: %d/%d", client, BaseCombatCharacter_GetAmmoCount(client, TF_AMMO_PRIMARY), TF2Util_GetPlayerMaxAmmo(client, TF_AMMO_PRIMARY));
 	
 	return Plugin_Stop;
 }

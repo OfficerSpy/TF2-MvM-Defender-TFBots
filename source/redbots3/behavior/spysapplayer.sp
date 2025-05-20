@@ -49,7 +49,7 @@ public Action CTFBotSpySapPlayers_Update(BehaviorAction action, int actor, float
 		SubtractVectors(origin, myOrigin, origin);
 		
 		//If we're close enough, build a sapper on them
-		if (GetVectorLength(origin) <= SAPPER_PLAYER_BUILD_ON_RANGE && CanPlayerAttack(actor))
+		if (GetVectorLength(origin) <= SAPPER_PLAYER_BUILD_ON_RANGE && TF2Util_CanWeaponAttack(mySapper))
 		{
 			BuildSapperOnEntity(actor, m_iPlayerSapTarget[actor], mySapper);
 			
@@ -115,7 +115,7 @@ bool CTFBotSpySapPlayers_SelectTarget(int actor)
 bool CanBuildSapper(int client)
 {
 	//Like CTFPlayer::CanBuild, only if we have ammo of TF_AMMO_GRENADES2
-	return GetAmmoCount(client, TF_AMMO_GRENADES2) > 0;
+	return BaseCombatCharacter_GetAmmoCount(client, TF_AMMO_GRENADES2) > 0;
 }
 
 void BuildSapperOnEntity(int client, int entity, int weapon)

@@ -66,11 +66,6 @@
 				"windows"	"\x55\x8B\xEC\x83\xEC\x20\x80\x7D\x2A\x00"
 				"linux"		"@_ZN6CTFBot10SetMissionENS_11MissionTypeEb"
 			}
-			"CTFPlayer::GetMaxAmmo"
-			{
-				"windows"	"\x55\x8B\xEC\x8B\x45\x2A\x53\x8B\xD9\x56\x57\x8B\x7D\x2A\x83\xF8\xFF"
-				"linux"		"@_ZN9CTFPlayer10GetMaxAmmoEii"
-			}
 			"CBaseEntity::GetNextThink"
 			{
 				"windows"	"\x55\x8B\xEC\x8B\x45\x08\x56\x8B\xF1\x85\xC0\x75\x2A\x8B\x86\xD0\x00\x00\x00\x89\x45\x08"
@@ -141,12 +136,7 @@
 				"windows"	"240"
 				"linux"		"246"
 			}
-			"CBaseCombatCharacter::GetAmmoCount"
-			{
-				"windows"	"266"
-				"linux"		"267"
-			}
-			"CTFWeaponBase::Clip1"
+			"CBaseCombatWeapon::Clip1"
 			{
 				"windows"	"345"
 				"linux"		"351"

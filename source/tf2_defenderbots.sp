@@ -133,6 +133,7 @@ ConVar redbots_manager_bot_request_credits;
 ConVar redbots_manager_bot_rtd_variance;
 #endif
 
+ConVar nb_blind;
 ConVar tf_bot_path_lookahead_range;
 ConVar tf_bot_health_critical_ratio;
 ConVar tf_bot_health_ok_ratio;
@@ -162,7 +163,7 @@ public Plugin myinfo =
 	name = "Defender TFBots",
 	author = "Officer Spy",
 	description = "TFBots that play Mann vs. Machine",
-	version = "1.4.9",
+	version = "1.5.0",
 	url = "https://github.com/OfficerSpy/TF2-MvM-Defender-TFBots"
 };
 
@@ -1464,6 +1465,7 @@ public void DefenderBot_TouchPost(int entity, int other)
 
 void FindGameConsoleVariables()
 {
+	nb_blind = FindConVar("nb_blind");
 	tf_bot_path_lookahead_range = FindConVar("tf_bot_path_lookahead_range");
 	tf_bot_health_critical_ratio = FindConVar("tf_bot_health_critical_ratio");
 	tf_bot_health_ok_ratio = FindConVar("tf_bot_health_ok_ratio");

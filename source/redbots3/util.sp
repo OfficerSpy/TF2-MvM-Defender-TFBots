@@ -226,9 +226,18 @@ int EconItemCreateNoSpawn(char[] classname, int itemDefIndex, int level, int qua
 		SetEntProp(item, Prop_Send, "m_bInitialized", 1);
 		
 		//SetEntProp doesn't work here...
-		char serverClassname[64]; GetEntityNetClass(item, serverClassname, sizeof(serverClassname));
-		SetEntData(item, FindSendPropInfo(serverClassname, "m_iEntityQuality"), quality);
-		SetEntData(item, FindSendPropInfo(serverClassname, "m_iEntityLevel"), level);
+		static int iOffsetEntityQuality = -1;
+		
+		if (iOffsetEntityQuality == -1)
+			iOffsetEntityQuality = FindSendPropInfo("CEconEntity", "m_iEntityQuality");
+		
+		static int iOffsetEntityLevel = -1;
+		
+		if (iOffsetEntityLevel == -1)
+			iOffsetEntityLevel = FindSendPropInfo("CEconEntity", "m_iEntityLevel");
+		
+		SetEntData(item, iOffsetEntityQuality, quality);
+		SetEntData(item, iOffsetEntityLevel, level);
 		
 		if (StrEqual(classname, "tf_weapon_builder", false))
 		{
@@ -1414,25 +1423,12 @@ int GetNearestCurrencyPack(int client, const float max_distance = 999999.0)
 
 bool CanUsePrimayWeapon(int client)
 {
+	if (TF2_IsPlayerInCondition(client, TFCond_MeleeOnly))
+		return false;
+	
 	int weapon = GetPlayerWeaponSlot(client, TFWeaponSlot_Primary);
 	
 	if (weapon == -1)
-		return false;
-	
-	return Weapon_CanSwitchTo(client, weapon);
-}
-
-//CTFPlayer::CanAttack
-bool CanPlayerAttack(int client)
-{
-	//NOTE: for now we are only doing the checks we actually need
-	
-	if ((TF2_GetStealthNoAttackExpireTime(client) > GetGameTime() && !TF2_IsPlayerInCondition(client, TFCond_Stealthed)) || TF2_IsPlayerInCondition(client, TFCond_Cloaked))
-	{
-		return false;
-	}
-	
-	if (TF2_IsFeignDeathReady(client))
 		return false;
 	
 	return true;
@@ -1816,4 +1812,11 @@ stock int GetTeamHumanClientCount(int team)
 			count++;
 	
 	return count;
+}
+
+/* TODO: remove this as we have a better way to do this
+we are only doing this for right now until we can solve a potential issue */
+stock int TEMP_GetPlayerMaxHealth(int client)
+{
+	return GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iMaxHealth", _, client);
 }

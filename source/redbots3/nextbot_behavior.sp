@@ -412,7 +412,7 @@ public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, flo
 	{
 		bool low_health = false;
 		
-		float health_ratio = float(GetClientHealth(actor)) / float(BaseEntity_GetMaxHealth(actor));
+		float health_ratio = float(GetClientHealth(actor)) / float(TEMP_GetPlayerMaxHealth(actor));
 		
 		if ((GetTimeSinceWeaponFired(actor) > 2.0 || TF2_GetPlayerClass(actor) == TFClass_Sniper) && health_ratio < tf_bot_health_critical_ratio.FloatValue)
 			low_health = true;
@@ -875,25 +875,25 @@ bool IsAmmoLow(int client)
 	{
 		if (!IsMeleeWeapon(myWeapon))
 		{
-			float flAmmoRation = float(GetAmmoCount(client, TF_AMMO_PRIMARY)) / float(GetMaxAmmo(client, TF_AMMO_PRIMARY));
+			float flAmmoRation = float(BaseCombatCharacter_GetAmmoCount(client, TF_AMMO_PRIMARY)) / float(TF2Util_GetPlayerMaxAmmo(client, TF_AMMO_PRIMARY));
 			return flAmmoRation < 0.2;
 		}
 		
 		return false;
 	}
 	
-	return GetAmmoCount(client, TF_AMMO_METAL) <= 0;
+	return BaseCombatCharacter_GetAmmoCount(client, TF_AMMO_METAL) <= 0;
 }
 
 bool IsAmmoFull(int client)
 {
-	bool isPrimaryFull = GetAmmoCount(client, TF_AMMO_PRIMARY) >= GetMaxAmmo(client, TF_AMMO_PRIMARY);
-	bool isSecondaryFull = GetAmmoCount(client, TF_AMMO_SECONDARY) >= GetMaxAmmo(client, TF_AMMO_SECONDARY);
+	bool isPrimaryFull = BaseCombatCharacter_GetAmmoCount(client, TF_AMMO_PRIMARY) >= TF2Util_GetPlayerMaxAmmo(client, TF_AMMO_PRIMARY);
+	bool isSecondaryFull = BaseCombatCharacter_GetAmmoCount(client, TF_AMMO_SECONDARY) >= TF2Util_GetPlayerMaxAmmo(client, TF_AMMO_SECONDARY);
 	
 	if (TF2_GetPlayerClass(client) == TFClass_Engineer)
 	{
 		//In addition, I want some metal as well
-		return GetAmmoCount(client, TF_AMMO_METAL) >= 200 && isPrimaryFull && isSecondaryFull;
+		return BaseCombatCharacter_GetAmmoCount(client, TF_AMMO_METAL) >= 200 && isPrimaryFull && isSecondaryFull;
 	}
 	
 	return isPrimaryFull && isSecondaryFull;
@@ -1090,7 +1090,7 @@ bool OpportunisticallyUsePowerupBottle(int client, int activeWeapon, INextBot bo
 			if (!threat || !threat.IsVisibleRecently())
 				return false;
 			
-			float healthRatio = float(GetClientHealth(client)) / float(BaseEntity_GetMaxHealth(client));
+			float healthRatio = float(GetClientHealth(client)) / float(TEMP_GetPlayerMaxHealth(client));
 			
 			if (healthRatio < tf_bot_health_critical_ratio.FloatValue)
 			{
@@ -1232,10 +1232,10 @@ void EquipBestWeaponForThreat(int client, const CKnownEntity threat)
 		return;
 	}
 	
-	if (GetAmmoCount(client, TF_AMMO_PRIMARY) <= 0)
+	if (BaseCombatCharacter_GetAmmoCount(client, TF_AMMO_PRIMARY) <= 0)
 		primary = -1;
 	
-	if (GetAmmoCount(client, TFWeaponSlot_Secondary) <= 0)
+	if (BaseCombatCharacter_GetAmmoCount(client, TFWeaponSlot_Secondary) <= 0)
 		secondary = -1;
 	
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(client);
@@ -1372,6 +1372,9 @@ CKnownEntity SelectCloserThreat(INextBot bot, const CKnownEntity threat1, const 
 
 void MonitorKnownEntities(int client, IVision vision)
 {
+	if (nb_blind.BoolValue)
+		return;
+	
 	static int maxEntCount = -1;
 	
 	if (maxEntCount == -1)
