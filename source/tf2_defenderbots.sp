@@ -54,6 +54,34 @@ enum
 	BOT_LINEUP_MODE_PREFERENCE_CHOOSE
 }
 
+enum struct esButtonInput
+{
+	int iPress;
+	float flPressTime;
+	int iRelease;
+	float flReleaseTime;
+	
+	void Reset()
+	{
+		this.iPress = 0;
+		this.flPressTime = 0.0;
+		this.iRelease = 0;
+		this.flReleaseTime = 0.0;
+	}
+	
+	void PressButtons(int buttons, float duration = -1.0)
+	{
+		this.iPress = buttons;
+		this.flPressTime = duration > 0.0 ? GetGameTime() + duration : 0.0;
+	}
+	
+	void ReleaseButtons(int buttons, float duration = -1.0)
+	{
+		this.iRelease = buttons;
+		this.flReleaseTime = duration > 0.0 ? GetGameTime() + duration : 0.0;
+	}
+}
+
 //Globals
 bool g_bLateLoad;
 bool g_bBotsEnabled;
@@ -69,10 +97,7 @@ bool g_bAllowBotTeamRedo;
 bool g_bIsDefenderBot[MAXPLAYERS + 1];
 bool g_bIsBeingRevived[MAXPLAYERS + 1];
 bool g_bHasUpgraded[MAXPLAYERS + 1];
-int g_iAdditionalButtons[MAXPLAYERS + 1];
-float g_flForceHoldButtonsTime[MAXPLAYERS + 1];
-int g_iSubtractiveButtons[MAXPLAYERS + 1];
-float g_flBlockInputTime[MAXPLAYERS + 1];
+esButtonInput g_arrExtraButtons[MAXPLAYERS + 1];
 static float m_flDeadRethinkTime[MAXPLAYERS + 1];
 int g_iBuybackNumber[MAXPLAYERS + 1];
 int g_iBuyUpgradesNumber[MAXPLAYERS + 1];
@@ -342,10 +367,7 @@ public void OnClientDisconnect(int client)
 public void OnClientPutInServer(int client)
 {
 	g_bHasUpgraded[client] = false;
-	g_iAdditionalButtons[client] = 0;
-	g_flForceHoldButtonsTime[client] = 0.0;
-	g_iSubtractiveButtons[client] = 0;
-	g_flBlockInputTime[client] = 0.0;
+	g_arrExtraButtons[client].Reset();
 	m_flDeadRethinkTime[client] = 0.0;
 	g_iBuybackNumber[client] = 0;
 	g_iBuyUpgradesNumber[client] = 0;
@@ -391,31 +413,33 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 	
 	if (IsPlayerAlive(client))
 	{
-		if (g_iAdditionalButtons[client] != 0)
+		if (g_arrExtraButtons[client].iPress != 0)
 		{
-			if (g_iAdditionalButtons[client] & IN_BACK)
+			if (g_arrExtraButtons[client].iPress & IN_BACK)
 				vel[0] -= PLAYER_SIDESPEED;
 			
-			if (g_iAdditionalButtons[client] & IN_FORWARD)
+			if (g_arrExtraButtons[client].iPress & IN_FORWARD)
 				vel[0] += PLAYER_SIDESPEED;
 			
-			if (g_iAdditionalButtons[client] & IN_MOVELEFT)
+			if (g_arrExtraButtons[client].iPress & IN_MOVELEFT)
 				vel[1] -= PLAYER_SIDESPEED;
 			
-			if (g_iAdditionalButtons[client] & IN_MOVERIGHT)
+			if (g_arrExtraButtons[client].iPress & IN_MOVERIGHT)
 				vel[1] += PLAYER_SIDESPEED;
 			
-			buttons |= g_iAdditionalButtons[client];
+			buttons |= g_arrExtraButtons[client].iPress;
 			
 			//We are told to hold these inputs down for a specific time, don't clear until it expires
-			if (g_flForceHoldButtonsTime[client] <= GetGameTime())
-				g_iAdditionalButtons[client] = 0;
+			if (g_arrExtraButtons[client].flPressTime <= GetGameTime())
+				g_arrExtraButtons[client].iPress = 0;
 		}
 		
-		if (g_iSubtractiveButtons[client] != 0)
+		if (g_arrExtraButtons[client].iRelease != 0)
 		{
-			buttons &= ~g_iSubtractiveButtons[client];
-			g_iSubtractiveButtons[client] = 0;
+			buttons &= ~g_arrExtraButtons[client].iRelease;
+			
+			if (g_arrExtraButtons[client].flReleaseTime <= GetGameTime())
+				g_arrExtraButtons[client].iRelease = 0;
 		}
 		
 #if defined EXTRA_PLUGINBOT

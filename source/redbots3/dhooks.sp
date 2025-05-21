@@ -12,40 +12,40 @@ static bool m_bEngineerKilled;
 
 bool InitDHooks(GameData hGamedata)
 {
-	int failCount = 0;
+	int iFailCount = 0;
 	
 #if defined METHOD_MVM_UPGRADES
 	//We could not find the address to g_MannVsMachineUpgrades, use this detour to fetch it instead
 	//NOTE: this will not support late-load!
 	if (!g_pMannVsMachineUpgrades)
 		if (!RegisterDetour(hGamedata, "CMannVsMachineUpgradeManager::LoadUpgradesFile", _, DHookCallback_LoadUpgradesFile_Post))
-			failCount++;
+			iFailCount++;
 #endif
 	
 	if (!RegisterDetour(hGamedata, "CTFPlayer::ManageRegularWeapons", DHookCallback_ManageRegularWeapons_Pre, DHookCallback_ManageRegularWeapons_Post))
-		failCount++;
+		iFailCount++;
 	
 	if (!RegisterDetour(hGamedata, "CTFPlayer::ManageBuilderWeapons", DHookCallback_ManageBuilderWeapons_Pre))
-		failCount++;
+		iFailCount++;
 	
 	if (!RegisterHook(hGamedata, m_hMyTouch, "CItem::MyTouch"))
-		failCount++;
+		iFailCount++;
 	
 	if (!RegisterHook(hGamedata, m_hIsBot, "CBasePlayer::IsBot"))
-		failCount++;
+		iFailCount++;
 	
 	if (!RegisterHook(hGamedata, m_hEventKilled, "CBaseEntity::Event_Killed"))
-		failCount++;
+		iFailCount++;
 	
 	if (!RegisterHook(hGamedata, m_hIsVisibleEntityNoticed, "IVision::IsVisibleEntityNoticed"))
-		failCount++;
+		iFailCount++;
 	
 	if (!RegisterHook(hGamedata, m_hIsIgnored, "IVision::IsIgnored"))
-		failCount++;
+		iFailCount++;
 	
-	if (failCount > 0)
+	if (iFailCount > 0)
 	{
-		LogError("InitDHooks: found %d problems with gamedata!", failCount);
+		LogError("InitDHooks: found %d problems with gamedata!", iFailCount);
 		return false;
 	}
 	
@@ -320,22 +320,6 @@ static MRESReturn DHookCallback_IsIgnored_Pre(Address pThis, DHookReturn hReturn
 			return MRES_Supercede;
 		}
 	}
-	
-	return MRES_Ignored;
-}
-
-static MRESReturn DHookCallback_Approach_Pre(Address pThis, DHookParam hParams)
-{
-	//Allow us to try to move while airborne
-	GameRules_SetProp("m_bPlayingMannVsMachine", false);
-	
-	return MRES_Ignored;
-}
-
-static MRESReturn DHookCallback_Approach_Post(Address pThis, DHookParam hParams)
-{
-	//We're still playing mvm
-	GameRules_SetProp("m_bPlayingMannVsMachine", true);
 	
 	return MRES_Ignored;
 }

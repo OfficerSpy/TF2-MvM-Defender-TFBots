@@ -71,13 +71,11 @@ static Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 					
 					if (cross[2] < 0.0)
 					{
-						g_iAdditionalButtons[actor] = IN_MOVERIGHT;
-						g_flForceHoldButtonsTime[actor] = GetGameTime() + 0.1;
+						g_arrExtraButtons[actor].PressButtons(IN_MOVERIGHT, 0.1);
 					}
 					else
 					{
-						g_iAdditionalButtons[actor] = IN_MOVELEFT;
-						g_flForceHoldButtonsTime[actor] = GetGameTime() + 0.1;
+						g_arrExtraButtons[actor].PressButtons(IN_MOVELEFT, 0.1);
 					}
 					
 					//Don't bump into them unless we're going for the stab

@@ -1820,3 +1820,56 @@ stock int TEMP_GetPlayerMaxHealth(int client)
 {
 	return GetEntProp(GetPlayerResourceEntity(), Prop_Send, "m_iMaxHealth", _, client);
 }
+
+//This seems heavily based on PlayerLocomotion::Approach
+stock void MovePlayerTowardsGoal(int client, const float vGoal[3], float vVel[3])
+{
+	//WASD Movement
+	float forward3D[3];
+	BasePlayer_EyeVectors(client, forward3D);
+	
+	float vForward[3];
+	vForward[0] = forward3D[0];
+	vForward[1] = forward3D[1];
+	NormalizeVector(vForward, vForward);
+	
+	float right[3] 
+	right[0] = vForward[1];
+	right[1] = -vForward[0];
+
+	//PlayerLocomotion::GetFeet
+	float vFeet[3]; GetClientAbsOrigin(client, vFeet);
+	
+	float to[3]; 
+	SubtractVectors(vGoal, vFeet, to);
+
+	/*float goalDistance = */
+	NormalizeVector(to, to);
+
+	float ahead = GetVectorDotProduct(to, vForward);
+	float side  = GetVectorDotProduct(to, right);
+	
+	const float epsilon = 0.25;
+
+	if (ahead > epsilon)
+	{
+		//PressForwardButton();
+		vVel[0] = PLAYER_SIDESPEED;
+	}
+	else if (ahead < -epsilon)
+	{
+		//PressBackwardButton();
+		vVel[0] = -PLAYER_SIDESPEED;
+	}
+
+	if (side <= -epsilon)
+	{
+		//PressLeftButton();
+		vVel[1] = -PLAYER_SIDESPEED;
+	}
+	else if (side >= epsilon)
+	{
+		//PressRightButton();
+		vVel[1] = PLAYER_SIDESPEED;
+	}
+}
