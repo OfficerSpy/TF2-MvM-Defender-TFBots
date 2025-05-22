@@ -637,6 +637,24 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				}
 			}
 #endif
+			ILocomotion myLoco = myBot.GetLocomotionInterface();
+			
+			if (!myLoco.IsOnGround() && !myLoco.IsClimbingOrJumping())
+			{
+				//TFBots have no air control in mvm, keep us moving
+				PathFollower myPath = myBot.GetCurrentPath();
+				
+				if (myPath)
+				{
+					Segment pGoal = myPath.GetCurrentGoal();
+					
+					if (pGoal)
+					{
+						float vGoal[3]; pGoal.GetPosition(vGoal);
+						MovePlayerTowardsGoal(client, vGoal, vel);
+					}
+				}
+			}
 		}
 		
 #if defined IDLEBOT_AIMING

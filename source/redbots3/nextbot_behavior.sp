@@ -1035,7 +1035,7 @@ bool OpportunisticallyUseWeaponAbilities(int client, int activeWeapon, INextBot 
 			
 			if (GetVectorDistance(vThreatOrigin, GetBombHatchPosition()) <= 100.0)
 			{
-				g_arrExtraButtons[client].PressButtons(IN_ATTACK3);
+				VS_PressSpecialFireButton(client);
 				return true;
 			}
 		}
