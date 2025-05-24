@@ -637,9 +637,9 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 				}
 			}
 #endif
-			ILocomotion myLoco = myBot.GetLocomotionInterface();
 			
-			if (!myLoco.IsOnGround() && !myLoco.IsClimbingOrJumping())
+#if defined TESTING_ONLY
+			if (GetEntityFlags(client) & FL_ONGROUND == 0 && !TF2_IsJumping(client))
 			{
 				//TFBots have no air control in mvm, keep us moving
 				PathFollower myPath = myBot.GetCurrentPath();
@@ -655,6 +655,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 					}
 				}
 			}
+#endif
 		}
 		
 #if defined IDLEBOT_AIMING
