@@ -230,7 +230,7 @@ public Action Timer_GiveCustomLoadout(Handle timer, int client)
 	if (GetClientHealth(client) != maxHealth)
 	{
 		BaseEntity_SetMaxHealth(client, maxHealth);
-		BaseEntity_SetHealth(client, maxHealth);
+		SetEntityHealth(client, maxHealth);
 	}
 	
 	PostInventoryApplication(client);

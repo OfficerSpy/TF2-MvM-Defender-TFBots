@@ -219,6 +219,8 @@ static Action Timer_PlayerSpawn(Handle timer, int data)
 		//Let medic bots use their shields
 		VS_AddBotAttribute(data, CTFBot_PROJECTILE_SHIELD);
 		
+		BaseEntity_MarkNeedsNamePurge(data);
+		
 		//Bots don't get their credits set when joining red because CTFGameRules::GetTeamAssignmentOverride ignores bot players
 		//Set their credits manually to what they should have like human players
 		TF2_SetCurrency(data, GetStartingCurrency(g_iPopulationManager) + GetAcquiredCreditsOfAllWaves());
