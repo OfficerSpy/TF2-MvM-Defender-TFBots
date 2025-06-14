@@ -990,7 +990,7 @@ float GetDesiredAttackRange(int client)
 	IVision vis = bot.GetVisionInterface();
 		
 	for (int i = 1; i <= MaxClients; i++)
-		if (IsClientInGame(i) && IsPlayerAlive(i) && TF2_GetClientTeam(i) == GetEnemyTeamOfPlayer(bot_entidx))
+		if (IsClientInGame(i) && IsPlayerAlive(i) && TF2_GetClientTeam(i) == GetPlayerEnemyTeam(bot_entidx))
 			vis.ForgetEntity(i);
 } */
 
@@ -1459,7 +1459,7 @@ int GetCountOfBotsWithNamedAction(const char[] name, int ignore = -1)
 	int count = 0;
 	
 	for (int i = 1; i <= MaxClients; i++)
-		if (i != ignore && IsClientInGame(i) && g_bIsDefenderBot[i] && ActionsManager.GetAction(i, name) != INVALID_ACTION)
+		if (i != ignore && IsClientInGame(i) && g_bIsDefenderBot[i] && ActionsManager.LookupEntityActionByName(i, name) != INVALID_ACTION)
 			count++;
 	
 	return count;

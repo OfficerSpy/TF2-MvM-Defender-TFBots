@@ -17,7 +17,7 @@ public Action CTFBotGuardPoint_OnStart(BehaviorAction action, int actor, Behavio
 {
 	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	
-	int point = GetDefendablePointTrigger(TF2_GetClientTeam(actor));
+	int point = GetCapturableAreaTrigger(GetPlayerEnemyTeam(actor));
 	
 	if (point == -1)
 		return action.ChangeTo(CTFBotDefenderAttack(), "No point found");
@@ -142,7 +142,7 @@ bool CTFBotGuardPoint_IsPossible(int client)
 		return false;
 	
 	//Nothing to defend
-	if (GetDefendablePointTrigger(TF2_GetClientTeam(client)) == -1)
+	if (GetCapturableAreaTrigger(GetPlayerEnemyTeam(client)) == -1)
 		return false;
 	
 	//I'd rather lose the point than lose the wave!

@@ -80,11 +80,16 @@ public Action CTFBotMedicRevive_Update(BehaviorAction action, int actor, float i
 
 public Action CTFBotMedicRevive_OnInjured(BehaviorAction action, int actor, Address takedamageinfo, ActionDesiredResult result)
 {
-	int weapon = BaseCombatCharacter_GetActiveWeapon(actor);
+	CTakeDamageInfo info = CTakeDamageInfo(takedamageinfo);
 	
-	//Someone hit me while I'm trying to revive someone, let's pop uber now if possible
-	if (weapon != -1 && TF2Util_GetWeaponID(weapon) == TF_WEAPON_MEDIGUN)
-		VS_PressAltFireButton(actor);
+	if (info.GetDamage() > 0.0)
+	{
+		int weapon = BaseCombatCharacter_GetActiveWeapon(actor);
+		
+		//Someone hit me while I'm trying to revive someone, let's pop uber now if possible
+		if (weapon != -1 && TF2Util_GetWeaponID(weapon) == TF_WEAPON_MEDIGUN)
+			VS_PressAltFireButton(actor);
+	}
 	
 	return action.Continue();
 }

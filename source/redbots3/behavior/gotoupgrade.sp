@@ -111,7 +111,7 @@ int FindClosestUpgradeStation(int actor)
 	int i = -1;
 	while ((i = FindEntityByClassname(i, "func_upgradestation")) != -1)
 	{
-		if (GetEntProp(i, Prop_Data, "m_bDisabled") == 1)
+		if (!IsUpgradeStationEnabled(i))
 			continue;
 		
 		CNavArea area = TheNavMesh.GetNearestNavArea(WorldSpaceCenter(i), true, 8000.0, false, false, TEAM_ANY);

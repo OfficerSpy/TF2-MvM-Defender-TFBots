@@ -188,7 +188,7 @@ public Plugin myinfo =
 	name = "Defender TFBots",
 	author = "Officer Spy",
 	description = "TFBots that play Mann vs. Machine",
-	version = "1.5.1",
+	version = "1.5.2",
 	url = "https://github.com/OfficerSpy/TF2-MvM-Defender-TFBots"
 };
 
@@ -630,7 +630,7 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 #if defined MOD_ROLL_THE_DICE_REVAMPED
 			if (redbots_manager_bot_rtd_variance.FloatValue >= COMMAND_MAX_RATE)
 			{
-				if (threat && m_flNextRollTime[client] <= GetGameTime())
+				if (threat && threat.IsVisibleInFOVNow() && m_flNextRollTime[client] <= GetGameTime())
 				{
 					m_flNextRollTime[client] = GetGameTime() + GetRandomFloat(COMMAND_MAX_RATE, redbots_manager_bot_rtd_variance.FloatValue);
 					FakeClientCommand(client, "sm_rtd");
@@ -997,6 +997,7 @@ public Action Command_ChooseBotClasses(int client, int args)
 	
 	//Should only be able to call this while solo, so current team count should always be 1
 	ShowDefenderBotTeamSetupMenu(client, _, true, defenderTeamSize - redTeamCount);
+	PrintToChatAll("%N is choosing the current bot team lineup.", client);
 	
 	return Plugin_Handled;
 }

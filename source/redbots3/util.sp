@@ -476,7 +476,7 @@ int FindBotNearestToBombNearestToHatch(int client)
 		if (!IsPlayerAlive(i))
 			continue;
 		
-		if (TF2_GetClientTeam(i) != GetEnemyTeamOfPlayer(client))
+		if (TF2_GetClientTeam(i) != GetPlayerEnemyTeam(client))
 			continue;
 		
 		if (TF2Util_IsPointInRespawnRoom(WorldSpaceCenter(i)))
@@ -535,7 +535,7 @@ int FindBombNearestToHatch()
 
 int SelectRandomReachableEnemy(int actor)
 {
-	TFTeam opposingTFTeam = GetEnemyTeamOfPlayer(actor);
+	TFTeam opposingTFTeam = GetPlayerEnemyTeam(actor);
 	
 	int playerarray[MAXPLAYERS + 1];
 	int playercount;
@@ -586,19 +586,19 @@ bool IsHealedByMedic(int client)
 	return false;
 }
 
-float[] GetBombHatchPosition()
+float[] GetBombHatchPosition(bool bUseAbsOrigin = false)
 {
-	float flOrigin[3];
+	float vOrigin[3];
 
 	int iHole = FindEntityByClassname(-1, "func_capturezone");
 	
-	if (IsValidEntity(iHole))
-		flOrigin = WorldSpaceCenter(iHole);
+	if (iHole != -1)
+		vOrigin = bUseAbsOrigin ? GetAbsOrigin(iHole) : WorldSpaceCenter(iHole);
 	
-	return flOrigin;
+	return vOrigin;
 }
 
-TFTeam GetEnemyTeamOfPlayer(int client)
+TFTeam GetPlayerEnemyTeam(int client)
 {
 	return TF2_GetEnemyTeam(TF2_GetClientTeam(client));
 }
@@ -764,7 +764,7 @@ int FindEnemyNearestToMe(int client, const float max_distance, bool bGiantsOnly 
 	
 	float bestDistance = 999999.0;
 	int bestEntity = -1;
-	TFTeam enemyTeam = GetEnemyTeamOfPlayer(client);
+	TFTeam enemyTeam = GetPlayerEnemyTeam(client);
 	
 	for (int i = 1; i <= MaxClients; i++)
 	{
@@ -1030,7 +1030,7 @@ int GetNearestSappablePlayer(int client, const float max_distance, bool bGiantsO
 {
 	float origin[3]; GetClientAbsOrigin(client, origin);
 	
-	TFTeam enemyTeam = GetEnemyTeamOfPlayer(client);
+	TFTeam enemyTeam = GetPlayerEnemyTeam(client);
 	float bestDistance = 999999.0;
 	int bestEntity = -1;
 	
@@ -1080,7 +1080,7 @@ int GetFarthestSappablePlayer(int client, const float max_distance, bool bGiants
 {
 	float origin[3]; GetClientAbsOrigin(client, origin);
 	
-	TFTeam enemyTeam = GetEnemyTeamOfPlayer(client);
+	TFTeam enemyTeam = GetPlayerEnemyTeam(client);
 	float bestDistance = 0.0;
 	int bestEntity = -1;
 	
@@ -1127,7 +1127,7 @@ int GetFarthestSappablePlayer(int client, const float max_distance, bool bGiants
 
 int GetEnemyPlayerNearestToPosition(int client, float position[3], const float max_distance)
 {
-	TFTeam enemyTeam = GetEnemyTeamOfPlayer(client);
+	TFTeam enemyTeam = GetPlayerEnemyTeam(client);
 	float bestDistance = 999999.0;
 	int bestEntity = -1;
 	
@@ -1171,68 +1171,44 @@ int GetControlPointByID(int pointID)
 	return -1;
 }
 
-//NOTE: not ideal, as a lot of maps just place the control point in the air
-/* int GetNearestDefendableControlPoint(int client, const float max_distance = 999999.0)
-{
-	float origin[3]; GetClientAbsOrigin(client, origin);
-	int myTeam = GetClientTeam(client);
-	
-	float bestDistance = 999999.0;
-	int bestEnt = -1;
-	
-	int ent = -1;
-	while ((ent = FindEntityByClassname(ent, "team_control_point")) != -1)
-	{
-		//My team does not own it
-		if (BaseEntity_GetTeamNumber(ent) != myTeam)
-			continue;
-		
-		//Cannot be captured right now
-		if (GetEntProp(ent, Prop_Data, "m_bLocked") == 1)
-			continue;
-		
-		float distance = GetVectorDistance(origin, GetAbsOrigin(ent));
-		
-		if (distance <= bestDistance && distance <= max_distance)
-		{
-			bestDistance = distance;
-			bestEnt = ent;
-		}
-	}
-	
-	return bestEnt;
-} */
-
-int GetDefendablePointTrigger(TFTeam team)
+//Return a capture area trigger associated with a control point that the team can capture
+int GetCapturableAreaTrigger(TFTeam team)
 {
 	int trigger = -1;
 	
-	//Look for a trigger_timer_door associated with a control point
-	while ((trigger = FindEntityByClassname(trigger, "trigger_timer_door")) != -1)
-	{		
+	//Look for a capture area trigger associated with a control point
+	while ((trigger = FindEntityByClassname(trigger, "trigger_*")) != -1)
+	{
+		//Only want capture areas
+		if (!HasEntProp(trigger, Prop_Data, "CTriggerAreaCaptureCaptureThink"))
+			continue;
+		
 		//Ignore disabled triggers
-		if (GetEntProp(trigger, Prop_Data, "m_bDisabled") == 1)
+		if (GetEntProp(trigger, Prop_Data, "m_bDisabled"))
 			continue;
 		
 		//Apparently some community maps don't disable the trigger when capped
-		char cpname[32]; GetEntPropString(trigger, Prop_Data, "m_iszCapPointName", cpname, sizeof(cpname));
+		char sCapPointName[32]; GetEntPropString(trigger, Prop_Data, "m_iszCapPointName", sCapPointName, sizeof(sCapPointName));
 		
 		//Trigger has no point associated with it
-		if (strlen(cpname) < 3)
+		if (strlen(sCapPointName) < 3)
 			continue;
 		
 		//Now find the matching control point
 		int point = -1;
-		char targetname[32];
 		
 		while ((point = FindEntityByClassname(point, "team_control_point")) != -1)
 		{
-			GetEntPropString(point, Prop_Data, "m_iName", targetname, sizeof(targetname));
+			int iPointIndex = GetEntProp(point, Prop_Data, "m_iPointIndex");
 			
-			//Found the match
-			if (strcmp(targetname, cpname, false) == 0)
-				if (BaseEntity_GetTeamNumber(point) == view_as<int>(team))
-					return trigger;
+			if (!TFGameRules_TeamMayCapturePoint(team, iPointIndex))
+				continue;
+			
+			char sName[32]; GetEntPropString(point, Prop_Data, "m_iName", sName, sizeof(sName));
+			
+			//Found the match?
+			if (strcmp(sName, sCapPointName, false) == 0)
+				return trigger;
 		}
 	}
 	
@@ -1243,7 +1219,7 @@ int GetNearestSappablePlayerHealingSomeone(int client, const float max_distance,
 {
 	float origin[3]; GetClientAbsOrigin(client, origin);
 	
-	TFTeam enemyTeam = GetEnemyTeamOfPlayer(client);
+	TFTeam enemyTeam = GetPlayerEnemyTeam(client);
 	float bestDistance = 999999.0;
 	int bestEntity = -1;
 	
@@ -1544,6 +1520,17 @@ bool GetBombInfo(BombInfo_t info)
 	info.flMinBattleFront = hatch_dist - range_fwd;
 	
 	return (closest_flag != INVALID_ENT_REFERENCE);
+}
+
+bool IsUpgradeStationEnabled(int station)
+{
+	static int iOffsetIsEnabled = -1;
+	
+	//m_bIsEnabled
+	if (iOffsetIsEnabled == -1)
+		iOffsetIsEnabled = FindDataMapInfo(station, "m_nStartDisabled") + 28;
+	
+	return GetEntData(station, iOffsetIsEnabled, 1);
 }
 
 stock bool DoesAnyPlayerUseThisName(const char[] name)
