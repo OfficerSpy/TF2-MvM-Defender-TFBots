@@ -16,7 +16,7 @@ BehaviorAction CTFBotGetHealth()
 public Action CTFBotGetHealth_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
 #if defined EXTRA_PLUGINBOT
-	pb_bPath[actor] = false;
+	g_arrPluginBot[actor].bPathing = false;
 #endif
 	
 	float health_ratio = float(GetClientHealth(actor)) / float(TEMP_GetPlayerMaxHealth(actor));

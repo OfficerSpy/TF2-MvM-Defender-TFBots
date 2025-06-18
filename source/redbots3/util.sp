@@ -368,42 +368,50 @@ bool HasSniperRifle(int client)
 	return false;
 }
 
-void TF2_DetonateObjectsOfType(int client, TFObjectType type)
+void DetonateObjectOfType(int client, TFObjectType iType, TFObjectMode iMode = TFObjectMode_None, bool bIgnoreSapperState = false)
 {
-	int iObject = -1;
-	while ((iObject = FindEntityByClassname(iObject, "obj_*")) != -1)
+	int iObj = GetObjectOfType(client, iType, iMode);
+	
+	if (iObj == -1)
+		return;
+	
+	if (!bIgnoreSapperState && (TF2_HasSapper(iObj) || TF2_IsPlasmaDisabled(iObj)))
+		return;
+	
+	Event hEvent = CreateEvent("object_removed");
+	
+	if (hEvent)
 	{
-		TFObjectType iObjType = TF2_GetObjectType(iObject);
-		if(GetEntPropEnt(iObject, Prop_Send, "m_hBuilder") == client && iObjType == type)
-		{
-			SetVariantInt(5000);
-			AcceptEntityInput(iObject, "RemoveHealth", client);
-		}
+		hEvent.SetInt("userid", GetClientUserId(client));
+		hEvent.SetInt("objecttype", iType);
+		hEvent.SetInt("index", iObj);
+		hEvent.Fire();
 	}
+	
+	TF2_DetonateObject(iObj);
 }
 
-int TF2_GetObject(int client, TFObjectType type)
+int GetObjectOfType(int client, TFObjectType iObjectType, TFObjectMode iObjectMode = TFObjectMode_None)
 {
-	int iEnt = -1;
+	int iNumObjects = TF2Util_GetPlayerObjectCount(client);
 	
-	while ((iEnt = FindEntityByClassname(iEnt, "obj_*")) != -1)
+	for (int i = 0; i < iNumObjects; i++)
 	{
-		if (TF2_GetBuilder(iEnt) != client)
+		int iObj = TF2Util_GetPlayerObject(client, i);
+		
+		if (TF2_GetObjectType(iObj) != iObjectType)
 			continue;
 		
-		if (TF2_GetObjectType(iEnt) != type)
+		if (iObjectType == TFObject_Teleporter && TF2_GetObjectMode(iObj) != iObjectMode)
 			continue;
 		
-		if (TF2_IsPlacing(iEnt))
+		if (TF2_IsDisposableBuilding(iObj))
 			continue;
 		
-		if (TF2_IsDisposableBuilding(iEnt))
-			continue;
-		
-		return iEnt;
+		return iObj;
 	}
 	
-	return iEnt;
+	return -1;
 }
 
 float[] GetAbsOrigin(int client)

@@ -131,8 +131,8 @@ public void CTFBotUpgrade_OnEnd(BehaviorAction action, int actor, BehaviorAction
 	
 	KV_MvM_UpgradesDone(actor);
 	
-	TF2_DetonateObjectsOfType(actor, TFObject_Sentry);
-	TF2_DetonateObjectsOfType(actor, TFObject_Dispenser);
+	DetonateObjectOfType(actor, TFObject_Sentry);
+	DetonateObjectOfType(actor, TFObject_Dispenser);
 	
 	// UpdateLookAroundForEnemies(actor, true);
 	

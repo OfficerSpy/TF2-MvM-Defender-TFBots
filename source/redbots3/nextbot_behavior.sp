@@ -10,12 +10,47 @@ static float m_flNextBottleUseTime[MAXPLAYERS + 1];
 
 #if defined EXTRA_PLUGINBOT
 //Replicate behavior of PathFollower's PluginBot
-bool pb_bPath[MAXPLAYERS + 1];
-float pb_vecPathGoal[MAXPLAYERS + 1][3];
-int pb_iPathGoalEntity[MAXPLAYERS + 1];
+enum struct esPluginBot
+{
+	bool bPathing;
+	float vecPathGoal[3];
+	int iPathGoalEntity;
+	
+	void Reset()
+	{
+		this.bPathing = false;
+		this.vecPathGoal = NULL_VECTOR;
+		this.iPathGoalEntity = -1;
+	}
+	
+	bool HasPathGoalVector()
+	{
+		return !Vector_IsZero(this.vecPathGoal);
+	}
+	
+	bool HasPathGoalEntity()
+	{
+		return this.iPathGoalEntity != -1;
+	}
+	
+	void SetPathGoalVector(const float vec[3])
+	{
+		//You can only set one or the other, not both
+		this.iPathGoalEntity = -1;
+		this.vecPathGoal = vec;
+	}
+	
+	void SetPathGoalEntity(int entity)
+	{
+		this.vecPathGoal = NULL_VECTOR;
+		this.iPathGoalEntity = entity;
+	}
+}
+
+esPluginBot g_arrPluginBot[MAXPLAYERS + 1];
 #endif
 
-#include "behavior/defenderattack.sp"
+#include "behavior/attack.sp"
 #include "behavior/markgiant.sp"
 #include "behavior/collectmoney.sp"
 #include "behavior/gotoupgrade.sp"
@@ -67,7 +102,7 @@ void ResetNextBot(int client)
 	m_vecGoalArea[client] = NULL_VECTOR;
 	m_ctMoveTimeout[client] = 0.0;
 	m_iHealthPack[client] = -1;
-	m_vecNestArea[client] = NULL_VECTOR;
+	//NOTE: engineer-specific behavior stuff is reset in the action itself
 	m_iSapTarget[client] = -1;
 	m_iPlayerSapTarget[client] = -1;
 	m_vecStartArea[client] = NULL_VECTOR;
@@ -76,9 +111,7 @@ void ResetNextBot(int client)
 	m_vecPointDefendArea[client] = NULL_VECTOR;
 	
 #if defined EXTRA_PLUGINBOT
-	pb_bPath[client] = false;
-	pb_vecPathGoal[client] = NULL_VECTOR;
-	pb_iPathGoalEntity[client] = -1;
+	g_arrPluginBot[client].Reset();
 #endif
 }
 
@@ -87,10 +120,10 @@ void PluginBot_SimulateFrame(int client)
 {
 	//SimulateFrame > PFContext::RecalculatePath
 	//This is used whenever we want to path somewhere constantly
-	if (pb_bPath[client])
+	if (g_arrPluginBot[client].bPathing)
 	{
-		bool shouldPathToVec = !IsZeroVector(pb_vecPathGoal[client]);
-		bool shouldPathToEntity = pb_iPathGoalEntity[client] > 0;
+		bool shouldPathToVec = g_arrPluginBot[client].HasPathGoalVector();
+		bool shouldPathToEntity = g_arrPluginBot[client].HasPathGoalEntity();
 		
 		if (shouldPathToVec || shouldPathToEntity)
 		{
@@ -101,9 +134,9 @@ void PluginBot_SimulateFrame(int client)
 				CBaseCombatCharacter(client).UpdateLastKnownArea();
 				
 				if (shouldPathToVec)
-					m_pPath[client].ComputeToPos(myBot, pb_vecPathGoal[client]);
+					m_pPath[client].ComputeToPos(myBot, g_arrPluginBot[client].vecPathGoal);
 				else if (shouldPathToEntity)
-					m_pPath[client].ComputeToTarget(myBot, pb_iPathGoalEntity[client]);
+					m_pPath[client].ComputeToTarget(myBot, g_arrPluginBot[client].iPathGoalEntity);
 				
 				m_flRepathTime[client] = GetGameTime() + 0.2;
 			}
@@ -863,20 +896,6 @@ bool IsPathToEntityPossible(int bot_entidx, int goal_entidx, float &length = -1.
 	delete result;
 	return false;
 } */
-
-#if defined EXTRA_PLUGINBOT
-void SetGoalVector(int bot_entidx, float vec[3])
-{
-	pb_iPathGoalEntity[bot_entidx] = -1; //Can't have both
-	pb_vecPathGoal[bot_entidx] = vec;
-}
-
-void SetGoalEntity(int bot_entidx, int goal_entidx)
-{
-	pb_vecPathGoal[bot_entidx] = NULL_VECTOR;
-	pb_iPathGoalEntity[bot_entidx] = goal_entidx;
-}
-#endif
 
 bool IsAmmoLow(int client)
 {
