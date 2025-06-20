@@ -26,8 +26,8 @@
 			}
 			"CObjectSentrygun_BaseOffset"
 			{
-				"windows"	"m_iKills"
-				"linux"		"m_iKills"
+				"windows"	"m_iAmmoShells"
+				"linux"		"m_iAmmoShells"
 			}
 			"CTFBot_BaseOffset"
 			{
@@ -190,8 +190,13 @@
 			}
 			"CObjectSentrygun::m_bPlacementOK"
 			{
-				"windows"	"-4" //build 9543365: 2888
-				"linux"		"-4" //build 9543365: 2912
+				"windows"	"-132" //build 9742990: 2688
+				"linux"		"-132" //build 9742990: 2712
+			}
+			"CObjectSentrygun::m_vecCurAngles"
+			{
+				"windows"	"-28" //build 9742990: 2792
+				"linux"		"-28" //build 9742990: 2816
 			}
 			"CTFBot::m_isLookingAroundForEnemies"
 			{

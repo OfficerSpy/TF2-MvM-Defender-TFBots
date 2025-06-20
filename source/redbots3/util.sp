@@ -1541,6 +1541,262 @@ bool IsUpgradeStationEnabled(int station)
 	return GetEntData(station, iOffsetIsEnabled, 1);
 }
 
+stock CNavArea PickBuildArea(int client, float SentryRange = 1300.0)
+{
+	int iAreaCount = TheNavAreas.Count;
+
+	//Check that this map has any nav areas
+	if (iAreaCount <= 0)
+		return NULL_AREA;
+	
+	BombInfo_t bombinfo;
+	
+	if (!GetBombInfo(bombinfo)) 
+	{	
+		return PickBuildAreaPreRound(client);
+	}
+	
+	float vecTargetPos[3];
+	vecTargetPos[0] = bombinfo.vPosition[0];
+	vecTargetPos[1] = bombinfo.vPosition[1];
+	vecTargetPos[2] = bombinfo.vPosition[2] + 40.0;
+	
+	CTFNavArea bombArea = TheNavMesh.GetNearestNavArea(vecTargetPos, false, 90000.0, false, true, TEAM_ANY);
+	
+	if (bombArea == NULL_AREA)
+	{
+		return NULL_AREA;
+	}
+	
+	if (bombArea.HasAttributeTF(BLUE_SPAWN_ROOM)) || bombArea.HasAttributeTF(RED_SPAWN_ROOM)))
+	{
+		return NULL_AREA;
+	}
+
+	//Areas forward of the bomb within some distance and visible to bomb.
+	ArrayList ForwardVisibleAreas = new ArrayList();
+	//Areas forward of the bomb but not necessarily visible.
+	ArrayList ForwardAreas        = new ArrayList();
+	//Areas visible to the bomb but not nescessarily forward of it.
+	ArrayList VisibleAreasAround  = new ArrayList();
+	
+	//Loop all nav areas
+	for (int i = 0; i < iAreaCount; i++)
+	{	
+		CTFNavArea area = view_as<CTFNavArea>(TheNavAreas.Get(i));
+		
+		if (area == NULL_AREA)
+			continue;
+		
+		//Area in spawn
+		if (area.HasAttributeTF(BLUE_SPAWN_ROOM) || area.HasAttributeTF(RED_SPAWN_ROOM))
+			continue;
+		
+		//TODO
+		//Better solution because this will break on all non mvm maps.
+		//Most likely areachable area
+		if (!area.HasAttributeTF(BOMB_DROP))
+			continue;
+		
+		float m_flBombTargetDistanceAtArea = GetTravelDistanceToBombTarget(area);
+		float m_flBombTargetDistanceAtBomb = GetTravelDistanceToBombTarget(bombArea);
+		
+		if (m_flBombTargetDistanceAtArea < 180.0)
+			continue;
+		
+		float areaCenter[3]; area.GetCenter(areaCenter);
+		areaCenter[2] += 50.0;
+		
+		float flAreaDistanceToBomb = GetVectorDistance(areaCenter, vecTargetPos);
+		
+		if (flAreaDistanceToBomb >= SentryRange)
+			continue;
+		
+		bool bAreaVisibleToBomb = area.IsEntirelyVisible(vecTargetPos);
+		
+		if (bAreaVisibleToBomb)
+		{
+			VisibleAreasAround.Push(area);
+		}
+		
+		if (m_flBombTargetDistanceAtBomb > m_flBombTargetDistanceAtArea)
+		{
+			if (flAreaDistanceToBomb <= SentryRange * GetRandomFloat(0.8, 1.75) && bAreaVisibleToBomb)
+			{
+				ForwardVisibleAreas.Push(area);
+			}
+			
+			ForwardAreas.Push(area);
+		}
+	}
+	
+	PrintToServer("PickBuildArea %i ForwardVisibleAreas | %i ForwardAreas | %i VisibleAreasAroundBomb", ForwardVisibleAreas.Length, ForwardAreas.Length, VisibleAreasAround.Length);
+	
+	CNavArea randomArea = NULL_AREA;
+	
+	if (ForwardVisibleAreas.Length     > 0) randomArea = ForwardVisibleAreas.Get(GetRandomInt(0, ForwardVisibleAreas.Length - 1));
+	else if (ForwardAreas.Length       > 0) randomArea =        ForwardAreas.Get(GetRandomInt(0, ForwardAreas.Length        - 1));
+	else if (VisibleAreasAround.Length > 0) randomArea =  VisibleAreasAround.Get(GetRandomInt(0, VisibleAreasAround.Length  - 1));
+	
+	ForwardVisibleAreas.Close();
+	ForwardAreas.Close();
+	VisibleAreasAround.Close();
+	
+	return randomArea;
+}
+
+stock CNavArea PickBuildAreaPreRound(int client, float SentryRange = 1300.0)
+{
+	int iAreaCount = TheNavAreas.Count;
+
+	//Check that this map has any nav areas
+	if (iAreaCount <= 0)
+		return NULL_AREA;
+	
+	ArrayList EnemySpawnExits = new ArrayList();	
+
+	//Collect enemy exit areas after spawn door.
+	for (int i = 0; i < iAreaCount; i++)
+	{
+		CTFNavArea area = view_as<CTFNavArea>(TheNavAreas.Get(i));
+		
+		if (area == NULL_AREA)
+			continue;
+		
+		//BLOCKED
+		if (area.HasAttributeTF(BLOCKED))
+			continue;
+		
+		//BLOCKED
+		if (area.HasAttributeTF(BLOCKED_AFTER_POINT_CAPTURE))
+			continue;
+		
+		//BLOCKED
+		if (area.HasAttributeTF(BLOCKED_UNTIL_POINT_CAPTURE))
+			continue;
+		
+		//Area in spawn but not an exit
+		if (GetTravelDistanceToBombTarget(area) <= 0.0 && !area.HasAttributeTF(SPAWN_ROOM_EXIT))
+			continue;
+		
+		//Area not an enemy spawn room exit
+		if (GetPlayerEnemyTeam(client) == TFTeam_Blue && !area.HasAttributeTF(BLUE_SPAWN_ROOM))
+			continue;
+		
+		//Area not an enemy spawn room exit
+		if (GetPlayerEnemyTeam(client) == TFTeam_Red && !area.HasAttributeTF(RED_SPAWN_ROOM))
+			continue;
+		
+		float flLowestBombTargetDistance = 999999.0;
+		CNavArea bestConnection = NULL_AREA;
+		
+		//Check spawn exit connections 
+		for (NavDirType dir = NORTH; dir < NUM_DIRECTIONS; dir++)
+		{			
+			//Only connections with BOMB_DROP attribute are considered good.
+			for (int iConnection = 0; iConnection < area.GetAdjacentCount(dir); iConnection++)
+			{			
+				CTFNavArea adjArea = area.GetAdjacentArea(dir, iConnection);
+				
+				//Area still in spawn... BAD
+				if (adjArea.HasAttributeTF(BLUE_SPAWN_ROOM) || adjArea.HasAttributeTF(RED_SPAWN_ROOM))
+					continue;
+				
+				float flBombTargetDistance = GetTravelDistanceToBombTarget(adjArea);
+				
+				//Area most likely in spawn
+				if (flBombTargetDistance <= 0.0)
+					continue;
+				
+				if (flBombTargetDistance <= flLowestBombTargetDistance)
+				{
+					bestConnection = adjArea;
+					flLowestBombTargetDistance = flBombTargetDistance;
+				}
+			}
+		}
+		
+		if (bestConnection != NULL_AREA)
+		{
+			EnemySpawnExits.Push(bestConnection);
+			//g_hAreasToDraw.Push(bestConnection);
+		}
+	}
+	
+	//We've failed men.
+	if (EnemySpawnExits.Length <= 0)
+	{
+		EnemySpawnExits.Close();
+		return NULL_AREA;
+	}
+	
+	//Random valid exit point.
+	CNavArea RandomEnemySpawnExit = EnemySpawnExits.Get(GetRandomInt(0, EnemySpawnExits.Length - 1));
+
+	//Search outward of the random exit untill we are some distance away.
+	float vecExitCenter[3];
+	RandomEnemySpawnExit.GetCenter(vecExitCenter);
+	vecExitCenter[2] += 45.0;
+	
+	//PrintToServer("%f %f %f", vecExitCenter[0], vecExitCenter[1], vecExitCenter[2]);
+
+	ArrayList AreasCloser                  = new ArrayList();	//Not necessarily visible but still <= 3000.0
+	ArrayList VisibleAreas                 = new ArrayList();
+	ArrayList VisibleAreasAfterSentryRange = new ArrayList();	//>= SentryRange
+	
+	for (int i = 0; i < iAreaCount; i++)
+	{
+		CTFNavArea area = view_as<CTFNavArea>(TheNavAreas.Get(i));
+		
+		if (area == NULL_AREA)
+			continue;
+		
+		if (area.HasAttributeTF((BLUE_SPAWN_ROOM | RED_SPAWN_ROOM)))
+			continue;
+		
+		//TODO
+		//Better solution because this will break on all non mvm maps.
+		if (!area.HasAttributeTF(BOMB_DROP))
+			continue;
+			
+		float center[3]; area.GetCenter(center);
+		
+		float flDistance = GetVectorDistance(center, vecExitCenter);
+		
+		if (flDistance <= SentryRange)
+			AreasCloser.Push(area);
+		
+		if (!area.IsEntirelyVisible(vecExitCenter))
+			continue;
+		
+		if (flDistance > (SentryRange * 0.75) && flDistance <= SentryRange * 1.25)
+		{
+			VisibleAreasAfterSentryRange.Push(area);
+			//g_hAreasToDraw.Push(area);
+		}
+		
+		if (flDistance <= SentryRange)
+			VisibleAreasAfterSentryRange.Push(area);
+		
+		VisibleAreas.Push(area);
+	}
+	
+	//PrintToServer("PickBuildAreaPreRound %i VisibleAreas | %i VisibleAreasAfterSentryRange | %i AreasCloser", VisibleAreas.Length, VisibleAreasAfterSentryRange.Length, AreasCloser.Length);
+	
+	CNavArea bestArea = NULL_AREA;
+	
+	if (VisibleAreasAfterSentryRange.Length > 0) bestArea = VisibleAreasAfterSentryRange.Get(GetRandomInt(0, VisibleAreasAfterSentryRange.Length - 1));
+	else if (VisibleAreas.Length > 0)            bestArea =                 VisibleAreas.Get(GetRandomInt(0, VisibleAreas.Length                 - 1));
+	else if (AreasCloser.Length > 0)             bestArea =                  AreasCloser.Get(GetRandomInt(0, AreasCloser.Length                  - 1));
+	
+	AreasCloser.Close();
+	VisibleAreas.Close();
+	VisibleAreasAfterSentryRange.Close();
+	
+	//DrawArea(bestArea, false, 6.0);
+	return bestArea;
+}
+
 stock bool DoesAnyPlayerUseThisName(const char[] name)
 {
 	char playerName[MAX_NAME_LENGTH];

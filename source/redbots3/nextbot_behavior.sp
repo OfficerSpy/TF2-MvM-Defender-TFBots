@@ -936,8 +936,7 @@ bool IsAmmoFull(int client)
 
 void ResetIntentionInterface(int bot_entidx)
 {
-	INextBot bot = CBaseNPC_GetNextBotOfEntity(bot_entidx);
-	bot.GetIntentionInterface().Reset();
+	CBaseNPC_GetNextBotOfEntity(bot_entidx).GetIntentionInterface().Reset();
 }
 
 void UpdateLookAroundForEnemies(int client, bool bVal)

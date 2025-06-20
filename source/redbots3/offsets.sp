@@ -8,6 +8,7 @@ void InitOffsets(GameData hGamedata)
 	
 	SetOffset(hGamedata, "CTFPlayer", "m_LastDamageType");
 	SetOffset(hGamedata, "CObjectSentrygun", "m_bPlacementOK");
+	SetOffset(hGamedata, "CObjectSentrygun", "m_vecCurAngles");
 	SetOffset(hGamedata, "CTFBot", "m_isLookingAroundForEnemies");
 	SetOffset(hGamedata, "CTFBot", "m_mission");
 	SetOffset(hGamedata, "CPopulationManager", "m_nStartingCurrency");
@@ -18,6 +19,7 @@ void InitOffsets(GameData hGamedata)
 	//Dump offsets
 	LogMessage("InitOffsets: CTFPlayer->m_LastDamageType = %d", GetOffset("CTFPlayer", "m_LastDamageType"));
 	LogMessage("InitOffsets: CObjectSentrygun->m_bPlacementOK = %d", GetOffset("CObjectSentrygun", "m_bPlacementOK"));
+	LogMessage("InitOffsets: CObjectSentrygun->m_vecCurAngles = %d", GetOffset("CObjectSentrygun", "m_vecCurAngles"));
 	LogMessage("InitOffsets: CTFBot->m_isLookingAroundForEnemies = %d", GetOffset("CTFBot", "m_isLookingAroundForEnemies"));
 	LogMessage("InitOffsets: CTFBot->m_mission = %d", GetOffset("CTFBot", "m_mission"));
 	LogMessage("InitOffsets: CPopulationManager->m_nStartingCurrency = %d", GetOffset("CPopulationManager", "m_nStartingCurrency"));
@@ -92,6 +94,11 @@ int GetLastDamageType(int client)
 bool IsPlacementOK(int iObject)
 {
 	return view_as<bool>(GetEntData(iObject, GetOffset("CObjectSentrygun", "m_bPlacementOK"), 1));
+}
+
+void GetTurretAngles(int sentry, float buffer[3])
+{
+	GetEntDataVector(sentry, GetOffset("CObjectSentrygun", "m_vecCurAngles"), buffer);
 }
 
 void SetLookingAroundForEnemies(int client, bool shouldLook)

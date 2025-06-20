@@ -1,91 +1,109 @@
-BehaviorAction CTFBotBuildSentrygun()
+BehaviorAction CTFBotMvMEngineerBuildSentrygun()
 {
 	BehaviorAction action = ActionsManager.Create("DefenderBuildSentrygun");
 	
-	action.OnStart = CTFBotBuildSentrygun_OnStart;
-	action.Update = CTFBotBuildSentrygun_Update;
-	action.OnEnd = CTFBotBuildSentrygun_OnEnd;
+	action.OnStart = CTFBotMvMEngineerBuildSentrygun_OnStart;
+	action.Update = CTFBotMvMEngineerBuildSentrygun_Update;
+	action.OnEnd = CTFBotMvMEngineerBuildSentrygun_OnEnd;
 	
 	return action;
 }
 
-public Action CTFBotBuildSentrygun_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+public Action CTFBotMvMEngineerBuildSentrygun_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
+	UpdateLookAroundForEnemies(actor, true);
+	
 	return action.Continue();
 }
 
-public Action CTFBotBuildSentrygun_Update(BehaviorAction action, int actor, float interval, ActionResult result)
+public Action CTFBotMvMEngineerBuildSentrygun_Update(BehaviorAction action, int actor, float interval, ActionResult result)
 {
-	if (TF2_GetObject(actor, TFObject_Sentry) != -1)
+	if (m_aNestArea[actor] == NULL_AREA) 
 	{
-		//TODO: disposable
-		
-		return action.Done("Built sentry");
+		return action.Done("No hint entity");
 	}
 	
-	int flag = FindBombNearestToHatch();
-	
-	if (IsZeroVector(m_vecNestArea[actor]))
+	if (CTFBotMvMEngineerIdle_ShouldAdvanceNestSpot(actor))
 	{
-		if (flag == -1)
+		//And you.
+		
+		return action.Done("No sentry");
+	}
+	
+	float areaCenter[3];
+	m_aNestArea[actor].GetCenter(areaCenter);
+	
+	float range_to_hint = GetVectorDistance(GetAbsOrigin(actor), areaCenter);
+	int myWeapon = BaseCombatCharacter_GetActiveWeapon(actor);
+	
+	if (range_to_hint < 200.0) 
+	{
+		//Start building a sentry
+		if (myWeapon != -1 && TF2Util_GetWeaponID(myWeapon) != TF_WEAPON_BUILDER)
+			FakeClientCommandThrottled(actor, "build 2");
+		
+		UpdateLookAroundForEnemies(actor, false);
+		
+		if (!myLoco.IsStuck())
 		{
-			//No bomb active, try to build near the robot spawn
-			return action.Continue();
+			g_arrExtraButtons[actor].PressButtons(IN_DUCK);
 		}
 		
-		CTFBotEngineerIdle_FindNestAreaAroundVec(actor, GetAbsOrigin(flag));
+		AimHeadTowards(myBody, areaCenter, OVERRIDE_ALL, 0.1, _, "Placing sentry");
+	}
+	
+	if (range_to_hint > 70.0)
+	{
+		//PrintToServer("%f %f %f", areaCenter[0], areaCenter[1], areaCenter[2]);
+	
+		g_arrPluginBot[actor].SetPathGoalVector(areaCenter);
+		g_arrPluginBot[actor].bPathing = true;
+		
+		if (range_to_hint > 300.0)
+		{
+			//Fuck em up.
+			EquipWeaponSlot(actor, TFWeaponSlot_Primary);
+		}
+		
+		UpdateLookAroundForEnemies(actor, true);
 		
 		return action.Continue();
 	}
 	
-	if (flag != -1)
+	g_arrPluginBot[actor].bPathing = false;
+	
+	if (myWeapon != -1 && TF2Util_GetWeaponID(myWeapon) == TF_WEAPON_BUILDER))
 	{
-		float flagPosition[3]; flagPosition = GetAbsOrigin(flag);
+		int objBeingBuilt = GetEntPropEnt(myWeapon, Prop_Send, "m_hObjectBeingBuilt");
 		
-		if (GetVectorDistance(m_vecNestArea[actor], flagPosition) > SENTRY_WATCH_BOMB_RANGE)
+		if (objBeingBuilt == -1)
+			return action.Continue();
+		
+		bool m_bPlacementOK = IsPlacementOK(objBeingBuilt);
+		
+		VS_PressFireButton(actor);
+		
+		if (!m_bPlacementOK && myBody.IsHeadAimingOnTarget() && myBody.GetHeadSteadyDuration() > 0.6)
 		{
-			//Our desired build area is too far from the bomb, invalidate!
-			m_vecNestArea[actor] = NULL_VECTOR;
+			//That spot was no good.
+			//Time to pick a new spot.
+			m_aNestArea[actor] = PickBuildArea(actor);
 			
 			return action.Continue();
 		}
 	}
 	
-	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
-	bool bWatchForEnemies = true;
+	int sentry = GetObjectOfType(actor, TFObject_Sentry);
 	
-	if (myBot.IsRangeLessThanEx(m_vecNestArea[actor], 75.0))
-	{
-		if (!IsWeapon(actor, TF_WEAPON_BUILDER))
-			FakeClientCommandThrottled(actor, "build 2 0");
-		
-		bWatchForEnemies = false;
-		SnapViewToPosition(actor, m_vecNestArea[actor]);
-		VS_PressFireButton(actor);
-	}
+	if (sentry == INVALID_ENT_REFERENCE)
+		return action.Continue();
 	
-	UpdateLookAroundForEnemies(actor, bWatchForEnemies);
+	SetPlayerReady(actor, true);
 	
-	if (bWatchForEnemies)
-	{
-		int primary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Primary);
-		
-		if (primary != -1)
-			TF2Util_SetPlayerActiveWeapon(actor, primary);
-	}
-	
-	if (m_flRepathTime[actor] <= GetGameTime())
-	{
-		m_flRepathTime[actor] = GetGameTime() + GetRandomFloat(0.5, 1.0);
-		m_pPath[actor].ComputeToPos(myBot, m_vecNestArea[actor]);
-	}
-	
-	m_pPath[actor].Update(myBot);
-	
-	return action.Continue();
+	return action.Done("Built a sentry");
 }
 
-public void CTFBotBuildSentrygun_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
+public void CTFBotMvMEngineerBuildSentrygun_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-	
+	UpdateLookAroundForEnemies(actor, true);
 }
