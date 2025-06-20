@@ -7,6 +7,7 @@
 #include <stocklib_officerspy/tf/tf_weaponbase>
 #include <stocklib_officerspy/tf/entity_capture_flag>
 #include <stocklib_officerspy/shared/util_shared>
+#include <stocklib_officerspy/mathlib/vector>
 
 #define SENTRY_MAX_RANGE 1100.0
 
@@ -181,6 +182,20 @@ static bool TraceFilter_TFBot(int entity, int contentsMask, StringMap data)
 	return true;
 }
 
+//CNavArea::GetRandomPoint
+void CNavArea_GetRandomPoint(CNavArea area, float buffer[3])
+{
+	float eLo[3], eHi[3];
+	area.GetExtent(eLo, eHi);
+	
+	float spot[3];
+	spot[0] = GetRandomFloat(eLo[0], eHi[0]);
+	spot[1] = GetRandomFloat(eLo[1], eHi[1]);
+	spot[2] = area.GetZ(spot[0], spot[1]);
+	
+	buffer = spot;
+}
+
 void RefundPlayerUpgrades(int client)
 {
 	KeyValues kv = new KeyValues("MVM_Respec");
@@ -320,7 +335,7 @@ float GetTimeSinceWeaponFired(int client)
 {
 	int iWeapon = BaseCombatCharacter_GetActiveWeapon(client);
 	
-	if (!IsValidEntity(iWeapon))
+	if (iWeapon == -1)
 		return 9999.0;
 		
 	float flLastFireTime = GetEntPropFloat(iWeapon, Prop_Send, "m_flLastFireTime");
@@ -337,17 +352,15 @@ int GetMedigunType(int weapon)
 	return TF2Attrib_HookValueInt(0, "set_weapon_mode", weapon);
 }
 
-int GetResistType(int client)
+int GetResistType(int weapon)
 {
-	return GetEntProp(BaseCombatCharacter_GetActiveWeapon(client), Prop_Send, "m_nChargeResistType");
+	return GetEntProp(weapon, Prop_Send, "m_nChargeResistType");
 }
 
 float[] WorldSpaceCenter(int entity)
 {
 	float vec[3];
-	
 	CBaseEntity(entity).WorldSpaceCenter(vec);
-	
 	return vec;
 }
 
@@ -355,17 +368,10 @@ bool HasSniperRifle(int client)
 {
 	int iWeapon = GetPlayerWeaponSlot(client, TFWeaponSlot_Primary);
 	
-	if (!IsValidEntity(iWeapon))
+	if (iWeapon == -1)
 		return false;
 	
-	switch(TF2Util_GetWeaponID(iWeapon))
-	{
-		case TF_WEAPON_SNIPERRIFLE:         return true;
-		case TF_WEAPON_SNIPERRIFLE_DECAP:   return true;
-		case TF_WEAPON_SNIPERRIFLE_CLASSIC: return true;
-	}
-	
-	return false;
+	return WeaponID_IsSniperRifle(TF2Util_GetWeaponID(iWeapon));
 }
 
 void DetonateObjectOfType(int client, TFObjectType iType, TFObjectMode iMode = TFObjectMode_None, bool bIgnoreSapperState = false)
@@ -414,32 +420,12 @@ int GetObjectOfType(int client, TFObjectType iObjectType, TFObjectMode iObjectMo
 	return -1;
 }
 
-float[] GetAbsOrigin(int client)
+float[] GetAbsOrigin(int entity)
 {
-	// if (client <= 0)
-		// return NULL_VECTOR;
-
-	float vec[3]; CBaseEntity(client).GetAbsOrigin(vec);
+	float vec[3]; CBaseEntity(entity).GetAbsOrigin(vec);
 	
 	return vec;
 }
-
-/* float[] GetTurretAngles(int sentry)
-{
-	// if (!IsBaseObject(sentry))
-		// return NULL_VECTOR;
-	
-	float angle[3];
-	
-	int offset = FindSendPropInfo("CObjectSentrygun", "m_iAmmoRockets");
-	int iAngleOffset = (offset - 36); //m_vecCurAngles
-	
-	angle[0] = GetEntDataFloat(sentry, iAngleOffset + 0); //m_vecCurAngles.x
-	angle[1] = GetEntDataFloat(sentry, iAngleOffset + 4); //m_vecCurAngles.y
-	angle[2] = GetEntDataFloat(sentry, iAngleOffset + 8); //m_vecCurAngles.z
-	
-	return angle;
-} */
 
 bool IsWeapon(int client, int iWeaponID)
 {
@@ -530,16 +516,6 @@ int FindBombNearestToHatch()
 	
 	return iBestEntity;
 }
-
-/* float[] GetAbsAngles(int client)
-{
-	// if (client <= 0)
-		// return NULL_VECTOR;
-
-	float vec[3]; BaseEntity_GetLocalAngles(client, vec);
-	
-	return vec;
-} */
 
 int SelectRandomReachableEnemy(int actor)
 {
@@ -1541,6 +1517,13 @@ bool IsUpgradeStationEnabled(int station)
 	return GetEntData(station, iOffsetIsEnabled, 1);
 }
 
+float[] GetAbsAngles(int entity)
+{
+	float vec[3]; CBaseEntity(entity).GetAbsAngles(vec);
+	
+	return vec;
+}
+
 stock CNavArea PickBuildArea(int client, float SentryRange = 1300.0)
 {
 	int iAreaCount = TheNavAreas.Count;
@@ -1568,7 +1551,7 @@ stock CNavArea PickBuildArea(int client, float SentryRange = 1300.0)
 		return NULL_AREA;
 	}
 	
-	if (bombArea.HasAttributeTF(BLUE_SPAWN_ROOM)) || bombArea.HasAttributeTF(RED_SPAWN_ROOM)))
+	if (bombArea.HasAttributeTF(BLUE_SPAWN_ROOM) || bombArea.HasAttributeTF(RED_SPAWN_ROOM))
 	{
 		return NULL_AREA;
 	}

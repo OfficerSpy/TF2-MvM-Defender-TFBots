@@ -84,7 +84,7 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 			DetonateObjectOfType(actor, TFObject_Dispenser);
 			
 			g_arrPluginBot[actor].bPathing = false;
-			return action.Done();
+			return action.Continue();
 		}
 		
 		UpdateLookAroundForEnemies(actor, false);
@@ -126,7 +126,7 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 						int objBeingBuilt = TF2_GetCarriedObject(actor);
 						
 						if (objBeingBuilt == -1)
-							return action.Done();
+							return action.Continue();
 						
 						bool m_bPlacementOK = IsPlacementOK(objBeingBuilt);
 						
@@ -154,7 +154,7 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 		
 		g_arrPluginBot[actor].bPathing = true;
 		
-		return action.Done();
+		return action.Continue();
 	}
 	
 	if ((m_aNestArea[actor] == NULL_AREA || bShouldAdvance) || sentry == INVALID_ENT_REFERENCE)
@@ -162,7 +162,7 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 		//HasStarted && !IsElapsed
 		if (m_ctFindNestHint[actor] > 0.0 && m_ctFindNestHint[actor] > GetGameTime()) 
 		{
-			return action.Done();
+			return action.Continue();
 		}
 		
 		//Start
@@ -267,13 +267,13 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 				
 				EquipWeaponSlot(actor, TFWeaponSlot_Melee);
 				
-				g_bUpdateLookingAroundForEnemies[actor] = false;
+				UpdateLookAroundForEnemies(actor, false);
 				
 				AimHeadTowards(myBody, WorldSpaceCenter(dispenser), CRITICAL, 1.0, _, "Work on my Dispenser");
 				VS_PressFireButton(actor);
 			}
 			
-			return action.Done();
+			return action.Continue();
 		}
 	}
 	
@@ -327,7 +327,8 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 
 static void CTFBotMvMEngineerIdle_OnEnd(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-	
+	//NOTE: engineer should only truly leave this behavior when he dies, it should otherwise be impossible
+	g_arrPluginBot[actor].bPathing = false;
 }
 
 static void CTFBotMvMEngineerIdle_ResetProperties(int actor)

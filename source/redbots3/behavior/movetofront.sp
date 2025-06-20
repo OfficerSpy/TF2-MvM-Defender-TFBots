@@ -15,6 +15,7 @@ BehaviorAction CTFBotMoveToFront()
 public Action CTFBotMoveToFront_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
 	int spawn = -1;
+	
 	while ((spawn = FindEntityByClassname(spawn, "func_respawnroomvisualizer")) != -1)
 	{
 		if (GetEntProp(spawn, Prop_Data, "m_iDisabled"))
@@ -35,6 +36,7 @@ public Action CTFBotMoveToFront_OnStart(BehaviorAction action, int actor, Behavi
 	int iBestEnt = -1;
 	
 	int holo = -1;
+	
 	while ((holo = FindEntityByClassname(holo, "prop_dynamic")) != -1)
 	{
 		char strModel[PLATFORM_MAX_PATH]; GetEntPropString(holo, Prop_Data, "m_ModelName", strModel, PLATFORM_MAX_PATH);
@@ -59,7 +61,7 @@ public Action CTFBotMoveToFront_OnStart(BehaviorAction action, int actor, Behavi
 	
 	if (iBestEnt == -1)
 	{
-		FakeClientCommandThrottled(actor, "tournament_player_readystate 1");
+		SetPlayerReady(actor, true);
 		
 		//PrintToServer("[%8.3f] CTFBotMoveToFront_OnStart(#%d): iBestEnt == -1", GetGameTime(), actor);
 		return action.Done("Cannot path to target hologram from whereever we are. Pressing F4");
@@ -84,7 +86,7 @@ public Action CTFBotMoveToFront_Update(BehaviorAction action, int actor, float i
 {
 	if (m_ctMoveTimeout[actor] < GetGameTime())
 	{
-		FakeClientCommandThrottled(actor, "tournament_player_readystate 1");
+		SetPlayerReady(actor, true);
 		
 		if (redbots_manager_debug_actions.BoolValue)
 			PrintToServer("[%8.3f] CTFBotMoveToFront(#%d): Timeout elapsed!", GetGameTime(), actor);
@@ -94,7 +96,7 @@ public Action CTFBotMoveToFront_Update(BehaviorAction action, int actor, float i
 	
 	if (GetVectorDistance(m_vecGoalArea[actor], WorldSpaceCenter(actor)) < 80.0)
 	{
-		FakeClientCommandThrottled(actor, "tournament_player_readystate 1");
+		SetPlayerReady(actor, true);
 		return action.Done("Goal reached!");
 	}
 	

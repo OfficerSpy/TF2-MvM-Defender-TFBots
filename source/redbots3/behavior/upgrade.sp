@@ -16,8 +16,6 @@ BehaviorAction CTFBotUpgrade()
 	action.OnStart = CTFBotUpgrade_OnStart;
 	action.Update = CTFBotUpgrade_Update;
 	action.OnEnd = CTFBotUpgrade_OnEnd;
-	action.OnSuspend = CTFBotUpgrade_OnSuspend;
-	action.OnResume = CTFBotUpgrade_OnResume;
 	
 	return action;
 }
@@ -46,13 +44,10 @@ public Action CTFBotUpgrade_OnStart(BehaviorAction action, int actor, BehaviorAc
 	else
 	{
 		//spend less time upgrading during the round, normal otherwise
-		m_flUpgradingTime[actor] = isRoundActive ? GetGameTime() + BUY_UPGRADES_FAST_MAX_TIME : GetGameTime() + BUY_UPGRADES_MAX_TIME;
+		m_flUpgradingTime[actor] = GetGameTime() + (isRoundActive ? BUY_UPGRADES_FAST_MAX_TIME : BUY_UPGRADES_MAX_TIME);
 	}
 	
 	// UpdateLookAroundForEnemies(actor, false);
-	
-	//Due to CTFBot::AvoidPlayers, other players can push us
-	SetEntityMoveType(actor, MOVETYPE_NONE);
 	
 	return action.Continue();
 }
@@ -66,7 +61,7 @@ public Action CTFBotUpgrade_Update(BehaviorAction action, int actor, float inter
 	{
 		//It shouldn't take us this long to upgrade...
 		
-		FakeClientCommand(actor, "tournament_player_readystate 1");
+		SetPlayerReady(actor, true);
 		
 		if (redbots_manager_debug_actions.BoolValue)
 			PrintToChatAll("%N upgrade for long with %d credits left!", actor, TF2_GetCurrency(actor));
@@ -93,7 +88,7 @@ public Action CTFBotUpgrade_Update(BehaviorAction action, int actor, float inter
 		{
 			// g_flNextUpdate[actor] = 0.0;
 			
-			FakeClientCommand(actor, "tournament_player_readystate 1");
+			SetPlayerReady(actor, true);
 			
 			delete info;
 			
@@ -107,7 +102,7 @@ public Action CTFBotUpgrade_Update(BehaviorAction action, int actor, float inter
 	{
 		int secondary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Secondary);
 		
-		if (secondary != -1 && TF2Util_GetWeaponID(secondary) == TF_WEAPON_MEDIGUN && GetEntPropEnt(secondary, Prop_Send, "m_hHealingTarget") == -1)
+		if (secondary != -1 && TF2Util_GetWeaponID(secondary) == TF_WEAPON_MEDIGUN)
 		{
 			int teammate = GerNearestTeammate(actor, WEAPON_MEDIGUN_RANGE);
 			
@@ -138,9 +133,6 @@ public void CTFBotUpgrade_OnEnd(BehaviorAction action, int actor, BehaviorAction
 	
 	if (IsPlayerAlive(actor))
 	{
-		if (GetEntityMoveType(actor) == MOVETYPE_NONE)
-			SetEntityMoveType(actor, MOVETYPE_WALK);
-		
 		//Remember this bot's upgrades
 		Command_BoughtUpgrades(actor, 0);
 		
@@ -154,23 +146,6 @@ public void CTFBotUpgrade_OnEnd(BehaviorAction action, int actor, BehaviorAction
 		
 		TF2_SetInUpgradeZone(actor, false);
 	}
-}
-
-public Action CTFBotUpgrade_OnSuspend(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
-{
-	//NOTE: this action should never be suspended
-	if (IsPlayerAlive(actor) && GetEntityMoveType(actor) == MOVETYPE_NONE)
-		SetEntityMoveType(actor, MOVETYPE_WALK);
-	
-	return action.Continue();
-}
-
-public Action CTFBotUpgrade_OnResume(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
-{
-	if (IsPlayerAlive(actor) && GetEntityMoveType(actor) == MOVETYPE_WALK)
-		SetEntityMoveType(actor, MOVETYPE_NONE);
-	
-	return action.Continue();
 }
 
 void CollectUpgrades(int client)

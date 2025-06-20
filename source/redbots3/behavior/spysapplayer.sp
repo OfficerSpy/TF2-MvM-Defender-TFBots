@@ -23,7 +23,7 @@ public Action CTFBotSpySapPlayers_Update(BehaviorAction action, int actor, float
 {
 	if (!IsValidClientIndex(m_iPlayerSapTarget[actor])
 	|| !IsPlayerAlive(m_iPlayerSapTarget[actor])
-	|| TF2_GetClientTeam(m_iPlayerSapTarget[actor]) != GetEnemyTeamOfPlayer(actor)
+	|| TF2_GetClientTeam(m_iPlayerSapTarget[actor]) != GetPlayerEnemyTeam(actor)
 	|| !IsPlayerSappable(m_iPlayerSapTarget[actor]))
 	{
 		return action.Done("No player to sap");

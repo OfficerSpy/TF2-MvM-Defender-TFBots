@@ -35,6 +35,9 @@ public Action CTFBotMvMEngineerBuildSentrygun_Update(BehaviorAction action, int 
 	
 	float range_to_hint = GetVectorDistance(GetAbsOrigin(actor), areaCenter);
 	int myWeapon = BaseCombatCharacter_GetActiveWeapon(actor);
+	INextBot myNextbot = CBaseNPC_GetNextBotOfEntity(actor);
+	IBody myBody = myNextbot.GetBodyInterface();
+	ILocomotion myLoco = myNextbot.GetLocomotionInterface();
 	
 	if (range_to_hint < 200.0) 
 	{
@@ -49,7 +52,7 @@ public Action CTFBotMvMEngineerBuildSentrygun_Update(BehaviorAction action, int 
 			g_arrExtraButtons[actor].PressButtons(IN_DUCK);
 		}
 		
-		AimHeadTowards(myBody, areaCenter, OVERRIDE_ALL, 0.1, _, "Placing sentry");
+		AimHeadTowards(myBody, areaCenter, MANDATORY, 0.1, _, "Placing sentry");
 	}
 	
 	if (range_to_hint > 70.0)
@@ -72,7 +75,7 @@ public Action CTFBotMvMEngineerBuildSentrygun_Update(BehaviorAction action, int 
 	
 	g_arrPluginBot[actor].bPathing = false;
 	
-	if (myWeapon != -1 && TF2Util_GetWeaponID(myWeapon) == TF_WEAPON_BUILDER))
+	if (myWeapon != -1 && TF2Util_GetWeaponID(myWeapon) == TF_WEAPON_BUILDER)
 	{
 		int objBeingBuilt = GetEntPropEnt(myWeapon, Prop_Send, "m_hObjectBeingBuilt");
 		

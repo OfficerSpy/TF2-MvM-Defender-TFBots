@@ -105,8 +105,7 @@ static void Event_MvmWaveBegin(Event event, const char[] name, bool dontBroadcas
 	{
 		if (IsClientInGame(i) && g_bIsDefenderBot[i] && IsPlayerAlive(i))
 		{
-			//Looking for sniping spots, don't disturb
-			if (ActionsManager.GetAction(i, "SniperLurk") != INVALID_ACTION)
+			if (!ShouldResetBehavior(i))
 				continue;
 			
 			//Rethink what we're supposed to do
@@ -295,4 +294,21 @@ static Action Timer_UpdateChosenBotTeamComposition(Handle timer)
 	UpdateChosenBotTeamComposition();
 	
 	return Plugin_Stop;
+}
+
+static bool ShouldResetBehavior(int client)
+{
+	//Looking for sniping spots, don't disturb
+	if (ActionsManager.LookupEntityActionByName(client, "SniperLurk") != INVALID_ACTION)
+		return false;
+	
+	//I'm healing people
+	if (ActionsManager.LookupEntityActionByName(client, "Heal") != INVALID_ACTION)
+		return false;
+	
+	//I am building shit
+	if (ActionsManager.LookupEntityActionByName(client, "DefenderEngineerIdle") != INVALID_ACTION)
+		return false;
+	
+	return true;
 }

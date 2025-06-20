@@ -32,7 +32,7 @@ Author: ★ Officer Spy ★
 
 // #define TFBOT_CUSTOM_SPY_CONTACT
 
-// #define EXTRA_PLUGINBOT
+#define EXTRA_PLUGINBOT
 
 // #define IDLEBOT_AIMING
 
@@ -658,6 +658,13 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 #endif
 		}
 		
+		//TODO: is this too expensive? use global per-player variable otherwise
+		if (TF2_IsInUpgradeZone(client) && ActionsManager.LookupEntityActionByName(client, "DefenderUpgrade") != INVALID_ACTION)
+		{
+			//Because of CTFBot::AvoidPlayers, do not let ourselves move away from other players while upgrading
+			vel = NULL_VECTOR;
+		}
+		
 #if defined IDLEBOT_AIMING
 		BotAim(client).Upkeep();
 		BotAim(client).FireWeaponAtEnemy();
@@ -760,7 +767,7 @@ public Action Command_Votebots(int client, int args)
 				return Plugin_Handled;
 			}
 			
-			ReplyToCommand(client, "%s Choose your bot team lineup first! Use command !choosebotteam/!cbt", PLUGIN_PREFIX);
+			ReplyToCommand(client, "%s Choose your bot team lineup first! Use command !choosebotteam or !cbt", PLUGIN_PREFIX);
 			return Plugin_BadLoad;
 		}
 	}

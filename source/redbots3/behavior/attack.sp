@@ -46,7 +46,7 @@ static Action CTFBotDefenderAttack_Update(BehaviorAction action, int actor, floa
 	
 	if (!IsValidClientIndex(m_iAttackTarget[actor])
 	|| !IsPlayerAlive(m_iAttackTarget[actor])
-	|| TF2_GetClientTeam(m_iAttackTarget[actor]) != GetEnemyTeamOfPlayer(actor))
+	|| TF2_GetClientTeam(m_iAttackTarget[actor]) != GetPlayerEnemyTeam(actor))
 	{
 		if (!CTFBotDefenderAttack_SelectTarget(actor))
 			return action.Done("Target is not valid");

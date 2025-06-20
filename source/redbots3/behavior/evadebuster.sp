@@ -25,7 +25,7 @@ public Action CTFBotEvadeBuster_Update(BehaviorAction action, int actor, float i
 	INextBot myBot = CBaseNPC_GetNextBotOfEntity(actor);
 	float myOrigin[3]; GetClientAbsOrigin(actor, myOrigin);
 	float pathGoalPosition[3];
-	int mySentry = TF2_GetPlayerClass(actor) == TFClass_Engineer ? TF2_GetObject(actor, TFObject_Sentry) : -1;
+	int mySentry = TF2_GetPlayerClass(actor) == TFClass_Engineer ? GetObjectOfType(actor, TFObject_Sentry) : -1;
 	
 	if (mySentry != -1 && !TF2_IsCarryingObject(actor) && myBot.IsRangeLessThan(mySentry, 500.0))
 	{

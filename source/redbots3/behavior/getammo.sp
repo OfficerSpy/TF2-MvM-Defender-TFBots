@@ -150,7 +150,7 @@ void ComputeHealthAndAmmoVectors(int client, JSONArray array, float max_range)
 		int ammo = -1;
 		while ((ammo = FindEntityByClassname(ammo, g_strHealthAndAmmoEntities[i])) != -1)
 		{
-			if (BaseEntity_GetTeamNumber(ammo) == view_as<int>(GetEnemyTeamOfPlayer(client)))
+			if (BaseEntity_GetTeamNumber(ammo) == view_as<int>(GetPlayerEnemyTeam(client)))
 				continue;
 		
 			if (GetVectorDistance(WorldSpaceCenter(client), WorldSpaceCenter(ammo)) > max_range)

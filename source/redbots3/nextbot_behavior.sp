@@ -538,7 +538,7 @@ public Action CTFBotMedicHeal_UpdatePost(BehaviorAction action, int actor, float
 		
 		if (myPatient > 0)
 		{
-			int iResistType = GetResistType(actor);
+			int iResistType = GetResistType(myWeapon);
 			int iLastDmgType = GetLastDamageType(myPatient);
 			
 			if (iLastDmgType & DMG_BULLET && iResistType != MEDIGUN_BULLET_RESIST)
@@ -669,7 +669,7 @@ Action GetDesiredBotAction(int client, BehaviorAction action)
 			//Collect any leftover money that my team didn't collect
 			return action.SuspendFor(CTFBotCollectMoney(), "Is possible");
 		}
-		else if (!TF2_IsInUpgradeZone(client) && !IsPlayerReady(client) && ActionsManager.GetAction(client, "DefenderMoveToFront") == INVALID_ACTION)
+		else if (!TF2_IsInUpgradeZone(client) && !IsPlayerReady(client) && ActionsManager.LookupEntityActionByName(client, "DefenderMoveToFront") == INVALID_ACTION)
 		{
 			if (redbots_manager_bot_use_upgrades.BoolValue)
 			{
@@ -677,7 +677,7 @@ Action GetDesiredBotAction(int client, BehaviorAction action)
 			}
 			else
 			{
-				FakeClientCommand(client, "tournament_player_readystate 1");
+				SetPlayerReady(client, true);
 				return action.SuspendFor(CTFBotMoveToFront(), "Skip upgrading");
 			}
 		}
@@ -726,7 +726,7 @@ Action GetDesiredBotAction(int client, BehaviorAction action)
 			}
 			case TFClass_Engineer:
 			{
-				return action.SuspendFor(CTFBotEngineerIdle(), "Engineer Start building");
+				return action.SuspendFor(CTFBotMvMEngineerIdle(), "Engineer Start building");
 			}
 			case TFClass_Spy:
 			{
@@ -761,7 +761,7 @@ Action GetUpgradePostAction(int client, BehaviorAction action)
 	if (GameRules_GetRoundState() == RoundState_BetweenRounds)
 	{
 		if (TF2_GetPlayerClass(client) == TFClass_Engineer)
-			return action.ChangeTo(CTFBotEngineerIdle(), "Start building");
+			return action.ChangeTo(CTFBotMvMEngineerIdle(), "Start building");
 		else if (TF2_GetPlayerClass(client) == TFClass_Medic)
 			return action.Done("Start heal mission");
 		else if (TF2_GetPlayerClass(client) == TFClass_Spy)
@@ -802,20 +802,6 @@ public bool NextBotTraceFilterIgnoreActors(int entity, int contentsMask, any iEx
 float GetDesiredPathLookAheadRange(int client)
 {
 	return tf_bot_path_lookahead_range.FloatValue * BaseAnimating_GetModelScale(client);
-}
-
-//CNavArea::GetRandomPoint
-void CNavArea_GetRandomPoint(CNavArea area, float buffer[3])
-{
-	float eLo[3], eHi[3];
-	area.GetExtent(eLo, eHi);
-	
-	float spot[3];
-	spot[0] = GetRandomFloat(eLo[0], eHi[0]);
-	spot[1] = GetRandomFloat(eLo[1], eHi[1]);
-	spot[2] = area.GetZ(spot[0], spot[1]);
-	
-	buffer = spot;
 }
 
 bool IsPathToVectorPossible(int bot_entidx, const float vec[3], float &length = -1.0)
@@ -1169,7 +1155,7 @@ bool OpportunisticallyUsePowerupBottle(int client, int activeWeapon, INextBot bo
 				return false;
 			
 			//We're busy going for the tank
-			if (ActionsManager.GetAction(client, "DefenderAttackTank") != INVALID_ACTION)
+			if (ActionsManager.LookupEntityActionByName(client, "DefenderAttackTank") != INVALID_ACTION)
 				return false;
 			
 			float myPosition[3]; myPosition = WorldSpaceCenter(client);
