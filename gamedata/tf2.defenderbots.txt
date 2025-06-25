@@ -185,8 +185,8 @@
 			//The calculation formula is base offset + this number
 			"CTFPlayer::m_LastDamageType"
 			{
-				"windows"	"20" //build 9543365: 8988
-				"linux"		"20" //build 9543365: 8992
+				"windows"	"20" //build 9742990: 8996
+				"linux"		"20" //build 9742990: 9004
 			}
 			"CObjectSentrygun::m_bPlacementOK"
 			{
@@ -200,13 +200,18 @@
 			}
 			"CTFBot::m_isLookingAroundForEnemies"
 			{
-				"windows"	"612" //build 8835751: 10336
-				"linux"		"604" //build 8835751: 10332
+				"windows"	"612" //build 9742990: 10344
+				"linux"		"604" //build 9742990: 10344
 			}
 			"CTFBot::m_mission"
 			{
-				"windows"	"664" //build 8835751: 10388
-				"linux"		"656" //build 8835751: 10384
+				"windows"	"664" //build 9742990: 10396
+				"linux"		"656" //build 9742990: 10396
+			}
+			"CTFBot::m_opportunisticTimer"
+			{
+				"windows"	"736" //build 9742990: 10468
+				"linux"		"728" //build 9742990: 10468
 			}
 			"CPopulationManager::m_nStartingCurrency"
 			{
