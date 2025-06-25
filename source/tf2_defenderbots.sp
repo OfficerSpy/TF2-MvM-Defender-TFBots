@@ -663,6 +663,12 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		{
 			//Because of CTFBot::AvoidPlayers, do not let ourselves move away from other players while upgrading
 			vel = NULL_VECTOR;
+			
+			if (TF2_GetPlayerClass(client) == TFClass_DemoMan && TF2_IsShieldEquipped(client))
+			{
+				//Don't charge out of the upgrade station
+				buttons &= ~IN_ATTACK2;
+			}
 		}
 		
 #if defined IDLEBOT_AIMING
