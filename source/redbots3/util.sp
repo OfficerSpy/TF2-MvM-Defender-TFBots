@@ -37,7 +37,7 @@ enum //medigun_resist_types_t
 	MEDIGUN_BLAST_RESIST,
 	MEDIGUN_FIRE_RESIST,
 	MEDIGUN_NUM_RESISTS
-};
+}
 
 enum //medigun_weapontypes_t
 {
@@ -45,7 +45,7 @@ enum //medigun_weapontypes_t
 	MEDIGUN_UBER,
 	MEDIGUN_QUICKFIX,
 	MEDIGUN_RESIST
-};
+}
 
 enum struct BombInfo_t
 {
@@ -75,7 +75,7 @@ enum
 	TF_LOADOUT_SLOT_TAUNT6    = 16,
 	TF_LOADOUT_SLOT_TAUNT7    = 17,
 	TF_LOADOUT_SLOT_TAUNT8    = 18,
-};
+}
 
 enum eMissionDifficulty
 {
@@ -86,7 +86,7 @@ enum eMissionDifficulty
 	MISSION_EXPERT,
 	MISSION_NIGHTMARE,
 	MISSION_MAX_COUNT
-};
+}
 
 enum
 {
@@ -95,7 +95,7 @@ enum
 	STATS_CREDITS_BONUS,
 	STATS_PLAYER_DEATHS,
 	STATS_BUYBACKS
-};
+}
 
 char g_sPlayerUseMyNameResponse[][] =
 {

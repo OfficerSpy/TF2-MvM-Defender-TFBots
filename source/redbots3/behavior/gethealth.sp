@@ -15,10 +15,6 @@ BehaviorAction CTFBotGetHealth()
 
 public Action CTFBotGetHealth_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-#if defined EXTRA_PLUGINBOT
-	g_arrPluginBot[actor].bPathing = false;
-#endif
-	
 	float health_ratio = float(GetClientHealth(actor)) / float(TEMP_GetPlayerMaxHealth(actor));
 	float ratio = ClampFloat((health_ratio - tf_bot_health_critical_ratio.FloatValue) / (tf_bot_health_ok_ratio.FloatValue - tf_bot_health_critical_ratio.FloatValue), 0.0, 1.0);
 	

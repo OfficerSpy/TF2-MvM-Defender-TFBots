@@ -24,12 +24,6 @@ BehaviorAction CTFBotGetAmmo()
 
 public Action CTFBotGetAmmo_OnStart(BehaviorAction action, int actor, BehaviorAction priorAction, ActionResult result)
 {
-#if defined EXTRA_PLUGINBOT
-	//Disable constant pathing cause we don't need it here
-	//Will cause conflcting pathing issues otherwise
-	g_arrPluginBot[actor].bPathing = false;
-#endif
-	
 	m_pPath[actor].SetMinLookAheadDistance(GetDesiredPathLookAheadRange(actor));
 	
 	JSONArray ammo = new JSONArray();

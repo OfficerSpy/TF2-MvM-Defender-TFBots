@@ -663,12 +663,6 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 		{
 			//Because of CTFBot::AvoidPlayers, do not let ourselves move away from other players while upgrading
 			vel = NULL_VECTOR;
-			
-			if (TF2_GetPlayerClass(client) == TFClass_DemoMan && TF2_IsShieldEquipped(client))
-			{
-				//Don't charge out of the upgrade station
-				buttons &= ~IN_ATTACK2;
-			}
 		}
 		
 #if defined IDLEBOT_AIMING
@@ -827,8 +821,13 @@ public Action Command_ShowBotChances(int client, int args)
 
 public Action Command_ShowNewBotTeamComposition(int client, int args)
 {
-	if (CreateDisplayPanelBotTeamComposition(client))
-		ReplyToCommand(client, "Use command !rerollbotclasses to reshuffle the bot class lineup.");
+	if (!CreateDisplayPanelBotTeamComposition(client))
+	{
+		ReplyToCommand(client, "%s There is no bot lineup currently active.", PLUGIN_PREFIX);
+		return Plugin_Handled;
+	}
+	
+	ReplyToCommand(client, "Use command !rerollbotclasses to reshuffle the bot class lineup.");
 	
 	return Plugin_Handled;
 }

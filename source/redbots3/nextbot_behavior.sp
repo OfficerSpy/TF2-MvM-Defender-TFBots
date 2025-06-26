@@ -122,6 +122,13 @@ void PluginBot_SimulateFrame(int client)
 	//This is used whenever we want to path somewhere constantly
 	if (g_arrPluginBot[client].bPathing)
 	{
+		if (TF2_GetPlayerClass(client) == TFClass_Engineer)
+		{
+			//Dumb hack for engineer so pathing does not conflict
+			if (ActionsManager.LookupEntityActionByName(client, "DefenderGetAmmo") != INVALID_ACTION || ActionsManager.LookupEntityActionByName(client, "DefenderGetHealth") != INVALID_ACTION)
+				return;
+		}
+		
 		bool shouldPathToVec = g_arrPluginBot[client].HasPathGoalVector();
 		bool shouldPathToEntity = g_arrPluginBot[client].HasPathGoalEntity();
 		
@@ -456,6 +463,24 @@ public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, flo
 {
 	if (g_bIsDefenderBot[actor] == false)
 		return Plugin_Continue;
+	
+	if (TF2_IsInUpgradeZone(actor) && ActionsManager.LookupEntityActionByName(actor, "DefenderUpgrade") != INVALID_ACTION)
+	{
+		TFClassType iClass = TF2_GetPlayerClass(actor);
+		
+		if (iClass == TFClass_DemoMan || iClass == TFClass_Scout)
+		{
+			CountdownTimer pOpportunisticTimer = CountdownTimer(GetOpportunisticTimer(actor));
+			
+			if (pOpportunisticTimer.Address)
+			{
+				//We don't do any of these things while upgrading
+				pOpportunisticTimer.Start(0.2);
+			}
+		}
+		
+		return Plugin_Continue;
+	}
 	
 	if (GameRules_GetRoundState() == RoundState_RoundRunning)
 	{

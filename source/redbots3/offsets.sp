@@ -11,6 +11,7 @@ void InitOffsets(GameData hGamedata)
 	SetOffset(hGamedata, "CObjectSentrygun", "m_vecCurAngles");
 	SetOffset(hGamedata, "CTFBot", "m_isLookingAroundForEnemies");
 	SetOffset(hGamedata, "CTFBot", "m_mission");
+	SetOffset(hGamedata, "CTFBot", "m_opportunisticTimer");
 	SetOffset(hGamedata, "CPopulationManager", "m_nStartingCurrency");
 	SetOffset(hGamedata, "CTFBuffItem", "m_bPlayingHorn");
 	SetOffset(hGamedata, "CTFNavArea", "m_distanceToBombTarget");
@@ -22,6 +23,7 @@ void InitOffsets(GameData hGamedata)
 	LogMessage("InitOffsets: CObjectSentrygun->m_vecCurAngles = %d", GetOffset("CObjectSentrygun", "m_vecCurAngles"));
 	LogMessage("InitOffsets: CTFBot->m_isLookingAroundForEnemies = %d", GetOffset("CTFBot", "m_isLookingAroundForEnemies"));
 	LogMessage("InitOffsets: CTFBot->m_mission = %d", GetOffset("CTFBot", "m_mission"));
+	LogMessage("InitOffsets: CTFBot->m_opportunisticTimer = %d", GetOffset("CTFBot", "m_opportunisticTimer"));
 	LogMessage("InitOffsets: CPopulationManager->m_nStartingCurrency = %d", GetOffset("CPopulationManager", "m_nStartingCurrency"));
 	LogMessage("InitOffsets: CTFBuffItem->m_bPlayingHorn = %d", GetOffset("CTFBuffItem", "m_bPlayingHorn"));
 	LogMessage("InitOffsets: CTFNavArea->m_distanceToBombTarget = %d", GetOffset("CTFNavArea", "m_distanceToBombTarget"));
@@ -109,6 +111,11 @@ void SetLookingAroundForEnemies(int client, bool shouldLook)
 int GetTFBotMission(int client)
 {
 	return GetEntData(client, GetOffset("CTFBot", "m_mission"));
+}
+
+Address GetOpportunisticTimer(int client)
+{
+	return GetEntityAddress(client) + GetOffset("CTFBot", "m_opportunisticTimer");
 }
 
 int GetStartingCurrency(int populator)

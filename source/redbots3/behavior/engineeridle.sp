@@ -117,7 +117,7 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 					//Crouch when closer than 200 hu
 					if (!myLoco.IsStuck())
 					{
-						g_arrExtraButtons[actor].PressButtons(IN_DUCK);
+						g_arrExtraButtons[actor].PressButtons(IN_DUCK, 0.1);
 					}
 					
 					if (flDistanceToGoal < 70.0)
@@ -262,7 +262,7 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 			{
 				if (!myLoco.IsStuck())
 				{
-					g_arrExtraButtons[actor].PressButtons(IN_DUCK);
+					g_arrExtraButtons[actor].PressButtons(IN_DUCK, 0.1);
 				}
 				
 				EquipWeaponSlot(actor, TFWeaponSlot_Melee);
@@ -310,7 +310,7 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 		{
 			if (!myLoco.IsStuck())
 			{
-				g_arrExtraButtons[actor].PressButtons(IN_DUCK);
+				g_arrExtraButtons[actor].PressButtons(IN_DUCK, 0.1);
 			}
 			
 			EquipWeaponSlot(actor, TFWeaponSlot_Melee);

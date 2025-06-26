@@ -49,7 +49,7 @@ public Action CTFBotMvMEngineerBuildSentrygun_Update(BehaviorAction action, int 
 		
 		if (!myLoco.IsStuck())
 		{
-			g_arrExtraButtons[actor].PressButtons(IN_DUCK);
+			g_arrExtraButtons[actor].PressButtons(IN_DUCK, 0.1);
 		}
 		
 		AimHeadTowards(myBody, areaCenter, MANDATORY, 0.1, _, "Placing sentry");
