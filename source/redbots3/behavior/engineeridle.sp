@@ -23,6 +23,7 @@ BehaviorAction CTFBotMvMEngineerIdle()
 	action.OnStart = CTFBotMvMEngineerIdle_OnStart;
 	action.Update = CTFBotMvMEngineerIdle_Update;
 	action.OnEnd = CTFBotMvMEngineerIdle_OnEnd;
+	action.OnMoveToSuccess = CTFBotMvMEngineerIdle_OnMoveToSuccess;
 	
 	return action;
 }
@@ -113,7 +114,7 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 				float flDistanceToGoal = GetVectorDistance(GetAbsOrigin(actor), center);
 				
 				if (flDistanceToGoal < 200.0)
-				{	
+				{
 					//Crouch when closer than 200 hu
 					if (!myLoco.IsStuck())
 					{
@@ -160,7 +161,7 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 	if ((m_aNestArea[actor] == NULL_AREA || bShouldAdvance) || sentry == INVALID_ENT_REFERENCE)
 	{
 		//HasStarted && !IsElapsed
-		if (m_ctFindNestHint[actor] > 0.0 && m_ctFindNestHint[actor] > GetGameTime()) 
+		if (m_ctFindNestHint[actor] > 0.0 && m_ctFindNestHint[actor] > GetGameTime())
 		{
 			return action.Continue();
 		}
@@ -180,7 +181,7 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 		{
 			if (BaseEntity_GetHealth(sentry) >= TF2Util_GetEntityMaxHealth(sentry)
 			&& !TF2_IsBuilding(sentry)
-			&& TF2_GetUpgradeLevel(sentry) >= 3
+			&& (TF2_IsMiniBuilding(sentry) || TF2_GetUpgradeLevel(sentry) >= 3)
 			&& GetEntProp(sentry, Prop_Send, "m_iAmmoShells") > 0)
 			{
 				m_ctSentrySafe[actor] = GetGameTime() + 3.0;
@@ -329,6 +330,14 @@ static void CTFBotMvMEngineerIdle_OnEnd(BehaviorAction action, int actor, Behavi
 {
 	//NOTE: engineer should only truly leave this behavior when he dies, it should otherwise be impossible
 	g_arrPluginBot[actor].bPathing = false;
+}
+
+static Action CTFBotMvMEngineerIdle_OnMoveToSuccess(BehaviorAction action, int actor, any path, ActionDesiredResult result)
+{
+	//Because of our constant pathing, we are not stuck once we arrive to our desired position
+	CBaseNPC_GetNextBotOfEntity(actor).GetLocomotionInterface().ClearStuckStatus("Arrived at goal");
+	
+	return action.TryContinue();
 }
 
 static void CTFBotMvMEngineerIdle_ResetProperties(int actor)

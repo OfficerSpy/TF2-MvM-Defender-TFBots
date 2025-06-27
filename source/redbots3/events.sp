@@ -276,7 +276,7 @@ static Action Timer_WaveFailure(Handle timer)
 			if (g_bHasUpgraded[i])
 			{
 				g_bHasBoughtUpgrades[i] = false;
-				RefundPlayerUpgrades(i);
+				VS_GrantOrRemoveAllUpgrades(i, true, true);
 				g_bHasUpgraded[i] = false;
 			}
 		}

@@ -126,8 +126,11 @@ public void CTFBotUpgrade_OnEnd(BehaviorAction action, int actor, BehaviorAction
 	
 	KV_MvM_UpgradesDone(actor);
 	
-	DetonateObjectOfType(actor, TFObject_Sentry);
-	DetonateObjectOfType(actor, TFObject_Dispenser);
+	if (TF2_GetPlayerClass(actor) == TFClass_Engineer && GameRules_GetRoundState() == RoundState_BetweenRounds)
+	{
+		DetonateObjectOfType(actor, TFObject_Sentry);
+		DetonateObjectOfType(actor, TFObject_Dispenser);
+	}
 	
 	// UpdateLookAroundForEnemies(actor, true);
 	

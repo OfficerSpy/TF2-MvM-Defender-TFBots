@@ -196,17 +196,6 @@ void CNavArea_GetRandomPoint(CNavArea area, float buffer[3])
 	buffer = spot;
 }
 
-void RefundPlayerUpgrades(int client)
-{
-	KeyValues kv = new KeyValues("MVM_Respec");
-	
-	TF2_SetInUpgradeZone(client, true);
-	FakeClientCommandKeyValues(client, kv);
-	TF2_SetInUpgradeZone(client, false);
-	
-	delete kv;
-}
-
 bool IsTFBotPlayer(int client)
 {
 	//TODO: change this, as it's not entirely reliable

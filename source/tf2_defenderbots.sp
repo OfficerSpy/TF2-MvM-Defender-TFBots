@@ -54,6 +54,23 @@ enum
 	BOT_LINEUP_MODE_PREFERENCE_CHOOSE
 }
 
+enum struct esMapConfiguration
+{
+	ArrayList adtSniperSpot;
+	ArrayList adtEngineerNestLocation;
+	ArrayList adtTeleporterEntranceLocation;
+	ArrayList adtTeleporterExitLocation;
+	
+	void Initialize()
+	{
+		this.adtSniperSpot = new ArrayList(3);
+	}
+	void Reset()
+	{
+		this.adtSniperSpot.Clear();
+	}
+}
+
 enum struct esButtonInput
 {
 	int iPress;
@@ -121,8 +138,8 @@ static float m_flLastCommandTime[MAXPLAYERS + 1];
 static float m_flLastReadyInputTime[MAXPLAYERS + 1];
 
 //Config
+esMapConfiguration g_arrMapConfig;
 static ArrayList m_adtBotNames;
-static ArrayList m_adtSniperSpots;
 
 //Global entities
 int g_iPopulationManager = -1;
@@ -314,7 +331,7 @@ public void OnPluginStart()
 	
 	g_adtChosenBotClasses = new ArrayList(TF2_CLASS_MAX_NAME_LENGTH);
 	m_adtBotNames = new ArrayList(MAX_NAME_LENGTH);
-	m_adtSniperSpots = new ArrayList(3);
+	g_arrMapConfig.Initialize();
 	
 	InitNextBotPathing();
 	
@@ -1915,11 +1932,11 @@ void AddBotsWithPresetTeamComp(int count = 6, int teamType = 0)
 
 void SetupSniperSpotHints()
 {
-	if (m_adtSniperSpots.Length > 0)
+	if (g_arrMapConfig.adtSniperSpot.Length > 0)
 	{
-		for (int i = 0; i < m_adtSniperSpots.Length; i++)
+		for (int i = 0; i < g_arrMapConfig.adtSniperSpot.Length; i++)
 		{
-			float vec[3]; m_adtSniperSpots.GetArray(i, vec);
+			float vec[3]; g_arrMapConfig.adtSniperSpot.GetArray(i, vec);
 			int ent = CreateEntityByName("func_tfbot_hint");
 			
 			if (ent != -1)
@@ -2107,7 +2124,7 @@ eMissionDifficulty GetMissionDifficulty()
 
 void Config_LoadMap()
 {
-	m_adtSniperSpots.Clear();
+	g_arrMapConfig.Reset();
 	
 	char mapName[PLATFORM_MAX_PATH]; GetCurrentMap(mapName, sizeof(mapName));
 	char filePath[PLATFORM_MAX_PATH]; BuildPath(Path_SM, filePath, sizeof(filePath), "configs/defenderbots/map/%s.cfg", mapName);
@@ -2128,7 +2145,7 @@ void Config_LoadMap()
 			do
 			{
 				float vec[3]; kv.GetVector("origin", vec);
-				m_adtSniperSpots.PushArray(vec);
+				g_arrMapConfig.adtSniperSpot.PushArray(vec);
 			} while (kv.GotoNextKey(false));
 		}
 		
@@ -2138,7 +2155,7 @@ void Config_LoadMap()
 	CloseHandle(kv);
 	
 #if defined TESTING_ONLY
-	LogMessage("Config_LoadMap: Found %d locations for SniperSpot", m_adtSniperSpots.Length);
+	LogMessage("Config_LoadMap: Found %d locations for SniperSpot", g_arrMapConfig.adtSniperSpot.Length);
 #endif
 }
 

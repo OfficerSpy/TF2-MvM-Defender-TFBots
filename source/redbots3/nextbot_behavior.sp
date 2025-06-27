@@ -1,3 +1,6 @@
+//CTFBotMedicHeal::m_patient
+#define ACTION_HEAL_PATIENT_OFFSET	0x4850
+
 #define FLAMETHROWER_REACH_RANGE	350.0
 #define FLAMEBALL_REACH_RANGE	526.0
 
@@ -475,7 +478,7 @@ public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, flo
 			if (pOpportunisticTimer.Address)
 			{
 				//We don't do any of these things while upgrading
-				pOpportunisticTimer.Start(0.2);
+				pOpportunisticTimer.Start(interval);
 			}
 		}
 		
@@ -558,8 +561,7 @@ public Action CTFBotMedicHeal_UpdatePost(BehaviorAction action, int actor, float
 	
 	if (myWeapon != -1 && TF2Util_GetWeaponID(myWeapon) == TF_WEAPON_MEDIGUN && GetMedigunType(myWeapon) == MEDIGUN_RESIST)
 	{
-		//TODO: get the value of m_patient instead
-		int myPatient = GetEntPropEnt(myWeapon, Prop_Send, "m_hHealingTarget");
+		int myPatient = action.GetHandleEntity(ACTION_HEAL_PATIENT_OFFSET);
 		
 		if (myPatient > 0)
 		{
