@@ -13,6 +13,16 @@ public Action CTFBotMvMEngineerBuildSentrygun_OnStart(BehaviorAction action, int
 {
 	UpdateLookAroundForEnemies(actor, true);
 	
+	if (GameRules_GetRoundState() == RoundState_BetweenRounds)
+	{
+		if (m_aNestArea[actor])
+		{
+			//Teleport ourselves to the nest area for a faster setup
+			float vNestPosition[3]; m_aNestArea[actor].GetCenter(vNestPosition);
+			CBaseEntity(actor).SetAbsOrigin(vNestPosition);
+		}
+	}
+	
 	return action.Continue();
 }
 

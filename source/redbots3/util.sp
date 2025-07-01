@@ -1513,7 +1513,7 @@ float[] GetAbsAngles(int entity)
 	return vec;
 }
 
-stock CNavArea PickBuildArea(int client, float SentryRange = 1300.0)
+CNavArea PickBuildArea(int client, float SentryRange = 1300.0)
 {
 	int iAreaCount = TheNavAreas.Count;
 
@@ -1617,7 +1617,7 @@ stock CNavArea PickBuildArea(int client, float SentryRange = 1300.0)
 	return randomArea;
 }
 
-stock CNavArea PickBuildAreaPreRound(int client, float SentryRange = 1300.0)
+CNavArea PickBuildAreaPreRound(int client, float SentryRange = 1300.0)
 {
 	int iAreaCount = TheNavAreas.Count;
 
@@ -1704,7 +1704,9 @@ stock CNavArea PickBuildAreaPreRound(int client, float SentryRange = 1300.0)
 	
 	//Random valid exit point.
 	CNavArea RandomEnemySpawnExit = EnemySpawnExits.Get(GetRandomInt(0, EnemySpawnExits.Length - 1));
-
+	
+	EnemySpawnExits.Close();
+	
 	//Search outward of the random exit untill we are some distance away.
 	float vecExitCenter[3];
 	RandomEnemySpawnExit.GetCenter(vecExitCenter);

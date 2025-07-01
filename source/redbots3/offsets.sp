@@ -95,7 +95,7 @@ int GetLastDamageType(int client)
 
 bool IsPlacementOK(int iObject)
 {
-	return view_as<bool>(GetEntData(iObject, GetOffset("CObjectSentrygun", "m_bPlacementOK"), 1));
+	return GetEntData(iObject, GetOffset("CObjectSentrygun", "m_bPlacementOK"), 1);
 }
 
 void GetTurretAngles(int sentry, float buffer[3])

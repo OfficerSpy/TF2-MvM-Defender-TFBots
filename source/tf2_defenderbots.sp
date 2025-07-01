@@ -205,7 +205,7 @@ public Plugin myinfo =
 	name = "Defender TFBots",
 	author = "Officer Spy",
 	description = "TFBots that play Mann vs. Machine",
-	version = "1.5.2",
+	version = "1.5.3",
 	url = "https://github.com/OfficerSpy/TF2-MvM-Defender-TFBots"
 };
 
