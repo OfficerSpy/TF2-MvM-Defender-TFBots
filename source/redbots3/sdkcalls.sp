@@ -1,6 +1,5 @@
 static Handle m_hPostInventoryApplication;
 static Handle m_hSetMission;
-// static Handle m_hGetNextThink;
 static Handle m_hLookupBone;
 static Handle m_hGetBonePosition;
 static Handle m_hHasAmmo;
@@ -44,16 +43,6 @@ bool InitSDKCalls(GameData hGamedata)
 		LogError("Failed to create SDKCall for CTFBot::SetMission!");
 		iFailCount++;
 	}
-	
-	/* StartPrepSDKCall(SDKCall_Entity);
-	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Signature, "CBaseEntity::GetNextThink");
-	PrepSDKCall_AddParameter(SDKType_String, SDKPass_Pointer);
-	PrepSDKCall_SetReturnInfo(SDKType_Float, SDKPass_Plain);
-	if ((m_hGetNextThink = EndPrepSDKCall()) == null)
-	{
-		LogError("Failed to create SDKCall for CBaseEntity::GetNextThink!");
-		iFailCount++;
-	} */
 	
 	StartPrepSDKCall(SDKCall_Entity);
 	PrepSDKCall_SetFromConf(hGamedata, SDKConf_Signature, "CBaseAnimating::LookupBone");
@@ -231,11 +220,6 @@ void SetMission(int client, int mission, bool resetBehaviorSystem = true)
 {
 	SDKCall(m_hSetMission, client, mission, resetBehaviorSystem);
 }
-
-/* float GetNextThink(int entity, const char[] szContext = "")
-{
-	return SDKCall(m_hGetNextThink, entity, szContext);
-} */
 
 int LookupBone(int entity, const char[] szName)
 {

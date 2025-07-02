@@ -29,6 +29,9 @@
 //Raw value checked in CTFRevolver::GetDamageType
 #define REVOLVER_ACCURACY_CHECK_COOLDOWN	1.0
 
+//PlayerLocomotion::GetStepHeight
+#define TFBOT_STEP_HEIGHT	18.0
+
 #define SNIPER_REACTION_TIME	0.5
 
 enum //medigun_resist_types_t

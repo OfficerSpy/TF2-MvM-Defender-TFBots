@@ -49,7 +49,8 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 		//DetonateObjectOfType(actor, TFObject_Sentry);
 		//DetonateObjectOfType(actor, TFObject_Dispenser);
 		
-		PrintToServer("CTFBotMvMEngineerIdle_Update: ADVANCE");
+		if (redbots_manager_debug_actions.BoolValue)
+			PrintToServer("CTFBotMvMEngineerIdle_Update: ADVANCE");
 		
 		//RIGHT NOW
 		CTFBotMvMEngineerIdle_ResetProperties(actor);
@@ -79,7 +80,8 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 			g_bGoingToGrabBuilding[actor] = false;
 			m_hBuildingToGrab[actor] = INVALID_ENT_REFERENCE;
 			
-			PrintToServer("CTFBotMvMEngineerIdle_Update: g_bGoingToGrabBuilding : building %i | m_aNestArea %x", building, m_aNestArea[actor]);
+			if (redbots_manager_debug_actions.BoolValue)
+				PrintToServer("CTFBotMvMEngineerIdle_Update: g_bGoingToGrabBuilding : building %i | m_aNestArea %x", building, m_aNestArea[actor]);
 			
 			DetonateObjectOfType(actor, TFObject_Sentry);
 			DetonateObjectOfType(actor, TFObject_Dispenser);
@@ -174,6 +176,39 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 	
 	if (bShouldAdvance)
 		return action.Continue();
+	
+	if (sentry != -1 && dispenser != -1)
+	{
+		if (m_ctSentrySafe[actor] > GetGameTime() && !g_bGoingToGrabBuilding[actor])
+		{
+			int mySecondary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Secondary);
+			
+			if (mySecondary != -1 && TF2Util_GetWeaponID(mySecondary) == TF_WEAPON_LASER_POINTER)
+			{
+				CKnownEntity threat = myNextbot.GetVisionInterface().GetPrimaryKnownThreat(false);
+				
+				if (threat && threat.IsVisibleInFOVNow())
+				{
+					int iThreat = threat.GetEntity();
+					
+					if (GetVectorDistance(GetAbsOrigin(sentry), GetAbsOrigin(iThreat)) > SENTRY_MAX_RANGE)
+					{
+						AimHeadTowards(myBody, WorldSpaceCenter(iThreat), MANDATORY, 0.1, _, "Aiming!");
+						TF2Util_SetPlayerActiveWeapon(actor, mySecondary);
+						
+						if (myBody.IsHeadAimingOnTarget() && BaseCombatCharacter_GetActiveWeapon(actor) == mySecondary)
+						{
+							OSLib_RunScriptCode(actor, _, _, "self.PressFireButton(0.1);self.PressAltFireButton(0.1)");
+						}
+						
+						g_arrPluginBot[actor].bPathing = false;
+						
+						return action.Continue();
+					}
+				}
+			}
+		}
+	}
 	
 	if (m_aNestArea[actor] != NULL_AREA)
 	{

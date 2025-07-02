@@ -19,6 +19,7 @@ public Action CTFBotMvMEngineerBuildSentrygun_OnStart(BehaviorAction action, int
 		{
 			//Teleport ourselves to the nest area for a faster setup
 			float vNestPosition[3]; m_aNestArea[actor].GetCenter(vNestPosition);
+			vNestPosition[2] += TFBOT_STEP_HEIGHT;
 			CBaseEntity(actor).SetAbsOrigin(vNestPosition);
 		}
 	}
