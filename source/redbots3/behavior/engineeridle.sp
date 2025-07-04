@@ -183,7 +183,7 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 		{
 			int mySecondary = GetPlayerWeaponSlot(actor, TFWeaponSlot_Secondary);
 			
-			if (mySecondary != -1 && TF2Util_GetWeaponID(mySecondary) == TF_WEAPON_LASER_POINTER)
+			if (mySecondary != -1 && TF2Util_GetWeaponID(mySecondary) == TF_WEAPON_LASER_POINTER && myNextbot.IsRangeLessThan(sentry, 180.0))
 			{
 				CKnownEntity threat = myNextbot.GetVisionInterface().GetPrimaryKnownThreat(false);
 				
@@ -196,7 +196,7 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 						AimHeadTowards(myBody, WorldSpaceCenter(iThreat), MANDATORY, 0.1, _, "Aiming!");
 						TF2Util_SetPlayerActiveWeapon(actor, mySecondary);
 						
-						if (myBody.IsHeadAimingOnTarget() && BaseCombatCharacter_GetActiveWeapon(actor) == mySecondary)
+						if (myBody.IsHeadAimingOnTarget() && GetEntProp(sentry, Prop_Send, "m_bPlayerControlled"))
 						{
 							OSLib_RunScriptCode(actor, _, _, "self.PressFireButton(0.1);self.PressAltFireButton(0.1)");
 						}
@@ -217,7 +217,7 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 			if (BaseEntity_GetHealth(sentry) >= TF2Util_GetEntityMaxHealth(sentry)
 			&& !TF2_IsBuilding(sentry)
 			&& (TF2_IsMiniBuilding(sentry) || TF2_GetUpgradeLevel(sentry) >= 3)
-			&& GetEntProp(sentry, Prop_Send, "m_iAmmoShells") > 0)
+			&& GetEntProp(sentry, Prop_Send, "m_iAmmoShells") > 50)
 			{
 				m_ctSentrySafe[actor] = GetGameTime() + 3.0;
 			}
