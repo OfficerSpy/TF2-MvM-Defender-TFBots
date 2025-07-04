@@ -187,11 +187,11 @@ static Action CTFBotMvMEngineerIdle_Update(BehaviorAction action, int actor, flo
 			{
 				CKnownEntity threat = myNextbot.GetVisionInterface().GetPrimaryKnownThreat(false);
 				
-				if (threat && threat.IsVisibleInFOVNow())
+				if (threat)
 				{
 					int iThreat = threat.GetEntity();
 					
-					if (GetVectorDistance(GetAbsOrigin(sentry), GetAbsOrigin(iThreat)) > SENTRY_MAX_RANGE)
+					if (GetVectorDistance(GetAbsOrigin(sentry), GetAbsOrigin(iThreat)) > SENTRY_MAX_RANGE && IsLineOfFireClearEntity(actor, GetEyePosition(actor), iThreat))
 					{
 						AimHeadTowards(myBody, WorldSpaceCenter(iThreat), MANDATORY, 0.1, _, "Aiming!");
 						TF2Util_SetPlayerActiveWeapon(actor, mySecondary);
