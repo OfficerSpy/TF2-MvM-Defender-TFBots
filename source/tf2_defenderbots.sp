@@ -77,6 +77,7 @@ enum struct esButtonInput
 	float flPressTime;
 	int iRelease;
 	float flReleaseTime;
+	float flKeySpeed;
 	
 	void Reset()
 	{
@@ -84,6 +85,7 @@ enum struct esButtonInput
 		this.flPressTime = 0.0;
 		this.iRelease = 0;
 		this.flReleaseTime = 0.0;
+		this.flKeySpeed = 0.0;
 	}
 	
 	void PressButtons(int buttons, float duration = -1.0)
@@ -205,7 +207,7 @@ public Plugin myinfo =
 	name = "Defender TFBots",
 	author = "Officer Spy",
 	description = "TFBots that play Mann vs. Machine",
-	version = "1.5.3",
+	version = "1.5.4",
 	url = "https://github.com/OfficerSpy/TF2-MvM-Defender-TFBots"
 };
 
@@ -444,6 +446,12 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 			if (g_arrExtraButtons[client].iPress & IN_MOVERIGHT)
 				vel[1] += PLAYER_SIDESPEED;
 			
+			if (g_arrExtraButtons[client].iPress & IN_LEFT)
+				angles[1] -= g_arrExtraButtons[client].flKeySpeed;
+			
+			if (g_arrExtraButtons[client].iPress & IN_RIGHT)
+				angles[1] += g_arrExtraButtons[client].flKeySpeed;
+			
 			buttons |= g_arrExtraButtons[client].iPress;
 			
 			//We are told to hold these inputs down for a specific time, don't clear until it expires
@@ -514,12 +522,8 @@ public Action OnPlayerRunCmd(int client, int &buttons, int &impulse, float vel[3
 						if (CanRevolverHeadshot(myWeapon))
 						{
 							//Don;t fire if our shot won't be very accurate
-							//TODO: use the offset of m_flLastAccuracyCheck?
-							if (m_flNextSnipeFireTime[client] > GetGameTime())
+							if (!(GetGameTime() - GetLastAccuracyCheck(myWeapon) > 1.0))
 								buttons &= ~IN_ATTACK;
-							
-							if (buttons & IN_ATTACK)
-								m_flNextSnipeFireTime[client] = GetGameTime() + REVOLVER_ACCURACY_CHECK_COOLDOWN;
 						}
 					}
 				}

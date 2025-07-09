@@ -14,6 +14,7 @@ void InitOffsets(GameData hGamedata)
 	SetOffset(hGamedata, "CTFBot", "m_opportunisticTimer");
 	SetOffset(hGamedata, "CPopulationManager", "m_nStartingCurrency");
 	SetOffset(hGamedata, "CTFBuffItem", "m_bPlayingHorn");
+	SetOffset(hGamedata, "CTFRevolver", "m_flLastAccuracyCheck");
 	SetOffset(hGamedata, "CTFNavArea", "m_distanceToBombTarget");
 	
 #if defined TESTING_ONLY
@@ -26,6 +27,7 @@ void InitOffsets(GameData hGamedata)
 	LogMessage("InitOffsets: CTFBot->m_opportunisticTimer = %d", GetOffset("CTFBot", "m_opportunisticTimer"));
 	LogMessage("InitOffsets: CPopulationManager->m_nStartingCurrency = %d", GetOffset("CPopulationManager", "m_nStartingCurrency"));
 	LogMessage("InitOffsets: CTFBuffItem->m_bPlayingHorn = %d", GetOffset("CTFBuffItem", "m_bPlayingHorn"));
+	LogMessage("InitOffsets: CTFRevolver->m_flLastAccuracyCheck = %d", GetOffset("CTFRevolver", "m_flLastAccuracyCheck"));
 	LogMessage("InitOffsets: CTFNavArea->m_distanceToBombTarget = %d", GetOffset("CTFNavArea", "m_distanceToBombTarget"));
 #endif
 }
@@ -127,6 +129,11 @@ int GetStartingCurrency(int populator)
 bool IsPlayingHorn(int weapon)
 {
 	return view_as<bool>(GetEntData(weapon, GetOffset("CTFBuffItem", "m_bPlayingHorn"), 1));
+}
+
+float GetLastAccuracyCheck(int weapon)
+{
+	return GetEntDataFloat(weapon, GetOffset("CTFRevolver", "m_flLastAccuracyCheck"));
 }
 
 float GetTravelDistanceToBombTarget(CTFNavArea area)

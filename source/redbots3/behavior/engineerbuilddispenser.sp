@@ -57,8 +57,8 @@ public Action CTFBotMvMEngineerBuildDispenser_Update(BehaviorAction action, int 
 			FakeClientCommandThrottled(actor, "build 0");
 		
 		//Look in "random" directions in an attempt to find a place to fit a dispenser.
-		//TODO: replace this cause our attention does not need to be focused on enemies
-		UpdateLookAroundForEnemies(actor, true);
+		g_arrExtraButtons[actor].PressButtons(IN_RIGHT, 0.1);
+		g_arrExtraButtons[actor].flKeySpeed = 5.0;
 		
 	//	if(g_flNextLookTime[actor] > GetGameTime())
 	//		return false;

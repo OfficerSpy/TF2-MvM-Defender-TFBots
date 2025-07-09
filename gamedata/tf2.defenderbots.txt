@@ -44,6 +44,11 @@
 				"windows"	"m_nInspectStage"
 				"linux"		"m_nInspectStage"
 			}
+			"CTFRevolver_BaseOffset"
+			{
+				"windows"	"m_nInspectStage"
+				"linux"		"m_nInspectStage"
+			}
 		}
 		"Signatures"
 		{
@@ -217,6 +222,11 @@
 			{
 				"windows"	"40" //build 8835751: 2080
 				"linux"		"40" //build 8835751: 2092
+			}
+			"CTFRevolver::m_flLastAccuracyCheck"
+			{
+				"windows"	"8" //build 9742990: 2048
+				"linux"		"8" //build 9742990: 2060
 			}
 			//These numbers are raw offsets and are not used for any calculations
 			"CTFNavArea::m_distanceToBombTarget"
