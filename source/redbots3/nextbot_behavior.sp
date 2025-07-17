@@ -485,6 +485,18 @@ public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, flo
 		return Plugin_Continue;
 	}
 	
+	if (!ShouldUseTeleporter(actor))
+	{
+		CountdownTimer pFindTeleporterTimer = CountdownTimer(action.Get(0x70));
+		
+		if (pFindTeleporterTimer.Address)
+		{
+			//Don't look for any nearby teleporters to use
+			//This forces CTFBotTacticalMonitor::FindNearbyTeleporter to return NULL
+			pFindTeleporterTimer.Start(interval);
+		}
+	}
+	
 	if (GameRules_GetRoundState() == RoundState_RoundRunning)
 	{
 		bool low_health = false;
@@ -1782,4 +1794,18 @@ void GetFlameThrowerAimForTank(int tank, float aimPos[3])
 {
 	aimPos = WorldSpaceCenter(tank);
 	aimPos[2] += 90.0;
+}
+
+static bool ShouldUseTeleporter(int client)
+{
+	switch (TF2_GetPlayerClass(client))
+	{
+		case TFClass_Medic, TFClass_Engineer:
+		{
+			//These classes have their own logic
+			return true;
+		}
+	}
+	
+	return true;
 }
