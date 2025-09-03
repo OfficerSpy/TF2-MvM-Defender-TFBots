@@ -487,7 +487,7 @@ public Action CTFBotTacticalMonitor_Update(BehaviorAction action, int actor, flo
 	
 	if (!ShouldUseTeleporter(actor))
 	{
-		CountdownTimer pFindTeleporterTimer = CountdownTimer(action.Get(0x70));
+		CountdownTimer pFindTeleporterTimer = CountdownTimer(action + 0x70);
 		
 		if (pFindTeleporterTimer.Address)
 		{

@@ -1971,6 +1971,10 @@ bool HavePlayersChosenBotTeam()
 	if (GetCountOfPlayersChoosingBotClasses() > 0)
 		return false;
 	
+	//Always ready if our team is full
+	if (GetTeamClientCount(TFTeam_Red) >= redbots_manager_defender_team_size.IntValue)
+		return true;
+	
 	/* If strictly requiring a chosen lineup, the list will only ever be made up of classes picked by a player
 	If it is empty, no one chose anything yet */
 	return g_adtChosenBotClasses.Length > 0;
