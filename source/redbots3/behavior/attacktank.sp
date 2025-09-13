@@ -163,6 +163,11 @@ int GetTankToTarget(int actor, float max_distance = 999999.0)
 				continue;
 		}
 		
+#if defined VALIDATE_ENTITY_TANKBOSS
+		if (!IsBaseBoss(ent))
+			continue;
+#endif
+		
 		float distance = GetVectorDistance(origin, WorldSpaceCenter(ent));
 		
 		if (distance <= bestDistance && distance <= max_distance)

@@ -34,6 +34,8 @@ Author: ★ Officer Spy ★
 
 #define EXTRA_PLUGINBOT
 
+// #define VALIDATE_ENTITY_TANKBOSS
+
 // #define IDLEBOT_AIMING
 
 #define PLUGIN_PREFIX	"[BotManager]"
