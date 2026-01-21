@@ -747,10 +747,7 @@ static int MenuHandler_DefenderBotTeamSetup(Menu menu, MenuAction action, int pa
 		case MenuAction_Cancel:
 		{
 			g_bChoosingBotClasses[param1] = false;
-			
-			if (redbots_manager_bot_lineup_mode.IntValue == BOT_LINEUP_MODE_PREFERENCE_CHOOSE)
-				UpdateChosenBotTeamComposition();
-			
+			DefenderBotTeamSetupCancelled();
 			PrintToChatAll("%s %N is no longer selecting the bot team.", PLUGIN_PREFIX, param1);
 		}
 		case MenuAction_End:
@@ -785,10 +782,7 @@ static int MenuHandler_DefenderBotTeamConfirmation(Menu menu, MenuAction action,
 		case MenuAction_Cancel:
 		{
 			g_bChoosingBotClasses[param1] = false;
-			
-			if (redbots_manager_bot_lineup_mode.IntValue == BOT_LINEUP_MODE_PREFERENCE_CHOOSE)
-				UpdateChosenBotTeamComposition();
-			
+			DefenderBotTeamSetupCancelled();
 			PrintToChatAll("%s %N is no longer selecting the bot team.", PLUGIN_PREFIX, param1);
 		}
 		case MenuAction_End:
@@ -995,4 +989,20 @@ static int MenuHandler_ShowBotTeamComposition(Menu menu, MenuAction action, int 
 {
 	//Do nothing
 	return 0;
+}
+
+static void DefenderBotTeamSetupCancelled()
+{
+	switch (redbots_manager_bot_lineup_mode.IntValue)
+	{
+		case BOT_LINEUP_MODE_PREFERENCE_CHOOSE:
+		{
+			UpdateChosenBotTeamComposition();
+		}
+		case BOT_LINEUP_MODE_CHOOSE:
+		{
+			//Clear this here or else the manager will think we have a chosen lineup already
+			g_adtChosenBotClasses.Clear();
+		}
+	}
 }

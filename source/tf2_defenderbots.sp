@@ -209,7 +209,7 @@ public Plugin myinfo =
 	name = "Defender TFBots",
 	author = "Officer Spy",
 	description = "TFBots that play Mann vs. Machine",
-	version = "1.5.4",
+	version = "1.5.5",
 	url = "https://github.com/OfficerSpy/TF2-MvM-Defender-TFBots"
 };
 
@@ -1381,7 +1381,7 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 							return Plugin_Handled;
 						}
 						
-						PrintToChat(client, "%s Choose your bot team lineup first! Use command !choosebotteam/!cbt", PLUGIN_PREFIX);
+						PrintToChat(client, "%s Choose your bot team lineup first! Use command !choosebotteam or !cbt", PLUGIN_PREFIX);
 						return Plugin_BadLoad;
 					}
 				}
