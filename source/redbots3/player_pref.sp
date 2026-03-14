@@ -14,6 +14,11 @@ enum
 	PREF_FL_SPY = (1 << 8)
 }
 
+/* Override all preferences to be from a specific player instead
+This is meant to be changed by admins for personal use
+The value here is the desired player's client index */
+int g_iPlayerForcedPref = -1;
+
 char g_sPlayerPrefPath[PLATFORM_MAX_PATH];
 static KeyValues m_kvPlayerPrefData;
 
@@ -128,6 +133,12 @@ int GetWeaponPreference(int client, const char[] class, const char[] slot)
 //Return weapon def index
 int GetPreferredWeaponForClass(const char[] class, const char[] slot)
 {
+	if (g_iPlayerForcedPref != -1)
+	{
+		//Preference forced by admin, probably wants to use his or someone else's
+		return GetWeaponPreference(g_iPlayerForcedPref, class, slot);
+	}
+	
 	ArrayList adtWeaponPref = new ArrayList();
 	
 	for (int i = 1; i <= MaxClients; i++)

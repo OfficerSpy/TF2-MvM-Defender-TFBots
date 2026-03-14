@@ -84,7 +84,7 @@ static Action CTFBotSpyLurkMvM_Update(BehaviorAction action, int actor, float in
 				}
 			}
 			
-			if (threatRange < GetDesiredAttackRange(actor))
+			if (threatRange < GetDesiredBackstabRange(actor, target))
 			{
 				if (TF2_IsPlayerInCondition(actor, TFCond_Disguised))
 				{
@@ -200,3 +200,8 @@ static Action CTFBotSpyLurkMvM_IsHindrance(BehaviorAction action, INextBot nextb
 	//Use default targeting, which prioritizes closer threats first
 	return Plugin_Continue;
 } */
+
+static float GetDesiredBackstabRange(int client, int target)
+{
+	return 75.0 * BaseAnimating_GetModelScale(target);
+}
