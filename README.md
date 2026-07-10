@@ -3,7 +3,7 @@ TFBots that can play Mann vs Machine.
 <p>This is a constant work-in-progress. Expect many things to change down the line.
 
 > [!IMPORTANT]
-> There have been several reports about functionality conflicting with external mods such as [sigsegv-mvm](https://github.com/rafradek/sigsegv-mvm). If you need more help regarding compatibility issues with your installation, please contact me in my _Discord_ development server. External mods are not natively supported!
+> There have been a few reports about the bots not working as intended with external mods such as [sigsegv-mvm](https://github.com/rafradek/sigsegv-mvm). If you need more help regarding compatibility issues with your installation, please contact me in my _Discord_ development server. External mods are not natively supported!
 
 # Requirements
 - [[TF2] TF2Attributes](https://github.com/FlaminSarge/tf2attributes)
