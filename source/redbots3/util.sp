@@ -51,7 +51,7 @@ enum struct BombInfo_t
 {
 	float vPosition[3];
 	float flMinBattleFront;
-	float flMaxBattleFront
+	float flMaxBattleFront;
 }
 
 enum
@@ -1533,7 +1533,7 @@ CNavArea PickBuildArea(int client, float SentryRange = 1300.0)
 	vecTargetPos[1] = bombinfo.vPosition[1];
 	vecTargetPos[2] = bombinfo.vPosition[2] + 40.0;
 	
-	CTFNavArea bombArea = TheNavMesh.GetNearestNavArea(vecTargetPos, false, 90000.0, false, true, TEAM_ANY);
+	CTFNavArea bombArea = view_as<CTFNavArea>(TheNavMesh.GetNearestNavArea(vecTargetPos, false, 90000.0, false, true, TEAM_ANY));
 	
 	if (bombArea == NULL_AREA)
 	{
@@ -1667,8 +1667,8 @@ CNavArea PickBuildAreaPreRound(int client, float SentryRange = 1300.0)
 		{			
 			//Only connections with BOMB_DROP attribute are considered good.
 			for (int iConnection = 0; iConnection < area.GetAdjacentCount(dir); iConnection++)
-			{			
-				CTFNavArea adjArea = area.GetAdjacentArea(dir, iConnection);
+			{
+				CTFNavArea adjArea = view_as<CTFNavArea>(area.GetAdjacentArea(dir, iConnection));
 				
 				//Area still in spawn... BAD
 				if (adjArea.HasAttributeTF(BLUE_SPAWN_ROOM) || adjArea.HasAttributeTF(RED_SPAWN_ROOM))

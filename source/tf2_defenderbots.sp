@@ -794,7 +794,7 @@ public Action Command_Votebots(int client, int args)
 			}
 			
 			ReplyToCommand(client, "%s Choose your bot team lineup first! Use command !choosebotteam or !cbt", PLUGIN_PREFIX);
-			return Plugin_BadLoad;
+			return Plugin_Handled;
 		}
 	}
 	
@@ -1409,7 +1409,7 @@ public Action Listener_TournamentPlayerReadystate(int client, const char[] comma
 						}
 						
 						PrintToChat(client, "%s Choose your bot team lineup first! Use command !choosebotteam or !cbt", PLUGIN_PREFIX);
-						return Plugin_BadLoad;
+						return Plugin_Handled;
 					}
 				}
 				
