@@ -166,6 +166,11 @@ int GetTankToTarget(int actor, float max_distance = 999999.0)
 #if defined VALIDATE_ENTITY_TANKBOSS
 		if (!IsBaseBoss(ent))
 			continue;
+		
+#else
+		//Ensure this is actually an NPC...
+		if (!CBaseEntity(ent).IsCombatCharacter())
+			continue;
 #endif
 		
 		float distance = GetVectorDistance(origin, WorldSpaceCenter(ent));
